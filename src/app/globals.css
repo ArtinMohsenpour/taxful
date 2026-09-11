@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #faf8f3;
+  --surface: #ffffff;
+  --foreground: #182720;
+  --muted-foreground: #59665e;
+  --primary: #245c45;
+  --primary-foreground: #ffffff;
+  --border: #dedcd4;
+  --focus: #245c45;
+  --success: #21633b;
+  --warning: #805500;
+  --error: #b42318;
+}
+
+.dark {
+  --background: #111816;
+  --surface: #1a2420;
+  --foreground: #f5f4ee;
+  --muted-foreground: #b3bdb6;
+  --primary: #91c6a9;
+  --primary-foreground: #11251a;
+  --border: #33463b;
+  --focus: #91c6a9;
+  --success: #91d5a7;
+  --warning: #f2cf75;
+  --error: #ffb4a9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  --color-focus: var(--focus);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  body {
+    @apply min-h-dvh bg-background font-sans text-foreground antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-4 outline-focus;
+  }
+
+  ::selection {
+    @apply bg-primary text-primary-foreground;
+  }
+}

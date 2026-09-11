@@ -1,0 +1,17 @@
+{
+  "Metadata": {
+    "title": "Taxful",
+    "description": "Ihr digitaler Ort für Steuerunterlagen."
+  },
+  "Home": {
+    "title": "Willkommen bei Taxful.",
+    "description": "Unsere Website entsteht. Bald erfahren Sie hier mehr über uns und unsere Leistungen."
+  },
+  "Preferences": {
+    "language": "Sprache",
+    "theme": "Darstellung",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "system": "System"
+  }
+}

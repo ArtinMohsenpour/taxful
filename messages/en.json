@@ -1,0 +1,17 @@
+{
+  "Metadata": {
+    "title": "Taxful",
+    "description": "Your digital home for tax documents."
+  },
+  "Home": {
+    "title": "Welcome to Taxful.",
+    "description": "Our website is taking shape. Soon you will find more about us and our services here."
+  },
+  "Preferences": {
+    "language": "Language",
+    "theme": "Appearance",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  }
+}
