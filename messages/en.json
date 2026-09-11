@@ -7,7 +7,17 @@
     "title": "Welcome to Taxful.",
     "description": "Our website is taking shape. Soon you will find more about us and our services here."
   },
+  "Navigation": {
+    "label": "Main navigation",
+    "home": "Taxful home",
+    "start": "Home",
+    "skip": "Skip to content",
+    "tagline": "A little more clarity."
+  },
   "Preferences": {
+    "english": "English language",
+    "switchLanguage": "Switch to German",
+    "themeAction": "Appearance: {current}. Switch to {next}",
     "language": "Language",
     "theme": "Appearance",
     "light": "Light",

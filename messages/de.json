@@ -7,7 +7,17 @@
     "title": "Willkommen bei Taxful.",
     "description": "Unsere Website entsteht. Bald erfahren Sie hier mehr über uns und unsere Leistungen."
   },
+  "Navigation": {
+    "label": "Hauptnavigation",
+    "home": "Taxful Startseite",
+    "start": "Startseite",
+    "skip": "Zum Inhalt springen",
+    "tagline": "Ein bisschen mehr Klarheit."
+  },
   "Preferences": {
+    "english": "Englische Sprache",
+    "switchLanguage": "Zu Englisch wechseln",
+    "themeAction": "Darstellung: {current}. Zu {next} wechseln",
     "language": "Sprache",
     "theme": "Darstellung",
     "light": "Hell",

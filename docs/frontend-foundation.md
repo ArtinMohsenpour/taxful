@@ -30,6 +30,10 @@ Payload content localization is configured for the same locales with German fall
 
 ## Themes
 
+`patches/next-themes@0.4.6.patch` fixes upstream issue https://github.com/pacocoursey/next-themes/issues/397. The package's startup-script component uses `useSyncExternalStore` with a true server snapshot and false client snapshot: initial SSR/hydration preserves the executable bootstrap, while client remounts omit it. Both ESM and CommonJS entry points are patched through pnpm. Remove the patch only after an upstream release fixes the issue and the development-console regression passes. Do not disable SSR or suppress console errors as a workaround.
+
+The shared navbar uses a DE/EN switch with a sliding indicator and a single theme button cycling light, dark, and system. Both support keyboard activation and translated accessible names. Color and indicator transitions are implemented in CSS and respect reduced-motion preferences. Palette tokens follow warm ivory, stone, and sage, with a separate darker brand-ink token for readable text.
+
 The frontend provider uses next-themes with a `class` attribute, system default, and the `taxful-theme` localStorage key. Its startup script applies the stored/system preference before hydration. Only the HTML element suppresses the expected attribute hydration difference. Theme controls wait until hydration before displaying the stored choice; the page itself remains server rendered.
 
 ## Verification

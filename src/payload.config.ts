@@ -19,6 +19,11 @@ export default buildConfig({
     },
   },
   collections: [Users, Media],
+  localization: {
+    locales: ['de', 'en'],
+    defaultLocale: 'de',
+    fallback: true,
+  },
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
