@@ -87,8 +87,12 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('de' | 'en') | ('de' | 'en')[];
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    navbar: Navbar;
+  };
+  globalsSelect: {
+    navbar: NavbarSelect<false> | NavbarSelect<true>;
+  };
   locale: 'de' | 'en';
   widgets: {
     collections: CollectionsWidget;
@@ -314,6 +318,103 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * Reorder items by dragging. Translate labels using the locale selector. Publish to update the public navigation. Internal paths link to pages; they do not create pages.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "navbar".
+ */
+export interface Navbar {
+  id: number;
+  /**
+   * Upload or choose an image to replace the Taxful branding. A transparent logo works best. Remove it to restore the default.
+   */
+  logo?: (number | null) | Media;
+  items?:
+    | {
+        label: string;
+        type: 'link' | 'dropdown';
+        appearance?: ('link' | 'button') | null;
+        link?: {
+          type: 'internal' | 'external';
+          /**
+           * Use / for home or a slug such as about. Do not include /de or /en. This links to a page; it does not create one.
+           */
+          path?: string | null;
+          /**
+           * Full URL beginning with https:// or http://.
+           */
+          url?: string | null;
+          newTab?: boolean | null;
+        };
+        children?:
+          | {
+              label: string;
+              description?: string | null;
+              link: {
+                type: 'internal' | 'external';
+                /**
+                 * Use / for home or a slug such as about. Do not include /de or /en. This links to a page; it does not create one.
+                 */
+                path?: string | null;
+                /**
+                 * Full URL beginning with https:// or http://.
+                 */
+                url?: string | null;
+                newTab?: boolean | null;
+              };
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "navbar_select".
+ */
+export interface NavbarSelect<T extends boolean = true> {
+  logo?: T;
+  items?:
+    | T
+    | {
+        label?: T;
+        type?: T;
+        appearance?: T;
+        link?:
+          | T
+          | {
+              type?: T;
+              path?: T;
+              url?: T;
+              newTab?: T;
+            };
+        children?:
+          | T
+          | {
+              label?: T;
+              description?: T;
+              link?:
+                | T
+                | {
+                    type?: T;
+                    path?: T;
+                    url?: T;
+                    newTab?: T;
+                  };
+              id?: T;
+            };
+        id?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -8,6 +8,8 @@
     "description": "Our website is taking shape. Soon you will find more about us and our services here."
   },
   "Navigation": {
+    "login": "Log in",
+    "loginSoon": "Login will be available soon",
     "label": "Main navigation",
     "home": "Taxful home",
     "start": "Home",

@@ -8,6 +8,8 @@
     "description": "Unsere Website entsteht. Bald erfahren Sie hier mehr über uns und unsere Leistungen."
   },
   "Navigation": {
+    "login": "Anmelden",
+    "loginSoon": "Die Anmeldung ist bald verfügbar",
     "label": "Hauptnavigation",
     "home": "Taxful Startseite",
     "start": "Startseite",

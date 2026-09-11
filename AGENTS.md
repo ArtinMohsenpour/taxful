@@ -55,7 +55,8 @@ next-themes 0.4.6 has a tracked pnpm patch for its React client-remount script w
 
 ## Repository state and generated files
 
-- `src/payload.config.ts` is the Payload entry point and currently registers only `Users` and `Media`.
+- `src/payload.config.ts` registers `Users`, `Media`, and the localized `Navbar` global. See `docs/navbar.md` for editor usage and database setup.
+- PostgreSQL schema push is disabled. Use reviewed migrations; the initial migration targets an empty database and must not be replayed over existing tables.
 - `src/app/(frontend)/` contains the placeholder public site.
 - `src/app/(payload)/` contains Payload routes and admin UI. Files marked as automatically generated must not be edited manually.
 - `src/payload-types.ts` is generated. Run `pnpm generate:types` after schema changes; do not hand-edit it.
@@ -141,7 +142,9 @@ Semantic tokens live in `src/app/globals.css` and map to Tailwind v4 utilities w
 | accent | `#EAE2D6` | `#343B2D` |
 | brand ink | `#52613F` | `#BDCBA6` |
 
-Use primary for sage surfaces and primary foreground for their text; use brand ink for olive text on pale surfaces. Check contrast when introducing new combinations. The navbar has two animated controls: a DE/EN switch and a light/dark/system cycling button. Keep keyboard labels localized and disable motion under prefers-reduced-motion.
+Use primary for sage surfaces and primary foreground for their text; use brand ink for olive text on pale surfaces. Check contrast when introducing new combinations. The navbar has two animated controls: a DE/EN switch and a light/dark toggle. The system preference is used initially, without a separate system icon. Keep keyboard labels localized and disable motion under prefers-reduced-motion.
+
+Navbar items are read from the published Payload global for each request, with German fallback. CMS users may edit and publish navigation; revisit this access rule before adding client accounts to Users. The login button is a disabled placeholder until authentication is implemented.
 
 Support light, dark, and system preferences; persist explicit choices and prevent initial theme flashing. Target WCAG 2.2 AA, keyboard navigation, visible focus, meaningful semantics, reduced motion, and responsive layouts from mobile upward.
 

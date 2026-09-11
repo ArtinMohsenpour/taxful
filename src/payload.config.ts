@@ -7,6 +7,7 @@ import sharp from 'sharp'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Navbar } from './globals/Navbar'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -19,6 +20,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Media],
+  globals: [Navbar],
   localization: {
     locales: ['de', 'en'],
     defaultLocale: 'de',
@@ -30,6 +32,8 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: postgresAdapter({
+    // Preserve existing data/schema; use reviewed migrations rather than automatic drops.
+    push: false,
     pool: {
       connectionString: process.env.DATABASE_URL || '',
     },

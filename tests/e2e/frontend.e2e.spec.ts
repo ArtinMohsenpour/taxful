@@ -52,7 +52,7 @@ test('supports system, dark, and light themes with persistence and no hydration 
   await page.goto(`${origin}/en`)
   const theme = page.getByRole('button', { name: /^Appearance:/ })
   await expect(theme).toBeEnabled()
-  await expect(theme).toHaveAttribute('data-theme-choice', 'system')
+  await expect(theme).toHaveAttribute('data-theme-choice', 'dark')
   await expect(page.locator('html')).toHaveClass(/dark/)
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(29, 33, 27)')
   await theme.click()
@@ -83,6 +83,7 @@ test('keeps Payload paths unlocalized and rejects unsupported pages', async ({ r
 test('fits a mobile viewport', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto(`${origin}/de`)
+  await expect(page.getByRole('button', { name: 'Anmelden' })).toBeDisabled()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   )

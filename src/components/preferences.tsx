@@ -12,7 +12,7 @@ export function Preferences() {
   const t = useTranslations('Preferences')
   const pathname = usePathname()
   const router = useRouter()
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
   const [pending, startTransition] = useTransition()
   // The server cannot know localStorage or the browser's color preference.
   const mounted = useSyncExternalStore(
@@ -21,9 +21,8 @@ export function Preferences() {
     () => false,
   )
 
-  const themes = ['light', 'dark', 'system'] as const
-  const activeTheme =
-    mounted && themes.includes(theme as (typeof themes)[number]) ? theme : 'system'
+  const themes = ['light', 'dark'] as const
+  const activeTheme = mounted && resolvedTheme === 'dark' ? 'dark' : 'light'
   const themeIndex = themes.findIndex((value) => value === activeTheme)
   const nextTheme = themes[(themeIndex + 1) % themes.length]
 
@@ -70,11 +69,11 @@ export function Preferences() {
         })}
         disabled={!mounted}
         data-theme-choice={activeTheme}
-        className="preference-toggle w-[7.5rem] grid-cols-3"
+        className="preference-toggle w-[5.5rem] grid-cols-2"
         onClick={() => setTheme(nextTheme)}
       >
         <span
-          className="toggle-thumb w-[calc((100%-0.5rem)/3)]"
+          className="toggle-thumb w-[calc((100%-0.5rem)/2)]"
           style={{ transform: `translateX(${themeIndex * 100}%)` }}
         />
         {themes.map((value) => (
@@ -99,13 +98,8 @@ export function Preferences() {
                   <circle cx="12" cy="12" r="4" />
                   <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
                 </>
-              ) : value === 'dark' ? (
-                <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />
               ) : (
-                <>
-                  <rect x="3" y="4" width="18" height="13" rx="2" />
-                  <path d="M8 21h8m-4-4v4" />
-                </>
+                <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />
               )}
             </svg>
           </span>
