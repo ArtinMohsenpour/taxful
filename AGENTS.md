@@ -150,6 +150,8 @@ Support light, dark, and system preferences; persist explicit choices and preven
 
 ## Payload and authorization rules
 
+- CMS Users have required `super-admin` (owner), `manager`, or `content-editor` roles. Only owners may grant owner access or modify owner accounts. Managers manage other staff; editors can read/update only their own profile and cannot modify roles. All three roles can edit Navbar. Keep future client identities separate. See `docs/cms-users.md` for profile fields, bootstrap, and migration notes.
+
 - Reuse `CMS_VERSION_LIMIT` (25) from `src/lib/cms-settings.ts`: globals use `versions.max`, collections use `versions.maxPerDoc`. Do not enable versioning for Users or Media without a requirement.
 - Navbar supports unsaved live preview using the official hook and the shared NavbarView. Reuse `previewURL` and `requirePreviewUser` for future pages, then add their own live data renderer. Preview requests must authenticate CMS users before fetching drafts. Public requests must continue using published content.
 

@@ -127,6 +127,27 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  firstName?: string | null;
+  lastName?: string | null;
+  /**
+   * Super admins own the system and control owner access. Managers manage staff and content. Editors manage content and their own profile. You cannot change your own role.
+   */
+  role: 'super-admin' | 'manager' | 'content-editor';
+  /**
+   * Optional profile photo. Images in Media are public website assets.
+   */
+  image?: (number | null) | Media;
+  /**
+   * Optional. Include the country code, e.g. +49.
+   */
+  phoneNumber?: string | null;
+  address?: {
+    street?: string | null;
+    addressLine2?: string | null;
+    postalCode?: string | null;
+    city?: string | null;
+    country?: string | null;
+  };
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -244,6 +265,20 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  firstName?: T;
+  lastName?: T;
+  role?: T;
+  image?: T;
+  phoneNumber?: T;
+  address?:
+    | T
+    | {
+        street?: T;
+        addressLine2?: T;
+        postalCode?: T;
+        city?: T;
+        country?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;
