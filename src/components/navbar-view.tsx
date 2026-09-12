@@ -6,6 +6,7 @@ import { Link } from '@/i18n/navigation'
 import { Preferences } from './preferences'
 import Image from 'next/image'
 import type { Navbar } from '@/payload-types'
+import { CustomerAccountLink } from './customer-auth/account-link'
 
 export type NavbarLabels = Record<
   'home' | 'skip' | 'label' | 'login' | 'loginSoon' | 'menu' | 'closeMenu',
@@ -105,14 +106,7 @@ export function NavbarView({ navbar, labels }: { navbar: Navbar; labels: NavbarL
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 lg:justify-end lg:border-0 lg:pt-0">
             <Preferences />
-            <button
-              type="button"
-              disabled
-              title={labels.loginSoon}
-              className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed"
-            >
-              {labels.login}
-            </button>
+            <CustomerAccountLink loginLabel={labels.login} />
           </div>
         </div>
       </nav>

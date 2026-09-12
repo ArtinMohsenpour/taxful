@@ -15,7 +15,7 @@ Taxful is a German-first, bilingual tax-company website and secure document-proc
 
 The initial public pages are Home, Services, About, How it works, FAQ, Contact, Privacy, and Impressum. Payload should manage localized content, navigation, SEO metadata, drafts, and publishing.
 
-Start as a system for one tax-related company serving multiple clients. Do not add SaaS billing or multiple independent tax firms unless that scope is explicitly approved.
+Customer accounts now support company workspaces through Better Auth organizations, as requested by the owner. Billing, subscriptions, and document conversion remain future work.
 
 ## Domain boundaries
 
@@ -130,21 +130,32 @@ The design direction is bright, soft, and professional: warm ivory backgrounds, 
 
 Semantic tokens live in `src/app/globals.css` and map to Tailwind v4 utilities with `@theme inline`. Import this stylesheet only from the frontend locale layout; do not apply its reset to the Payload admin. Components must use semantic tokens instead of hardcoded palette values.
 
-| Token | Light | Dark |
-| --- | --- | --- |
-| background | `#F7F2EB` | `#1D211B` |
-| surface | `#FFFDF9` | `#272C23` |
-| foreground | `#30372B` | `#F7F2EB` |
-| muted foreground | `#696C60` | `#BCBFB0` |
-| primary | `#8B9A6E` | `#A6B58B` |
+| Token              | Light     | Dark      |
+| ------------------ | --------- | --------- |
+| background         | `#F7F2EB` | `#1D211B` |
+| surface            | `#FFFDF9` | `#272C23` |
+| foreground         | `#30372B` | `#F7F2EB` |
+| muted foreground   | `#696C60` | `#BCBFB0` |
+| primary            | `#8B9A6E` | `#A6B58B` |
 | primary foreground | `#20271A` | `#20271A` |
-| border | `#E2DBCF` | `#3D4435` |
-| accent | `#EAE2D6` | `#343B2D` |
-| brand ink | `#52613F` | `#BDCBA6` |
+| border             | `#E2DBCF` | `#3D4435` |
+| accent             | `#EAE2D6` | `#343B2D` |
+| brand ink          | `#52613F` | `#BDCBA6` |
 
 Use primary for sage surfaces and primary foreground for their text; use brand ink for olive text on pale surfaces. Check contrast when introducing new combinations. The navbar has two animated controls: a DE/EN switch and a light/dark toggle. The system preference is used initially, without a separate system icon. Keep keyboard labels localized and disable motion under prefers-reduced-motion.
 
-Navbar items are read from the published Payload global for each request, with German fallback. CMS users may edit and publish navigation; revisit this access rule before adding client accounts to Users. The login button is a disabled placeholder until authentication is implemented.
+Navbar items are read from the published Payload global for each request, with German fallback. CMS users may edit and publish navigation. Customer identities remain separate from Payload Users. The navbar links to customer login or the customer portal according to the customer session.
+
+## Customer authentication
+
+- Better Auth manages customer identities and database sessions in the separate PostgreSQL `customer_auth` schema. Do not alter Payload Admin authentication to implement customer features.
+- The endpoint is `/api/customer-auth`; localized customer pages include login, signup, forgot/reset password, email verification, invitation acceptance, portal, and portal security.
+- Apply reviewed customer SQL using `pnpm customer:migrate`. These migrations have their own ledger and must not be mixed with Payload migrations.
+- Organizations represent company workspaces; membership roles are owner, admin, member, and reviewer. Reviewer currently has member permissions; document-review permissions are not implemented.
+- Enforce session and organization membership on the server for all future private features. Existing portal pages use `requireCustomer` and `getCustomerWorkspace`.
+- Local email uses Mailpit (`pnpm customer:mail`, inbox http://localhost:8026). Customer email verification is required.
+- The customer `name` field is a display name from Better Auth; it is separate from staff first/last names. MFA, billing, and conversion are deferred.
+- See `docs/customer-auth.md` for setup and operational details.
 
 Support light, dark, and system preferences; persist explicit choices and prevent initial theme flashing. Target WCAG 2.2 AA, keyboard navigation, visible focus, meaningful semantics, reduced motion, and responsive layouts from mobile upward.
 
