@@ -3,17 +3,20 @@ import { ValidationError } from 'payload'
 import { cmsEditor } from '../access/cms-editor'
 import { navigationLinkFields } from '../fields/navigation-link'
 import { internalHref, externalHref } from '../lib/navigation-links'
+import { CMS_VERSION_LIMIT, previewURL } from '../lib/cms-settings'
 
 export const Navbar: GlobalConfig = {
   slug: 'navbar',
   label: 'Navbar',
   admin: {
+    livePreview: { url: ({ locale }) => previewURL(locale.code) },
+    preview: (_, { locale }) => previewURL(locale),
     group: 'Website',
     description:
       'Reorder items by dragging. Translate labels using the locale selector. Publish to update the public navigation. Internal paths link to pages; they do not create pages.',
   },
   access: { read: () => true, update: cmsEditor, readVersions: cmsEditor },
-  versions: { drafts: true },
+  versions: { drafts: true, max: CMS_VERSION_LIMIT },
   hooks: {
     beforeValidate: [
       ({ data }) => {

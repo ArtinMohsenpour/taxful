@@ -150,6 +150,9 @@ Support light, dark, and system preferences; persist explicit choices and preven
 
 ## Payload and authorization rules
 
+- Reuse `CMS_VERSION_LIMIT` (25) from `src/lib/cms-settings.ts`: globals use `versions.max`, collections use `versions.maxPerDoc`. Do not enable versioning for Users or Media without a requirement.
+- Navbar supports unsaved live preview using the official hook and the shared NavbarView. Reuse `previewURL` and `requirePreviewUser` for future pages, then add their own live data renderer. Preview requests must authenticate CMS users before fetching drafts. Public requests must continue using published content.
+
 - Default access to private collections is denied and then granted deliberately.
 - Enforce client isolation on the server for every read, write, export, and file download. Hiding UI is not authorization.
 - Payload Local API bypasses access control by default. When acting on behalf of a user, pass the user and set `overrideAccess: false`.

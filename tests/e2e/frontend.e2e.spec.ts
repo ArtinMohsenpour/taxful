@@ -80,10 +80,21 @@ test('keeps Payload paths unlocalized and rejects unsupported pages', async ({ r
   expect(response.status()).toBe(404)
 })
 
+test('requires CMS authentication for draft preview', async ({ request }) => {
+  const response = await request.get(`${origin}/de?preview=true`)
+  expect(response.status()).toBe(404)
+})
+
 test('fits a mobile viewport', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto(`${origin}/de`)
+  const menu = page.getByRole('button', { name: 'Menü öffnen' })
+  await expect(menu).toHaveAttribute('aria-expanded', 'false')
+  await menu.click()
   await expect(page.getByRole('button', { name: 'Anmelden' })).toBeDisabled()
+  await page.keyboard.press('Escape')
+  await expect(menu).toBeFocused()
+  await expect(menu).toHaveAttribute('aria-expanded', 'false')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   )

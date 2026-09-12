@@ -2,6 +2,16 @@
 
 Open `/admin/globals/navbar` or **Website → Navbar** in Payload.
 
+## Live preview and history
+
+Open **Live Preview** in the Navbar editor to see unsaved changes alongside the form. Select Mobile, Tablet, or Desktop and switch the editor locale to preview German or English. The regular Preview button opens the latest saved draft. Public visitors continue seeing published content until you publish.
+
+Preview requires a signed-in CMS user. It shares the production Navbar renderer, including Media logo population. No autosave is needed for live updates, so typing does not create database versions.
+
+Navbar keeps at most 25 versions using Payload's built-in retention on new version creation. Users and Media have no version history enabled. Future versioned collections should use `maxPerDoc: CMS_VERSION_LIMIT`; globals use `max: CMS_VERSION_LIMIT`. Future pages can reuse `previewURL`, `requirePreviewUser`, and the same server-data/client-preview pattern. Their content models and renderers still need to be built.
+
+Implementation follows [Payload's client live-preview documentation](https://payloadcms.com/docs/live-preview/client).
+
 Use **Company logo** to upload or select an image from Media, then publish. Its aspect ratio is preserved and it replaces the default Taxful branding. Remove the image to restore the default. The current internal page has an accent background; dropdown parents also highlight when a child is active.
 
 The additive `20260911_141108_navbar_logo` migration adds optional Media references to the Navbar and its versions. Its SQL has been applied to the existing local development database, whose migration history still requires baselining as described below.

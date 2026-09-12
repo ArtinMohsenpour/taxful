@@ -5,7 +5,8 @@
   },
   "Home": {
     "title": "Willkommen bei Taxful.",
-    "description": "Unsere Website entsteht. Bald erfahren Sie hier mehr über uns und unsere Leistungen."
+    "description": "Unsere Website entsteht. Bald erfahren Sie hier mehr über uns und unsere Leistungen.",
+    "eyebrow": "Ein bisschen mehr Klarheit."
   },
   "Navigation": {
     "login": "Anmelden",
@@ -14,7 +15,9 @@
     "home": "Taxful Startseite",
     "start": "Startseite",
     "skip": "Zum Inhalt springen",
-    "tagline": "Ein bisschen mehr Klarheit."
+    "tagline": "Ein bisschen mehr Klarheit.",
+    "menu": "Menü öffnen",
+    "closeMenu": "Menü schließen"
   },
   "Preferences": {
     "english": "Englische Sprache",

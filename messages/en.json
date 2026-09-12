@@ -5,7 +5,8 @@
   },
   "Home": {
     "title": "Welcome to Taxful.",
-    "description": "Our website is taking shape. Soon you will find more about us and our services here."
+    "description": "Our website is taking shape. Soon you will find more about us and our services here.",
+    "eyebrow": "A little more clarity."
   },
   "Navigation": {
     "login": "Log in",
@@ -14,7 +15,9 @@
     "home": "Taxful home",
     "start": "Home",
     "skip": "Skip to content",
-    "tagline": "A little more clarity."
+    "tagline": "A little more clarity.",
+    "menu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "Preferences": {
     "english": "English language",

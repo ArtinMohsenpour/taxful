@@ -80,12 +80,26 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .mobile-nav-open {
+    animation: menu-reveal 220ms ease-out;
+  }
   body,
   .site-navbar {
     transition:
       background-color 300ms ease,
       color 300ms ease,
       border-color 300ms ease;
+  }
+}
+
+@keyframes menu-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
