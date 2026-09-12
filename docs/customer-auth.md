@@ -23,7 +23,9 @@ Both `/de` and `/en` offer `/signup`, `/login`, `/forgot-password`, `/reset-pass
 
 The customer schema contains users, accounts, sessions, verifications, organizations, organization memberships, organization invitations, rate limits, and its migration ledger. A company is an organization; an individual customer can belong to multiple companies. Membership permissions are checked through Better Auth on the server. Owners and administrators manage invitations; reviewer currently has ordinary member permissions. Future document operations must enforce organization access independently of visible UI controls.
 
-Better Auth's `name` is a full display name, not a structured legal name. First and last names can be introduced separately if product requirements need them, while retaining a derived display name for authentication UI.
+Signup and profile use separate first and last names, required and limited to 75 characters each. The server derives Better Auth's display name. Migration 0003 adds nullable columns for existing customers without guessing how to split their names; those customers enter both parts when they next save their profile. New registrations require both fields.
+
+The portal has a responsive sidebar with Overview, File converter, Files, Team, Profile, Account security, and Sign out. Company creation stays on the overview, and the company switcher persists across portal pages. Invitations live on Team. Converter and Files are clearly labeled placeholders for future functionality. Each workspace icon is an individual SVG in `public/icons/`.
 
 ## Authentication settings
 

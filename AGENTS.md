@@ -154,7 +154,9 @@ Navbar items are read from the published Payload global for each request, with G
 - Organizations represent company workspaces; membership roles are owner, admin, member, and reviewer. Reviewer currently has member permissions; document-review permissions are not implemented.
 - Enforce session and organization membership on the server for all future private features. Existing portal pages use `requireCustomer` and `getCustomerWorkspace`.
 - Local email uses Mailpit (`pnpm customer:mail`, inbox http://localhost:8026). Customer email verification is required.
-- The customer `name` field is a display name from Better Auth; it is separate from staff first/last names. MFA, billing, and conversion are deferred.
+- Customer signup and profile use required `firstName` and `lastName` fields (75 characters each). Server hooks derive Better Auth's display `name`. Migration 0003 preserves existing display names without guessing name parts; existing customers complete those fields when saving their profile.
+- Portal navigation uses a responsive sidebar: overview, converter, files, team, profile, security, and logout. Converter and Files are explicit placeholders. Workspace and invitation-role dropdowns share an animated keyboard-accessible control. Workspace SVG icons live in `public/icons/` and are rendered with a color-inheriting mask.
+- MFA, billing, and conversion are deferred.
 - See `docs/customer-auth.md` for setup and operational details.
 
 Support light, dark, and system preferences; persist explicit choices and prevent initial theme flashing. Target WCAG 2.2 AA, keyboard navigation, visible focus, meaningful semantics, reduced motion, and responsive layouts from mobile upward.

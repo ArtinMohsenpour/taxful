@@ -5,8 +5,17 @@ import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { customerAuth } from '@/lib/customer-auth/client'
 import { buttonClass, inputClass } from './auth-form'
+import { Icon } from './icon'
 
-export function ProfileForm({ name, email }: { name: string; email: string }) {
+export function ProfileForm({
+  firstName,
+  lastName,
+  email,
+}: {
+  firstName?: string | null
+  lastName?: string | null
+  email: string
+}) {
   const t = useTranslations('Auth')
   const router = useRouter()
   const [pending, setPending] = useState(false)
@@ -16,8 +25,10 @@ export function ProfileForm({ name, email }: { name: string; email: string }) {
     setPending(true)
     setMessage('')
     try {
+      const data = new FormData(event.currentTarget)
       const result = await customerAuth.updateUser({
-        name: String(new FormData(event.currentTarget).get('name') || '').trim(),
+        firstName: String(data.get('firstName') || '').trim(),
+        lastName: String(data.get('lastName') || '').trim(),
       })
       setMessage(t(result.error ? 'genericError' : 'saved'))
       if (!result.error) router.refresh()
@@ -29,17 +40,21 @@ export function ProfileForm({ name, email }: { name: string; email: string }) {
   }
   return (
     <form onSubmit={submit} className="space-y-5">
-      <label className="block space-y-2 text-sm font-medium">
-        {t('name')}
-        <input
-          name="name"
-          defaultValue={name}
-          required
-          maxLength={150}
-          autoComplete="name"
-          className={inputClass}
-        />
-      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {(['firstName', 'lastName'] as const).map((field) => (
+          <label key={field} className="block space-y-2 text-sm font-medium">
+            {t(field)}
+            <input
+              name={field}
+              defaultValue={(field === 'firstName' ? firstName : lastName) || ''}
+              required
+              maxLength={75}
+              autoComplete={field === 'firstName' ? 'given-name' : 'family-name'}
+              className={inputClass}
+            />
+          </label>
+        ))}
+      </div>
       <div>
         <p className="text-sm font-medium">{t('email')}</p>
         <p className="mt-2 break-all text-muted-foreground">{email}</p>
@@ -124,7 +139,7 @@ export function LogoutButton() {
     <div>
       <button
         disabled={pending}
-        className="rounded-full border border-border px-5 py-3 text-sm font-medium hover:bg-accent disabled:opacity-60"
+        className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-60"
         onClick={async () => {
           setPending(true)
           setError(false)
@@ -142,6 +157,7 @@ export function LogoutButton() {
           }
         }}
       >
+        <Icon name="logout" />
         {pending ? t('working') : t('logout')}
       </button>
       {error && (

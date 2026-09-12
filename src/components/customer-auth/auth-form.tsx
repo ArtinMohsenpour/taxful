@@ -70,7 +70,9 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       } else if (mode === 'signup') {
         const result = await customerAuth.signUp.email(
           {
-            name: String(data.get('name')).trim(),
+            name: `${String(data.get('firstName')).trim()} ${String(data.get('lastName')).trim()}`,
+            firstName: String(data.get('firstName')).trim(),
+            lastName: String(data.get('lastName')).trim(),
             email,
             password,
             locale,
@@ -183,16 +185,20 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         {!done && !badReset && (
           <form onSubmit={submit} className="space-y-5">
             {mode === 'signup' && (
-              <label className="block space-y-2 text-sm font-medium">
-                {t('name')}
-                <input
-                  name="name"
-                  autoComplete="name"
-                  required
-                  maxLength={150}
-                  className={inputClass}
-                />
-              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {(['firstName', 'lastName'] as const).map((field) => (
+                  <label key={field} className="block space-y-2 text-sm font-medium">
+                    {t(field)}
+                    <input
+                      name={field}
+                      autoComplete={field === 'firstName' ? 'given-name' : 'family-name'}
+                      required
+                      maxLength={75}
+                      className={inputClass}
+                    />
+                  </label>
+                ))}
+              </div>
             )}
             {emailField && (
               <label className="block space-y-2 text-sm font-medium">

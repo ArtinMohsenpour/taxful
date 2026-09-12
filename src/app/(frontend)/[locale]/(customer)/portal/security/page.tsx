@@ -3,7 +3,6 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { auth } from '@/lib/customer-auth/auth'
 import { requireCustomer } from '@/lib/customer-auth/session'
 import { ChangePasswordForm } from '@/components/customer-auth/profile-form'
-import { Link } from '@/i18n/navigation'
 import { revokeDevice } from './actions'
 
 export default async function SecurityPage() {
@@ -13,11 +12,8 @@ export default async function SecurityPage() {
   const sessions = await auth.api.listSessions({ headers: await headers() })
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/portal" className="text-sm text-brand-ink underline">
-        {t('portal')}
-      </Link>
-      <h1 className="mt-5 mb-8 text-4xl font-medium tracking-tight">{t('security')}</h1>
-      <div className="grid items-start gap-6 md:grid-cols-2">
+      <h1 className="mb-8 text-3xl font-medium tracking-tight">{t('security')}</h1>
+      <div className="grid items-start gap-6 xl:grid-cols-2">
         <section className="rounded-3xl border border-border bg-surface p-6">
           <h2 className="mb-6 text-xl font-semibold">{t('changePassword')}</h2>
           <ChangePasswordForm />

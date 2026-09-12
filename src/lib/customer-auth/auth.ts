@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth'
+import { APIError } from 'better-auth/api'
 import { organization } from 'better-auth/plugins'
 import { ownerAc, adminAc, memberAc } from 'better-auth/plugins/organization/access'
 import { after } from 'next/server'
@@ -7,6 +8,16 @@ import { emailLocale, sendCustomerEmail } from './email'
 import { customerReturnPath } from './navigation'
 
 const baseURL = process.env.BETTER_AUTH_URL
+function customerName(input: object) {
+  const user = input as { firstName?: unknown; lastName?: unknown }
+  const firstName = typeof user.firstName === 'string' ? user.firstName.trim() : ''
+  const lastName = typeof user.lastName === 'string' ? user.lastName.trim() : ''
+  if (!firstName || !lastName || firstName.length > 75 || lastName.length > 75)
+    throw new APIError('BAD_REQUEST', {
+      message: 'First and last name are required (up to 75 characters each).',
+    })
+  return { firstName, lastName, name: `${firstName} ${lastName}` }
+}
 if (!baseURL || !process.env.BETTER_AUTH_SECRET)
   throw new Error('Run pnpm customer:setup to configure customer authentication')
 
@@ -19,7 +30,25 @@ export const auth = betterAuth({
   database: customerPool,
   user: {
     modelName: 'customer_users',
-    additionalFields: { locale: { type: 'string', defaultValue: 'de', required: false } },
+    additionalFields: {
+      locale: { type: 'string', defaultValue: 'de', required: false },
+      firstName: { type: 'string', required: true },
+      lastName: { type: 'string', required: true },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: { before: async (user) => ({ data: { ...user, ...customerName(user) } }) },
+      update: {
+        before: async (user) => {
+          if ('firstName' in user || 'lastName' in user)
+            return { data: { ...user, ...customerName(user) } }
+          if ('name' in user)
+            throw new APIError('BAD_REQUEST', { message: 'Update first and last name together.' })
+          return { data: user }
+        },
+      },
+    },
   },
   account: { modelName: 'customer_accounts', accountLinking: { enabled: false } },
   verification: { modelName: 'customer_verifications' },

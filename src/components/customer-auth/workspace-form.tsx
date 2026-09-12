@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { customerAuth } from '@/lib/customer-auth/client'
 import { inputClass, buttonClass } from './auth-form'
+import { WorkspaceSelect } from './workspace-select'
 
 export function WorkspaceForm() {
   const t = useTranslations('Auth')
@@ -75,35 +76,25 @@ export function WorkspaceSwitcher({
   const [error, setError] = useState(false)
   return (
     <div>
-      <label className="block space-y-2 text-sm font-medium">
-        {t('switchWorkspace')}
-        <select
-          className={inputClass}
-          value={activeId}
-          disabled={pending}
-          onChange={async (event) => {
-            setPending(true)
-            setError(false)
-            try {
-              const result = await customerAuth.organization.setActive({
-                organizationId: event.target.value,
-              })
-              if (result.error) setError(true)
-              else router.refresh()
-            } catch {
-              setError(true)
-            } finally {
-              setPending(false)
-            }
-          }}
-        >
-          {organizations.map((org) => (
-            <option key={org.id} value={org.id}>
-              {org.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <WorkspaceSelect
+        label={t('switchWorkspace')}
+        value={activeId}
+        disabled={pending}
+        options={organizations.map((org) => ({ value: org.id, label: org.name }))}
+        onChange={async (organizationId) => {
+          setPending(true)
+          setError(false)
+          try {
+            const result = await customerAuth.organization.setActive({ organizationId })
+            if (result.error) setError(true)
+            else router.refresh()
+          } catch {
+            setError(true)
+          } finally {
+            setPending(false)
+          }
+        }}
+      />
       {error && (
         <p role="alert" className="mt-2 text-sm text-error">
           {t('genericError')}

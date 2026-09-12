@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { customerAuth } from '@/lib/customer-auth/client'
 import { buttonClass, inputClass } from './auth-form'
+import { WorkspaceSelect } from './workspace-select'
 
 export function InviteForm({ organizationId, owner }: { organizationId: string; owner: boolean }) {
   const t = useTranslations('Auth')
@@ -12,6 +13,7 @@ export function InviteForm({ organizationId, owner }: { organizationId: string; 
   const router = useRouter()
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState('')
+  const [role, setRole] = useState('member')
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
@@ -30,6 +32,7 @@ export function InviteForm({ organizationId, owner }: { organizationId: string; 
       setMessage(t(result.error ? 'genericError' : 'invitationSent'))
       if (!result.error) {
         form.reset()
+        setRole('member')
         router.refresh()
       }
     } catch {
@@ -44,14 +47,18 @@ export function InviteForm({ organizationId, owner }: { organizationId: string; 
         {t('email')}
         <input name="email" type="email" required className={inputClass} />
       </label>
-      <label className="block space-y-2 text-sm font-medium">
-        {t('role')}
-        <select name="role" className={inputClass}>
-          <option value="member">{t('member')}</option>
-          <option value="reviewer">{t('reviewer')}</option>
-          {owner && <option value="admin">{t('admin')}</option>}
-        </select>
-      </label>
+      <WorkspaceSelect
+        label={t('role')}
+        name="role"
+        value={role}
+        onChange={setRole}
+        disabled={pending}
+        options={[
+          { value: 'member', label: t('member') },
+          { value: 'reviewer', label: t('reviewer') },
+          ...(owner ? [{ value: 'admin', label: t('admin') }] : []),
+        ]}
+      />
       {message && (
         <p role="status" className="text-sm text-brand-ink">
           {message}
