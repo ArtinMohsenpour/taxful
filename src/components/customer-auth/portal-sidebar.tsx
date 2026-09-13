@@ -66,8 +66,12 @@ export function PortalSidebar({
                 key={href}
                 href={href}
                 onClick={() => setOpen(false)}
-                aria-current={pathname === href ? 'page' : undefined}
-                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${index === 4 ? 'mt-5' : ''} ${pathname === href ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                aria-current={
+                  pathname === href || (href !== '/portal' && pathname.startsWith(href + '/'))
+                    ? 'page'
+                    : undefined
+                }
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${index === 4 ? 'mt-5' : ''} ${pathname === href || (href !== '/portal' && pathname.startsWith(href + '/')) ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
               >
                 <Icon name={icon} />
                 {t(label)}
@@ -77,7 +81,9 @@ export function PortalSidebar({
               </Link>
             ))}
           </nav>
-          <div className={`mt-6 border-t border-border pt-4 transition-[visibility,opacity] duration-250 motion-reduce:transition-none lg:visible lg:opacity-100 ${open ? 'visible opacity-100' : 'invisible opacity-0'}`}>
+          <div
+            className={`mt-6 border-t border-border pt-4 transition-[visibility,opacity] duration-250 motion-reduce:transition-none lg:visible lg:opacity-100 ${open ? 'visible opacity-100' : 'invisible opacity-0'}`}
+          >
             <p className="mb-2 truncate px-4 text-xs text-muted-foreground">{name}</p>
             <LogoutButton />
           </div>

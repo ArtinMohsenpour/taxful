@@ -15,7 +15,7 @@ Taxful is a German-first, bilingual tax-company website and secure document-proc
 
 The initial public pages are Home, Services, About, How it works, FAQ, Contact, Privacy, and Impressum. Payload should manage localized content, navigation, SEO metadata, drafts, and publishing.
 
-Customer accounts now support company workspaces through Better Auth organizations, as requested by the owner. Billing, subscriptions, and document conversion remain future work.
+Customer accounts support company workspaces through Better Auth organizations. Document conversion now supports extraction, human review and validated XRechnung export; billing and subscriptions remain future work.
 
 ## Domain boundaries
 
@@ -29,7 +29,7 @@ Invoice conversion and tax-return submission are different workflows:
 
 The provisional conversion MVP is: upload, extract, normalize, human review, validate, and export for one agreed input document type and one agreed target profile. Direct submission begins only after an integration proof of concept for one specifically selected ELSTER procedure.
 
-The primary audience, first output format/procedure, authorized reviewer/submitting party, and company identity are still product decisions. Do not make irreversible domain-model choices that depend on these unanswered questions.
+The first output is XRechnung 3.0.2 UBL for supported standard invoices. Company owners, admins and reviewers may approve and export. The first ELSTER procedure and authorized submitting party remain product decisions; do not make irreversible submission-model choices that depend on them.
 
 ## Current technical baseline
 
@@ -151,12 +151,15 @@ Navbar items are read from the published Payload global for each request, with G
 - Better Auth manages customer identities and database sessions in the separate PostgreSQL `customer_auth` schema. Do not alter Payload Admin authentication to implement customer features.
 - The endpoint is `/api/customer-auth`; localized customer pages include login, signup, forgot/reset password, email verification, invitation acceptance, portal, and portal security.
 - Apply reviewed customer SQL using `pnpm customer:migrate`. These migrations have their own ledger and must not be mixed with Payload migrations.
-- Organizations represent company workspaces; membership roles are owner, admin, member, and reviewer. Reviewer currently has member permissions; document-review permissions are not implemented.
+- Organizations represent company workspaces; membership roles are owner, admin, member, and reviewer. In document processing, owners, admins, and reviewers may approve/export; members may upload and save drafts. Enforce this on the server.
 - Enforce session and organization membership on the server for all future private features. Existing portal pages use `requireCustomer` and `getCustomerWorkspace`.
 - Local email uses Mailpit (`pnpm customer:mail`, inbox http://localhost:8026). Customer email verification is required.
 - Customer signup and profile use required `firstName` and `lastName` fields (75 characters each). Server hooks derive Better Auth's display `name`. Migration 0003 preserves existing display names without guessing name parts; existing customers complete those fields when saving their profile.
-- Portal navigation uses a responsive sidebar: overview, converter, files, team, profile, security, and logout. Converter and Files are explicit placeholders. Workspace and invitation-role dropdowns share an animated keyboard-accessible control. Workspace SVG icons live in `public/icons/` and are rendered with a color-inheriting mask.
-- MFA, billing, and conversion are deferred.
+- Portal navigation uses a responsive sidebar: overview, converter, files, team, profile, security, and logout. Converter and Files now implement private uploads, asynchronous extraction, review and XRechnung export. Workspace SVG icons live in `public/icons/` and are rendered with a color-inheriting mask.
+- See `docs/document-converter.md` for supported formats, data isolation, quotas, worker/services, Gemini setup and export boundaries. Do not label XRechnung as a tax return or bypass KoSIT validation. Preserve immutable approvals/exports and server-side entitlement enforcement.
+- Document progress is persisted, with conservative local-text/vision routing and at most one visual fallback. File history uses server-side search, status/type/date filters, Berlin date groups and pagination. Keep original/export download authorization and revision checks on the server. Provider response schemas are compact; full strict validation remains local.
+- File preview supports PDF canvases, normalized images, DOCX text and escaped XML. Deletion requires confirmation and current uploader/owner/admin permission; removes all document versions, preserves usage, and uses a durable storage-cleanup queue. Do not permit active workers to recreate deleted artifacts.
+- MFA, billing, ZUGFeRD and direct ELSTER submission are deferred.
 - See `docs/customer-auth.md` for setup and operational details.
 
 Support light, dark, and system preferences; persist explicit choices and prevent initial theme flashing. Target WCAG 2.2 AA, keyboard navigation, visible focus, meaningful semantics, reduced motion, and responsive layouts from mobile upward.

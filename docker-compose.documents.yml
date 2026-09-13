@@ -1,0 +1,23 @@
+services:
+  document-scanner:
+    platform: linux/amd64
+    image: clamav/clamav@sha256:1fdfd24c6f0a0fb60788481487459a6d4eda8a9b448641594e04db8410d34422
+    ports:
+      - '127.0.0.1:3310:3310'
+    volumes:
+      - document_scan_signatures:/var/lib/clamav
+    restart: unless-stopped
+    mem_limit: 2g
+  invoice-validator:
+    build: ./infrastructure/xrechnung
+    ports:
+      - '127.0.0.1:8086:8080'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 768m
+    restart: unless-stopped
+volumes:
+  document_scan_signatures:

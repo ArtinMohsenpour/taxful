@@ -8,6 +8,8 @@ const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
 const nextConfig: NextConfig = {
+  // Keep verification builds separate from an active development server.
+  distDir: process.env.TAXFUL_BUILD_DIR || '.next',
   images: {
     localPatterns: [
       {

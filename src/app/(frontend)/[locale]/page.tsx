@@ -21,7 +21,7 @@ export default async function HomePage({
       <main
         id="main"
         tabIndex={-1}
-        className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-7 pt-20 pb-24 sm:px-14 sm:py-28"
+        className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-3 pt-20 pb-24 sm:px-6 sm:py-28"
       >
         <div
           aria-hidden="true"

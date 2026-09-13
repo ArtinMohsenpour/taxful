@@ -12,13 +12,19 @@ export const metadata: Metadata = {
 export default async function CustomerLayout({ children }: { children: ReactNode }) {
   const messages = await getMessages()
   return (
-    <NextIntlClientProvider messages={{ Auth: messages.Auth, Preferences: messages.Preferences }}>
+    <NextIntlClientProvider
+      messages={{
+        Auth: messages.Auth,
+        Preferences: messages.Preferences,
+        Documents: messages.Documents,
+      }}
+    >
       <div className="min-h-dvh pt-3 sm:pt-6">
         <Navbar />
         <main
           id="main"
           tabIndex={-1}
-          className="mx-auto w-full max-w-6xl px-5 py-12 sm:px-10 sm:py-16"
+          className="mx-auto w-full max-w-6xl px-3 py-12 sm:px-6 sm:py-16"
         >
           {children}
         </main>

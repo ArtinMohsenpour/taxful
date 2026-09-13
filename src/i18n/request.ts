@@ -4,6 +4,7 @@ import { hasLocale } from 'next-intl'
 import { getRequestConfig } from 'next-intl/server'
 import { routing } from './routing'
 import { customerMessages } from '../../messages/customer'
+import { documentMessages } from '../../messages/documents'
 
 const messages = {
   de: () => import('../../messages/de.json').then((module) => module.default),
@@ -16,7 +17,11 @@ export default getRequestConfig(async ({ locale }) => {
 
   return {
     locale: requestedLocale,
-    messages: { ...(await messages[requestedLocale]()), Auth: customerMessages[requestedLocale] },
+    messages: {
+      ...(await messages[requestedLocale]()),
+      Auth: customerMessages[requestedLocale],
+      Documents: documentMessages[requestedLocale],
+    },
     timeZone: 'Europe/Berlin',
   }
 })

@@ -1,0 +1,53 @@
+import type { DocumentRecord } from '../../src/lib/documents/schema'
+export function invoiceFixture(): DocumentRecord {
+  return {
+    documentType: 'invoice',
+    documentNumber: 'TEST-2026-001',
+    documentDate: '2026-09-12',
+    currency: 'EUR',
+    buyerReference: 'TEST-BUYER',
+    paymentTerms: 'Paid in cash.',
+    paymentMeansCode: '10',
+    bankAccount: '',
+    issuer: {
+      name: 'Test Contact',
+      companyName: 'Synthetic Supplier GmbH',
+      taxId: '',
+      taxNumber: '',
+      vatId: 'DE123456788',
+      address: 'Teststraße 1',
+      postalCode: '10115',
+      city: 'Berlin',
+      country: 'DE',
+      email: 'supplier@example.test',
+      phone: '+4930123456',
+    },
+    recipient: {
+      name: 'Test Buyer',
+      companyName: 'Synthetic Buyer GmbH',
+      taxId: '',
+      taxNumber: '',
+      vatId: '',
+      address: 'Teststraße 2',
+      postalCode: '10115',
+      city: 'Berlin',
+      country: 'DE',
+      email: 'buyer@example.test',
+      phone: '',
+    },
+    netAmount: '100.00',
+    taxAmount: '19.00',
+    grossAmount: '119.00',
+    lines: [
+      {
+        description: 'Synthetic consulting service',
+        quantity: '1',
+        unitCode: 'C62',
+        unitPrice: '100.00',
+        netAmount: '100.00',
+        taxRate: '19',
+      },
+    ],
+    additionalFields: [],
+  }
+}

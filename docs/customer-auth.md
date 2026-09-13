@@ -25,7 +25,7 @@ The customer schema contains users, accounts, sessions, verifications, organizat
 
 Signup and profile use separate first and last names, required and limited to 75 characters each. The server derives Better Auth's display name. Migration 0003 adds nullable columns for existing customers without guessing how to split their names; those customers enter both parts when they next save their profile. New registrations require both fields.
 
-The portal has a responsive sidebar with Overview, File converter, Files, Team, Profile, Account security, and Sign out. Company creation stays on the overview, and the company switcher persists across portal pages. Invitations live on Team. Converter and Files are clearly labeled placeholders for future functionality. Each workspace icon is an individual SVG in `public/icons/`.
+The portal has a responsive sidebar with Overview, File converter, Files, Team, Profile, Account security, and Sign out. Company creation stays on the overview, and the company switcher persists across portal pages. Invitations live on Team. Converter and Files implement the workflow described in `docs/document-converter.md`. Each workspace icon is an individual SVG in `public/icons/`.
 
 ## Authentication settings
 

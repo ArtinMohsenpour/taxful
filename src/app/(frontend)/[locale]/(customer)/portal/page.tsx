@@ -56,9 +56,6 @@ export default async function PortalPage() {
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               {t(item === 'files' ? 'filesIntro' : 'converterIntro')}
             </p>
-            <span className="mt-5 inline-block rounded-full bg-accent px-3 py-1 text-xs text-muted-foreground">
-              {t('comingSoon')}
-            </span>
           </Link>
         ))}
       </div>
