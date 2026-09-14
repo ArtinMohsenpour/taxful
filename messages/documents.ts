@@ -1,5 +1,102 @@
 export const documentMessages = {
   en: {
+    chooseUnit: 'Choose a unit',
+    unitC62: 'Unit',
+    unitH87: 'Piece',
+    unitHUR: 'Hour',
+    unitDAY: 'Day',
+    unitMON: 'Month',
+    unitKGM: 'Kilogram',
+    unitMTR: 'Metre',
+    unitLTR: 'Litre',
+    unitMTK: 'Square metre',
+    fromDefaults: 'Default value · confirm against the invoice',
+    calculatedTotals: 'Check the invoice calculation',
+    calculatedHint:
+      'Calculated from the entered line amounts and VAT rates. We do not overwrite the source totals. Foreign sales tax must not be treated as German VAT.',
+    taxMismatchHint:
+      'The entered tax total does not match the line rates. Correct the rates or amounts using the source invoice before approval.',
+    companySettings: 'Company invoice details',
+    companySettingsHint:
+      'Save the legal details of this workspace’s company. Owners and administrators can edit them. Use the VAT ID (USt-IdNr.) and/or Steuernummer, not a personal tax ID. These details can fill missing invoice fields after the company is identified as supplier or buyer.',
+    companyProfileInvalid:
+      'Check the highlighted fields. A legal name is required; use a two-letter country code, a valid VAT ID format and a valid email where provided.',
+    saveCompany: 'Save company details',
+    companySaved: 'Company details saved for this workspace.',
+    companyEditRole: 'Only company owners and administrators can edit these details.',
+    requiredMark: '* Required',
+    optionalMark: '(Optional)',
+    oneOfMark: '(One of these required)',
+    fromCompany: 'Prefilled from company settings · verify against the invoice',
+    useCompany: 'Use your company details',
+    prefillHint:
+      'Choose which party is your company. We fill empty fields only and keep extracted values. Automatic prefill requires a matching tax identifier. Always verify the result against the source invoice.',
+    companyIsSupplier: 'My company is the supplier',
+    companyIsBuyer: 'My company is the buyer',
+    companyApplied: 'Missing fields filled from company settings. Review them before approving.',
+    companyNothingToFill: 'No empty fields could be filled. Existing values were kept.',
+    companyMismatch:
+      'This party’s VAT ID differs from your company settings. Check which party is your company before prefilling.',
+    missingCount:
+      '{count, plural, one {# field needs attention before approval} other {# fields need attention before approval}}',
+    missingHint:
+      'Select a field below to jump to it. Required fields are marked with *. You can save an incomplete draft.',
+    fieldMissing: 'Complete or correct this required field.',
+    paymentEither:
+      'Enter either the invoice’s payment terms or its due date. Both are not required.',
+    confirmMissing: 'Complete the four review confirmations before approving.',
+    approving: 'Saving approval…',
+    savingReview: 'Saving…',
+    reviewApproved: 'Review approved. You can now generate the selected export.',
+    requestTimedOut:
+      'The request took too long. Reload this document to check whether it was saved before trying again.',
+    processingActivity: 'Processing activity · Berlin time',
+    workerOffline:
+      'Processing is paused: the background processor is offline. Your original is saved. Processing resumes when the service is available.',
+    scannerOffline:
+      'Waiting for the security scanner to become available. Your original is saved; scanning has not started. Processing will resume automatically.',
+
+    supplyDate: 'Supply / service date',
+    dueDate: 'Due date (or payment terms)',
+    targetFormat: 'Export format',
+    zugferdFile: 'ZUGFeRD PDF',
+    downloadZugferd: 'Download ZUGFeRD PDF',
+    exportZugferd: 'Validate and download ZUGFeRD',
+    zugferdHint:
+      'PDF invoice with embedded EN 16931 XML. We generate the PDF from your approved data and keep the original separately.',
+    xrechnungHint:
+      'Structured XML with additional recipient routing and supplier contact details. Confirm your recipient’s requirements.',
+    unsupported: 'Not supported for invoice conversion',
+    notInvoiceTitle: 'This document needs a different workflow',
+    nonInvoiceHint:
+      'We could not confidently identify a supported invoice. No invoice fields or exports are shown. Tax notices, bank statements and other documents cannot be turned into an invoice by extracting their numbers.',
+    wageHint:
+      'This is a wage tax certificate (Lohnsteuerbescheinigung), not an invoice. Its information belongs in an income-tax return. Taxful does not yet support that ELSTER workflow.',
+    originalKept: 'Your original is safely stored. You can preview, download or delete it above.',
+    recheck: 'Check document type again',
+    wage_tax_certificate: 'Wage tax certificate',
+    bank_statement: 'Bank statement',
+    classifying: 'Identifying document type',
+    supplierIdHint: 'Provide the supplier’s VAT ID or tax number. A personal tax ID is not needed.',
+    optionalBuyerVat: 'Buyer VAT ID · if applicable',
+    paymentDetails: 'Payment',
+    paymentHint:
+      'These are payment details of the uploaded invoice, not your Taxful subscription. For a positive amount due, enter its payment terms OR due date. IBAN is only needed for SEPA transfer.',
+    xrechnungDetails: 'Additional XRechnung details',
+    routingHint:
+      'XRechnung requires a buyer reference and supplier contact details. For federal public recipients, use the Leitweg-ID provided by the recipient. B2B buyer references are not Leitweg-IDs. Email endpoints are supported here.',
+    buyerType: 'Recipient type',
+    business: 'Business',
+    public: 'Public authority',
+    leitwegId: 'Leitweg-ID / recipient routing reference',
+    supplierContact: 'Supplier contact name',
+    supplierEmail: 'Supplier email',
+    supplierPhone: 'Supplier phone',
+    buyerEmail: 'Buyer email',
+    zugferdUnavailable: 'PDF export is temporarily unavailable. Please try again.',
+    zugferdInvalid:
+      'The invoice did not pass PDF/XML validation. Check the invoice amounts and required fields.',
+    lines: 'Line items',
     preview: 'Preview document',
     exportedFile: 'Exported XML',
     close: 'Close',
@@ -52,7 +149,8 @@ export const documentMessages = {
     uploadingFile: 'Uploading and saving your original…',
     uploadSaved: 'Original saved. Processing will continue automatically.',
     title: 'Document converter',
-    intro: 'Upload a document, review the extracted facts, then approve an export.',
+    intro:
+      'Upload an invoice, review the necessary invoice details, then approve an XML or PDF export.',
     files: 'Your files',
     filesIntro: 'Track processing, review documents, and download approved exports.',
     upload: 'Upload and extract',
@@ -114,7 +212,7 @@ export const documentMessages = {
     cash: 'Cash',
     bankTransfer: 'SEPA credit transfer',
     name: 'Contact / personal name',
-    companyName: 'Company name',
+    companyName: 'Legal name / company name',
     taxId: 'Personal tax ID (IdNr)',
     taxNumber: 'Tax number (Steuernummer)',
     vatId: 'VAT ID',
@@ -169,13 +267,13 @@ export const documentMessages = {
       'Format checks do not confirm that a tax identifier exists or belongs to this person or company.',
     exportTitle: 'Validated invoice export',
     exportHint:
-      'Standard invoices with positive VAT rates are supported first. Exemptions, reverse charge, credit notes, discounts and prepayments need additional export profiles. Extra fields are retained in your review but are not automatically mapped into XRechnung.',
+      'Standard invoices with positive VAT rates are supported first. Exemptions, reverse charge, credit notes, discounts and prepayments need additional export profiles.',
     export: 'Validate and download XRechnung',
-    exportIncomplete: 'Complete or correct this field for the supported XRechnung profile.',
+    exportIncomplete: 'Complete or correct this field for the selected invoice profile.',
     exportPending: 'Approve the current revision to enable export.',
     approvalRole: 'Only company owners, administrators and reviewers can approve and export.',
     exportNote:
-      'XRechnung is an invoice format. This download is not a tax return or a submission to the Finanzamt.',
+      'XRechnung and ZUGFeRD are invoice formats. This download is not a tax return or a submission to the Finanzamt.',
     genericError: 'We couldn’t complete the request. Please try again.',
     unauthorized: 'Please sign in again.',
     unverified: 'Please verify your email.',
@@ -204,6 +302,107 @@ export const documentMessages = {
     validatorUnavailable: 'The official invoice validator is unavailable. No export was released.',
   },
   de: {
+    chooseUnit: 'Einheit auswählen',
+    unitC62: 'Einheit',
+    unitH87: 'Stück',
+    unitHUR: 'Stunde',
+    unitDAY: 'Tag',
+    unitMON: 'Monat',
+    unitKGM: 'Kilogramm',
+    unitMTR: 'Meter',
+    unitLTR: 'Liter',
+    unitMTK: 'Quadratmeter',
+    fromDefaults: 'Standardwert · mit der Rechnung abgleichen',
+    calculatedTotals: 'Rechnungsberechnung prüfen',
+    calculatedHint:
+      'Berechnet aus den eingegebenen Positionsbeträgen und Umsatzsteuersätzen. Die Originalsummen werden nicht überschrieben. Ausländische Sales Tax darf nicht als deutsche Umsatzsteuer behandelt werden.',
+    taxMismatchHint:
+      'Die eingegebene Steuersumme passt nicht zu den Steuersätzen der Positionen. Gleichen Sie Steuersätze und Beträge vor der Freigabe mit dem Original ab.',
+    companySettings: 'Rechnungsdaten des Unternehmens',
+    companySettingsHint:
+      'Speichern Sie die rechtlichen Angaben des Unternehmens dieses Arbeitsbereichs. Inhaber und Administratoren können sie bearbeiten. Verwenden Sie USt-IdNr. und/oder Steuernummer, nicht die persönliche Steuer-ID. Die Angaben können fehlende Rechnungsfelder ergänzen, sobald das Unternehmen als Lieferant oder Käufer zugeordnet ist.',
+    companyProfileInvalid:
+      'Prüfen Sie die markierten Felder. Der vollständige Firmenname ist erforderlich; verwenden Sie einen zweistelligen Ländercode sowie gegebenenfalls eine gültig formatierte USt-IdNr. und E-Mail-Adresse.',
+    saveCompany: 'Unternehmensdaten speichern',
+    companySaved: 'Unternehmensdaten für diesen Arbeitsbereich gespeichert.',
+    companyEditRole: 'Nur Inhaber und Administratoren können diese Angaben bearbeiten.',
+    requiredMark: '* Pflichtfeld',
+    optionalMark: '(Optional)',
+    oneOfMark: '(Eine der Angaben erforderlich)',
+    fromCompany: 'Aus Unternehmensdaten ergänzt · mit Rechnung abgleichen',
+    useCompany: 'Unternehmensdaten verwenden',
+    prefillHint:
+      'Wählen Sie, welche Rechnungspartei Ihr Unternehmen ist. Wir ergänzen nur leere Felder und behalten extrahierte Werte bei. Automatisches Ergänzen erfordert eine übereinstimmende steuerliche Kennung. Gleichen Sie das Ergebnis immer mit dem Original ab.',
+    companyIsSupplier: 'Mein Unternehmen ist der Lieferant',
+    companyIsBuyer: 'Mein Unternehmen ist der Käufer',
+    companyApplied:
+      'Fehlende Felder aus den Unternehmensdaten ergänzt. Bitte vor der Freigabe prüfen.',
+    companyNothingToFill:
+      'Keine leeren Felder konnten ergänzt werden. Vorhandene Werte wurden beibehalten.',
+    companyMismatch:
+      'Die USt-IdNr. dieser Partei unterscheidet sich von Ihren Unternehmensdaten. Prüfen Sie vor dem Ergänzen die Zuordnung.',
+    missingCount:
+      '{count, plural, one {# Feld muss vor der Freigabe geprüft werden} other {# Felder müssen vor der Freigabe geprüft werden}}',
+    missingHint:
+      'Wählen Sie ein Feld, um direkt dorthin zu springen. Pflichtfelder sind mit * gekennzeichnet. Ein unvollständiger Entwurf kann gespeichert werden.',
+    fieldMissing: 'Dieses Pflichtfeld ergänzen oder korrigieren.',
+    paymentEither:
+      'Zahlungsbedingungen oder Fälligkeitsdatum dieser Rechnung angeben. Nicht beide sind erforderlich.',
+    confirmMissing: 'Bestätigen Sie vor der Freigabe alle vier Prüfpunkte.',
+    approving: 'Freigabe wird gespeichert…',
+    savingReview: 'Wird gespeichert…',
+    reviewApproved: 'Prüfung freigegeben. Sie können jetzt den gewählten Export erstellen.',
+    requestTimedOut:
+      'Die Anfrage hat zu lange gedauert. Laden Sie das Dokument neu, um vor einem erneuten Versuch den Speicherstatus zu prüfen.',
+    processingActivity: 'Verarbeitungsverlauf · Berliner Zeit',
+    workerOffline:
+      'Verarbeitung pausiert: Der Hintergrunddienst ist nicht erreichbar. Ihr Original ist gespeichert. Die Verarbeitung wird fortgesetzt, sobald der Dienst verfügbar ist.',
+    scannerOffline:
+      'Warten auf den Sicherheitsprüfdienst. Ihr Original ist gespeichert; die Prüfung hat noch nicht begonnen. Die Verarbeitung wird automatisch fortgesetzt.',
+
+    supplyDate: 'Liefer- / Leistungsdatum',
+    dueDate: 'Fälligkeitsdatum (oder Zahlungsbedingungen)',
+    targetFormat: 'Exportformat',
+    zugferdFile: 'ZUGFeRD-PDF',
+    downloadZugferd: 'ZUGFeRD-PDF herunterladen',
+    exportZugferd: 'ZUGFeRD prüfen und herunterladen',
+    zugferdHint:
+      'PDF-Rechnung mit eingebettetem EN-16931-XML. Das PDF wird aus Ihren freigegebenen Angaben erstellt; das Original bleibt separat erhalten.',
+    xrechnungHint:
+      'Strukturiertes XML mit zusätzlichen Empfängerreferenzen und Lieferantenkontaktdaten. Beachten Sie die Vorgaben Ihres Empfängers.',
+    unsupported: 'Für Rechnungskonvertierung nicht unterstützt',
+    notInvoiceTitle: 'Dieses Dokument benötigt einen anderen Ablauf',
+    nonInvoiceHint:
+      'Es wurde keine unterstützte Rechnung sicher erkannt. Rechnungsfelder und Exporte werden deshalb nicht angezeigt. Steuerbescheide, Kontoauszüge und andere Dokumente lassen sich nicht durch Übernahme ihrer Zahlen in eine Rechnung umwandeln.',
+    wageHint:
+      'Dies ist eine Lohnsteuerbescheinigung, keine Rechnung. Ihre Angaben gehören in die Einkommensteuererklärung. Taxful unterstützt diesen ELSTER-Ablauf noch nicht.',
+    originalKept:
+      'Ihr Original ist gespeichert. Sie können es oben ansehen, herunterladen oder löschen.',
+    recheck: 'Dokumenttyp erneut prüfen',
+    wage_tax_certificate: 'Lohnsteuerbescheinigung',
+    bank_statement: 'Kontoauszug',
+    classifying: 'Dokumenttyp erkennen',
+    supplierIdHint:
+      'USt-IdNr. oder Steuernummer des Lieferanten angeben. Die persönliche Steuer-ID wird nicht benötigt.',
+    optionalBuyerVat: 'USt-IdNr. des Käufers · falls zutreffend',
+    paymentDetails: 'Zahlung',
+    paymentHint:
+      'Dies sind Zahlungsangaben der hochgeladenen Rechnung, nicht Ihres Taxful-Abos. Bei einem positiven Zahlbetrag sind Zahlungsbedingungen ODER Fälligkeit erforderlich. Die IBAN wird nur für eine SEPA-Überweisung benötigt.',
+    xrechnungDetails: 'Zusätzliche XRechnung-Angaben',
+    routingHint:
+      'XRechnung benötigt eine Käuferreferenz und Lieferantenkontaktdaten. Für öffentliche Empfänger des Bundes verwenden Sie deren Leitweg-ID. B2B-Käuferreferenzen sind keine Leitweg-IDs. Hier werden E-Mail-Endpunkte unterstützt.',
+    buyerType: 'Empfängertyp',
+    business: 'Unternehmen',
+    public: 'Öffentliche Stelle',
+    leitwegId: 'Leitweg-ID / Empfängerreferenz',
+    supplierContact: 'Kontaktperson des Lieferanten',
+    supplierEmail: 'E-Mail des Lieferanten',
+    supplierPhone: 'Telefon des Lieferanten',
+    buyerEmail: 'E-Mail des Käufers',
+    zugferdUnavailable: 'Der PDF-Export ist vorübergehend nicht verfügbar. Bitte erneut versuchen.',
+    zugferdInvalid:
+      'Die Rechnung hat die PDF-/XML-Prüfung nicht bestanden. Prüfen Sie Beträge und Pflichtangaben.',
+    lines: 'Rechnungspositionen',
     preview: 'Dokumentvorschau',
     exportedFile: 'Exportiertes XML',
     close: 'Schließen',
@@ -259,7 +458,8 @@ export const documentMessages = {
     uploadingFile: 'Ihr Original wird hochgeladen und gespeichert…',
     uploadSaved: 'Original gespeichert. Die Verarbeitung wird automatisch fortgesetzt.',
     title: 'Dokumentenkonverter',
-    intro: 'Dokument hochladen, extrahierte Angaben prüfen und anschließend den Export freigeben.',
+    intro:
+      'Rechnung hochladen, notwendige Rechnungsangaben prüfen und einen XML- oder PDF-Export freigeben.',
     files: 'Ihre Dateien',
     filesIntro: 'Verarbeitung verfolgen, Dokumente prüfen und freigegebene Exporte herunterladen.',
     upload: 'Hochladen und auslesen',
@@ -323,7 +523,7 @@ export const documentMessages = {
     cash: 'Barzahlung',
     bankTransfer: 'SEPA-Überweisung',
     name: 'Kontaktperson / Name',
-    companyName: 'Unternehmensname',
+    companyName: 'Vollständiger Name / Firmenname',
     taxId: 'Persönliche Steuer-ID (IdNr)',
     taxNumber: 'Steuernummer',
     vatId: 'Umsatzsteuer-ID',
@@ -379,14 +579,13 @@ export const documentMessages = {
       'Formatprüfungen bestätigen nicht, dass eine Steuernummer existiert oder dieser Person bzw. Firma gehört.',
     exportTitle: 'Validierter Rechnungsexport',
     exportHint:
-      'Zunächst werden Standardrechnungen mit positiven Umsatzsteuersätzen unterstützt. Befreiungen, Reverse Charge, Gutschriften, Rabatte und Vorauszahlungen benötigen weitere Exportprofile. Zusatzfelder bleiben in Ihrer Prüfung erhalten, werden aber nicht automatisch in XRechnung übernommen.',
+      'Zunächst werden Standardrechnungen mit positiven Umsatzsteuersätzen unterstützt. Befreiungen, Reverse Charge, Gutschriften, Rabatte und Vorauszahlungen benötigen weitere Exportprofile.',
     export: 'XRechnung prüfen und herunterladen',
-    exportIncomplete:
-      'Diese Angabe für das unterstützte XRechnung-Profil ergänzen oder korrigieren.',
+    exportIncomplete: 'Diese Angabe für das gewählte Rechnungsprofil ergänzen oder korrigieren.',
     exportPending: 'Geben Sie die aktuelle Version frei, um den Export zu aktivieren.',
     approvalRole: 'Nur Inhaber, Administratoren und Prüfer können freigeben und exportieren.',
     exportNote:
-      'XRechnung ist ein Rechnungsformat. Dieser Download ist keine Steuererklärung und keine Übermittlung an das Finanzamt.',
+      'XRechnung und ZUGFeRD sind Rechnungsformate. Dieser Download ist keine Steuererklärung und keine Übermittlung an das Finanzamt.',
     genericError: 'Die Anfrage konnte nicht abgeschlossen werden. Bitte erneut versuchen.',
     unauthorized: 'Bitte erneut anmelden.',
     unverified: 'Bitte Ihre E-Mail bestätigen.',

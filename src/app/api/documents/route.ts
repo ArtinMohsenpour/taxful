@@ -3,6 +3,7 @@ import { boundedBody, failure, json } from '@/lib/documents/http'
 import { entitlements, documentLibrary, uploadDocuments } from '@/lib/documents/service'
 import { documentFilters } from '@/lib/documents/listing'
 import { documentLimits, DocumentError, extractionReady } from '@/lib/documents/config'
+import { processingHealth } from '@/lib/documents/diagnostics'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
       ...(await documentLibrary(context, documentFilters(new URL(request.url).searchParams))),
       limits: await entitlements(context),
       aiReady: extractionReady(),
+      health: await processingHealth(),
     })
   } catch (error) {
     return failure(error)

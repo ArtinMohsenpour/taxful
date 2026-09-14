@@ -29,7 +29,7 @@ Invoice conversion and tax-return submission are different workflows:
 
 The provisional conversion MVP is: upload, extract, normalize, human review, validate, and export for one agreed input document type and one agreed target profile. Direct submission begins only after an integration proof of concept for one specifically selected ELSTER procedure.
 
-The first output is XRechnung 3.0.2 UBL for supported standard invoices. Company owners, admins and reviewers may approve and export. The first ELSTER procedure and authorized submitting party remain product decisions; do not make irreversible submission-model choices that depend on them.
+Outputs are XRechnung 3.0.2 UBL and ZUGFeRD EN16931 PDF/CII for supported standard invoices. Classify before invoice extraction; unrelated and uncertain documents must not show invoice fields or permit invoice export. Company owners, admins and reviewers may approve and export. The first ELSTER procedure and authorized submitting party remain product decisions; do not make irreversible submission-model choices that depend on them.
 
 ## Current technical baseline
 
@@ -159,7 +159,7 @@ Navbar items are read from the published Payload global for each request, with G
 - See `docs/document-converter.md` for supported formats, data isolation, quotas, worker/services, Gemini setup and export boundaries. Do not label XRechnung as a tax return or bypass KoSIT validation. Preserve immutable approvals/exports and server-side entitlement enforcement.
 - Document progress is persisted, with conservative local-text/vision routing and at most one visual fallback. File history uses server-side search, status/type/date filters, Berlin date groups and pagination. Keep original/export download authorization and revision checks on the server. Provider response schemas are compact; full strict validation remains local.
 - File preview supports PDF canvases, normalized images, DOCX text and escaped XML. Deletion requires confirmation and current uploader/owner/admin permission; removes all document versions, preserves usage, and uses a durable storage-cleanup queue. Do not permit active workers to recreate deleted artifacts.
-- MFA, billing, ZUGFeRD and direct ELSTER submission are deferred.
+- MFA, billing and direct ELSTER submission are deferred. ZUGFeRD EN16931 export now uses shared canonical invoice data, separate CII mapping, Mustangproject PDF/A generation and independent PDF/XML validation; see `docs/invoice-export-profiles.md`.
 - See `docs/customer-auth.md` for setup and operational details.
 
 Support light, dark, and system preferences; persist explicit choices and prevent initial theme flashing. Target WCAG 2.2 AA, keyboard navigation, visible focus, meaningful semantics, reduced motion, and responsive layouts from mobile upward.
@@ -241,3 +241,19 @@ The public website may launch before conversion and submission. Do not estimate 
 - Tailwind theme variables: https://tailwindcss.com/docs/theme
 - next-intl documentation: https://next-intl.dev/
 - PostgreSQL documentation: https://www.postgresql.org/docs/
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+
+## Local processing visibility
+
+Company invoice profiles live in `customer_auth.company_invoice_profiles`, editable by current owners/admins. Review shows all saved company details; prefill only fills blanks for an explicitly selected party or an unambiguous tax-identifier match. EUR/DE are marked defaults for blank fields, never replacements for source values. Keep approval field navigation, decimal arithmetic checks, official unit-code validation and persisted export failures. Never silently repair tax treatment or alter approved snapshots.
+
+`pnpm dev` now runs Next.js and the document worker together via `scripts/dev.ts`. Keep PostgreSQL and `pnpm documents:services` running. Preserve safe structured stage logs and tenant-scoped processing activity. The worker heartbeat makes offline processing visible; queued files must not highlight Safety check until claimed. Scanner outages must not consume extraction attempts or bypass malware checking.

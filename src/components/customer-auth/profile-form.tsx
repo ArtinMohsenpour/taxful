@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { customerAuth } from '@/lib/customer-auth/client'
+import { announceSignOut } from '@/lib/customer-auth/session-timeout'
 import { buttonClass, inputClass } from './auth-form'
 import { Icon } from './icon'
 
@@ -147,6 +148,7 @@ export function LogoutButton() {
             const result = await customerAuth.signOut()
             if (result.error) setError(true)
             else {
+              announceSignOut('manual')
               router.replace(`/${locale}/login`)
               router.refresh()
             }

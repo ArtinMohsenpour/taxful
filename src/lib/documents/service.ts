@@ -4,8 +4,9 @@ import { documentLimits, DocumentError } from './config'
 import { detectDocument } from './prepare'
 import { readPrivate, writePrivate, removePrivate, sha256 } from './storage'
 import { lockMembership, canDeleteDocument, type DocumentContext } from './access'
-import { recordSchema, reviewSchema, validateRecord } from './schema'
-import { generateXRechnung, validateXRechnung, xrechnungRequirements } from './xrechnung'
+import { recordSchema, reviewSchema } from './schema'
+import { generateXRechnung, validateXRechnung, invoiceRequirements } from './xrechnung'
+import { generateZugferd } from './zugferd'
 import type { PoolClient } from 'pg'
 import { documentFilters, type DocumentFilters } from './listing'
 
@@ -149,16 +150,17 @@ export async function documentLibrary(
     AND ($2='' OR position(lower($2) in lower(d.original_name))>0)
     AND ($3='all' OR ($3='exported' AND d.status='approved' AND e.id IS NOT NULL)
       OR ($3='approved' AND d.status='approved' AND e.id IS NULL)
-      OR ($3='processing' AND (d.status='processing' OR (d.export_state='generating' AND d.export_started_at>now()-interval '60 seconds')))
-      OR ($3='failed' AND (d.status IN ('failed','rejected') OR d.export_state='failed' OR (d.export_state='generating' AND d.export_started_at<=now()-interval '60 seconds')))
+      OR ($3='processing' AND (d.status='processing' OR (d.export_state='generating' AND d.export_started_at>now()-interval '120 seconds')))
+      OR ($3='failed' AND (d.status IN ('failed','rejected') OR d.export_state='failed' OR (d.export_state='generating' AND d.export_started_at<=now()-interval '120 seconds')))
       OR ($3 NOT IN ('all','exported','approved','failed','processing') AND d.status=$3))
     AND ($4='all' OR ($4='pdf' AND d.mime_type='application/pdf')
       OR ($4='word' AND d.mime_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
       OR ($4='image' AND d.mime_type LIKE 'image/%'))
     AND ($5::date IS NULL OR d.created_at >= ($5::date::timestamp AT TIME ZONE 'Europe/Berlin'))
     AND ($6::date IS NULL OR d.created_at < (($6::date+1)::timestamp AT TIME ZONE 'Europe/Berlin'))`
-  const join = `FROM customer_auth.documents d LEFT JOIN customer_auth.document_exports e
-    ON e.document_id=d.id AND e.revision=d.revision AND e.format='xrechnung-ubl-3.0.2'`
+  const join = `FROM customer_auth.documents d LEFT JOIN LATERAL
+    (SELECT min(id::text) AS id, bool_or(format='xrechnung-ubl-3.0.2') AS xrechnung, bool_or(format='zugferd-en16931') AS zugferd
+    FROM customer_auth.document_exports WHERE document_id=d.id AND revision=d.revision) e ON true`
   const values = [
     context.organizationId,
     filters.q,
@@ -176,10 +178,11 @@ export async function documentLibrary(
     const result = await client.query(
       `SELECT d.id,d.uploaded_by,d.original_name,d.mime_type,d.size_bytes,d.status,d.error_code,
       d.processing_stage,d.extraction_method,
-      CASE WHEN d.export_state='generating' AND d.export_started_at<=now()-interval '60 seconds' THEN 'failed' ELSE d.export_state END AS export_state,
+      CASE WHEN d.export_state='generating' AND d.export_started_at<=now()-interval '120 seconds' THEN 'failed' ELSE d.export_state END AS export_state,
       d.created_at,d.updated_at,
       (d.scanned_at IS NOT NULL AND d.status<>'rejected') AS source_available,
-      (e.id IS NOT NULL AND d.status='approved') AS export_available,
+      (COALESCE(e.xrechnung,false) AND d.status='approved') AS export_available,
+      (COALESCE(e.zugferd,false) AND d.status='approved') AS zugferd_available,
       to_char(d.created_at AT TIME ZONE 'Europe/Berlin','YYYY-MM-DD') AS upload_date
       ${join} WHERE ${where} ORDER BY d.created_at DESC,d.id DESC LIMIT 20 OFFSET $7`,
       [...values, (page - 1) * 20],
@@ -204,8 +207,9 @@ export async function documentLibrary(
 export async function getDocument(context: DocumentContext, id: string) {
   const result = await customerPool.query(
     `SELECT d.*,
-     CASE WHEN d.export_state='generating' AND d.export_started_at<=now()-interval '60 seconds' THEN 'failed' ELSE d.export_state END AS export_state,
-     EXISTS(SELECT 1 FROM customer_auth.document_exports e WHERE e.document_id=d.id AND e.revision=d.revision) AS export_available
+     CASE WHEN d.export_state='generating' AND d.export_started_at<=now()-interval '120 seconds' THEN 'failed' ELSE d.export_state END AS export_state,
+     EXISTS(SELECT 1 FROM customer_auth.document_exports e WHERE e.document_id=d.id AND e.revision=d.revision AND format='xrechnung-ubl-3.0.2') AS export_available,
+     EXISTS(SELECT 1 FROM customer_auth.document_exports e WHERE e.document_id=d.id AND e.revision=d.revision AND format='zugferd-en16931') AS zugferd_available
      FROM customer_auth.documents d WHERE d.id=$1 AND d.organization_id=$2`,
     [id, context.organizationId],
   )
@@ -216,14 +220,14 @@ export async function saveReview(context: DocumentContext, id: string, input: un
   const parsed = reviewSchema.safeParse(input)
   if (!parsed.success) throw new DocumentError('invalidRequest')
   const { data, revision, approve, confirmations } = parsed.data
-  if (approve && (!Object.values(confirmations).every(Boolean) || validateRecord(data).length))
+  if (approve && (!Object.values(confirmations).every(Boolean) || invoiceRequirements(data).length))
     throw new DocumentError('reviewInvalid')
   const client = await customerPool.connect()
   try {
     await client.query('BEGIN')
     await lockMembership(client, context, approve)
     const document = await client.query(
-      "SELECT status,revision,export_state,export_started_at>now()-interval '60 seconds' AS export_busy FROM customer_auth.documents WHERE id=$1 AND organization_id=$2 FOR UPDATE",
+      "SELECT status,revision,export_state,export_started_at>now()-interval '120 seconds' AS export_busy FROM customer_auth.documents WHERE id=$1 AND organization_id=$2 FOR UPDATE",
       [id, context.organizationId],
     )
     if (!document.rows[0]) throw new DocumentError('notFound', 404)
@@ -238,7 +242,7 @@ export async function saveReview(context: DocumentContext, id: string, input: un
       [randomUUID(), id, next, data, context.userId, approve],
     )
     await client.query(
-      "UPDATE customer_auth.documents SET reviewed_data=$3,revision=$4,status=$5,export_state='idle',approved_by=$6,approved_at=CASE WHEN $6::text IS NULL THEN NULL ELSE now() END,updated_at=now() WHERE id=$1 AND organization_id=$2",
+      "UPDATE customer_auth.documents SET reviewed_data=$3,revision=$4,status=$5,export_state='idle',export_issues='[]',approved_by=$6,approved_at=CASE WHEN $6::text IS NULL THEN NULL ELSE now() END,updated_at=now() WHERE id=$1 AND organization_id=$2",
       [
         id,
         context.organizationId,
@@ -267,7 +271,7 @@ export async function retryDocument(context: DocumentContext, id: string) {
     await client.query('BEGIN')
     await lockMembership(client, context)
     const result = await client.query(
-      "UPDATE customer_auth.documents SET status='queued',processing_stage='queued',error_code=NULL,lease_token=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2 AND status='failed' AND attempts<3 RETURNING id",
+      "UPDATE customer_auth.documents SET status='queued',processing_stage='queued',error_code=NULL,lease_token=NULL,updated_at=now() WHERE id=$1 AND organization_id=$2 AND status IN ('failed','unsupported') AND attempts<3 RETURNING id",
       [id, context.organizationId],
     )
     if (!result.rowCount) throw new DocumentError('invalidState', 409)
@@ -280,16 +284,20 @@ export async function retryDocument(context: DocumentContext, id: string) {
     client.release()
   }
 }
-export async function exportDocument(context: DocumentContext, id: string) {
+export async function exportDocument(
+  context: DocumentContext,
+  id: string,
+  format: 'xrechnung' | 'zugferd' = 'xrechnung',
+) {
   const claim = await customerPool.connect()
   let started: string
   try {
     await claim.query('BEGIN')
     await lockMembership(claim, context, true)
     const result = await claim.query(
-      `UPDATE customer_auth.documents SET export_state='generating',export_started_at=now(),updated_at=now()
+      `UPDATE customer_auth.documents SET export_state='generating',export_issues='[]',export_started_at=now(),updated_at=now()
       WHERE id=$1 AND organization_id=$2 AND status='approved'
-      AND (export_state<>'generating' OR export_started_at<now()-interval '60 seconds') RETURNING export_started_at::text`,
+      AND (export_state<>'generating' OR export_started_at<now()-interval '120 seconds') RETURNING export_started_at::text`,
       [id, context.organizationId],
     )
     if (!result.rowCount) throw new DocumentError('exportBusy', 409)
@@ -302,21 +310,46 @@ export async function exportDocument(context: DocumentContext, id: string) {
     claim.release()
   }
   try {
-    const result = await generateDocumentExport(context, id)
+    const result = await generateDocumentExport(context, id, format)
     await customerPool.query(
-      'UPDATE customer_auth.documents SET export_state=$3,updated_at=now() WHERE id=$1 AND organization_id=$2 AND export_started_at=$4',
-      [id, context.organizationId, typeof result === 'string' ? 'idle' : 'failed', started],
+      'UPDATE customer_auth.documents SET export_state=$3,export_issues=$5,updated_at=now() WHERE id=$1 AND organization_id=$2 AND export_started_at=$4',
+      [
+        id,
+        context.organizationId,
+        typeof result === 'string' ? 'idle' : 'failed',
+        started,
+        JSON.stringify(typeof result === 'string' ? [] : result.issues),
+      ],
     )
     return result
   } catch (error) {
     await customerPool.query(
-      "UPDATE customer_auth.documents SET export_state='failed',updated_at=now() WHERE id=$1 AND organization_id=$2 AND export_started_at=$3",
-      [id, context.organizationId, started],
+      "UPDATE customer_auth.documents SET export_state='failed',export_issues=$4,updated_at=now() WHERE id=$1 AND organization_id=$2 AND export_started_at=$3",
+      [
+        id,
+        context.organizationId,
+        started,
+        JSON.stringify(
+          error instanceof DocumentError && error.issues?.length
+            ? error.issues
+            : [
+                {
+                  code: 'validation',
+                  message: error instanceof DocumentError ? error.code : 'genericError',
+                },
+              ],
+        ),
+      ],
     )
     throw error
   }
 }
-async function generateDocumentExport(context: DocumentContext, id: string) {
+async function generateDocumentExport(
+  context: DocumentContext,
+  id: string,
+  format: 'xrechnung' | 'zugferd',
+) {
+  const formatId = format === 'xrechnung' ? 'xrechnung-ubl-3.0.2' : 'zugferd-en16931'
   const client = await customerPool.connect()
   let written: string | undefined
   try {
@@ -330,21 +363,25 @@ async function generateDocumentExport(context: DocumentContext, id: string) {
     if (!doc) throw new DocumentError('notFound', 404)
     if (doc.status !== 'approved') throw new DocumentError('approvalRequired', 409)
     const existing = await client.query(
-      "SELECT id FROM customer_auth.document_exports WHERE document_id=$1 AND revision=$2 AND format='xrechnung-ubl-3.0.2'",
-      [id, doc.revision],
+      'SELECT id FROM customer_auth.document_exports WHERE document_id=$1 AND revision=$2 AND format=$3',
+      [id, doc.revision, formatId],
     )
     if (existing.rows[0]) {
       await client.query('COMMIT')
       return existing.rows[0].id as string
     }
     const data = recordSchema.parse(doc.reviewed_data)
-    const missing = xrechnungRequirements(data)
+    const missing = invoiceRequirements(data, format)
     if (missing.length) {
       await client.query('COMMIT')
-      return { issues: missing.map((field) => ({ code: field, message: 'exportIncomplete' })) }
+      return {
+        issues: missing.map((field) => ({ code: field, field, message: 'exportIncomplete' })),
+      }
     }
-    const xml = generateXRechnung(data)
-    const report = await validateXRechnung(xml)
+    const xml = format === 'xrechnung' ? generateXRechnung(data) : null
+    const zugferd = format === 'zugferd' ? await generateZugferd(data) : null
+    const bytes = zugferd?.bytes || Buffer.from(xml!)
+    const report = zugferd ? { ...zugferd.report, issues: [] } : await validateXRechnung(xml!)
     if (!report.valid) {
       await event(client, context, id, 'export_rejected', {
         revision: doc.revision,
@@ -354,14 +391,15 @@ async function generateDocumentExport(context: DocumentContext, id: string) {
       return { issues: report.issues }
     }
     written = randomUUID()
-    await writePrivate(written, Buffer.from(xml), 'export')
+    await writePrivate(written, bytes, 'export')
     await client.query(
       'INSERT INTO customer_auth.document_exports(id,document_id,revision,format,sha256,validation_report,created_by) VALUES($1,$2,$3,$4,$5,$6,$7)',
-      [written, id, doc.revision, 'xrechnung-ubl-3.0.2', sha256(xml), report, context.userId],
+      [written, id, doc.revision, formatId, sha256(bytes), report, context.userId],
     )
     await event(client, context, id, 'export_validated', {
       revision: doc.revision,
       exportId: written,
+      format: formatId,
     })
     await client.query('COMMIT')
     return written
@@ -382,20 +420,24 @@ async function generateDocumentExport(context: DocumentContext, id: string) {
 export async function downloadDocument(
   context: DocumentContext,
   id: string,
-  kind: 'source' | 'preview' | 'export',
+  kind: 'source' | 'preview' | 'export' | 'zugferd',
 ) {
   const doc = await getDocument(context, id)
   if (!doc.scanned_at || doc.status === 'rejected') throw new DocumentError('invalidState', 409)
-  if (kind === 'export') {
+  if (kind === 'export' || kind === 'zugferd') {
     if (doc.status !== 'approved') throw new DocumentError('approvalRequired', 409)
     const result = await customerPool.query(
-      'SELECT id,sha256 FROM customer_auth.document_exports WHERE document_id=$1 AND revision=$2',
-      [id, doc.revision],
+      'SELECT id,sha256 FROM customer_auth.document_exports WHERE document_id=$1 AND revision=$2 AND format=$3',
+      [id, doc.revision, kind === 'export' ? 'xrechnung-ubl-3.0.2' : 'zugferd-en16931'],
     )
     if (!result.rows[0]) throw new DocumentError('notFound', 404)
     const bytes = await readPrivate(result.rows[0].id, 'export')
     if (sha256(bytes) !== result.rows[0].sha256) throw new DocumentError('invalidFile')
-    return { bytes, mime: 'application/xml', name: 'xrechnung-' + id + '.xml' }
+    return {
+      bytes,
+      mime: kind === 'export' ? 'application/xml' : 'application/pdf',
+      name: kind === 'export' ? 'xrechnung-' + id + '.xml' : 'zugferd-' + id + '.pdf',
+    }
   }
   if (kind === 'preview' && !doc.mime_type.startsWith('image/'))
     throw new DocumentError('notFound', 404)

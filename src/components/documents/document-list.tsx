@@ -3,8 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { Icon } from '@/components/customer-auth/icon'
-import { buttonClass, inputClass } from '@/components/customer-auth/auth-form'
+import { buttonClass } from '@/components/customer-auth/auth-form'
 import { DocumentProgress } from './document-progress'
+import { ProcessingNotice, type ProcessingHealth } from './processing-notice'
 import { DocumentActions } from './document-actions'
 import { WorkspaceSelect } from '@/components/customer-auth/workspace-select'
 import type { documentMessages } from '../../../messages/documents'
@@ -21,10 +22,12 @@ type Item = {
   processing_stage: string
   export_state: string
   source_available: boolean
+  zugferd_available: boolean
   export_available: boolean
   can_delete: boolean
 }
 type Listing = {
+  health: ProcessingHealth
   documents: Item[]
   total: number
   page: number
@@ -135,6 +138,10 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
   }
   return (
     <div className="space-y-6">
+      {(upload ||
+        listing?.documents.some((item) => ['queued', 'processing'].includes(item.status))) && (
+        <ProcessingNotice health={listing?.health} />
+      )}
       {notice && (
         <p
           role="status"
@@ -241,66 +248,88 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
           setError('')
           setQuery(params.toString())
         }}
-        className="rounded-3xl border border-border bg-surface p-5"
       >
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <label className="text-xs font-medium">
-            {t('searchFiles')}
-            <input
-              name="q"
-              maxLength={120}
-              type="search"
-              className={`${inputClass} mt-2`}
-              placeholder={t('searchFiles')}
+        <div className="flex flex-wrap items-center gap-1.5 rounded-3xl border border-border bg-surface p-1.5">
+          <input
+            name="q"
+            maxLength={120}
+            type="search"
+            aria-label={t('searchFiles')}
+            placeholder={t('searchFiles')}
+            className="h-9 w-full min-w-0 rounded-full border border-border bg-background/60 px-3 text-base text-foreground transition outline-none focus:border-focus focus:ring-2 focus:ring-focus/15 sm:w-auto sm:min-w-28 sm:flex-1 sm:text-xs"
+          />
+          <div className="min-w-0 flex-1 sm:w-32 sm:flex-none">
+            <WorkspaceSelect
+              compact
+              name="status"
+              label={t('status')}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={(
+                [
+                  'all',
+                  'queued',
+                  'processing',
+                  'needs_review',
+                  'approved',
+                  'exported',
+                  'failed',
+                  'unsupported',
+                ] as const
+              ).map((value) => ({ value, label: t(value === 'all' ? 'allStatuses' : value) }))}
             />
-          </label>
-          <WorkspaceSelect
-            name="status"
-            label={t('status')}
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={(
-              [
-                'all',
-                'queued',
-                'processing',
-                'needs_review',
-                'approved',
-                'exported',
-                'failed',
-              ] as const
-            ).map((value) => ({ value, label: t(value === 'all' ? 'allStatuses' : value) }))}
-          />
-          <WorkspaceSelect
-            name="type"
-            label={t('allTypes')}
-            value={typeFilter}
-            onChange={setTypeFilter}
-            options={(['all', 'pdf', 'word', 'image'] as const).map((value) => ({
-              value,
-              label: t(
-                value === 'all'
-                  ? 'allTypes'
-                  : value === 'pdf'
-                    ? 'pdfFiles'
-                    : value === 'word'
-                      ? 'wordFiles'
-                      : 'imageFiles',
-              ),
-            }))}
-          />
-          <label className="min-w-0 text-xs font-medium">
-            {t('fromDate')}
-            <input name="from" type="date" className={`${inputClass} mt-2 min-w-0`} />
-          </label>
-          <label className="min-w-0 text-xs font-medium">
-            {t('toDate')}
-            <input name="to" type="date" className={`${inputClass} mt-2 min-w-0`} />
-          </label>
-          <div className="flex flex-wrap items-end gap-3">
-            <button type="submit" className={buttonClass}>
-              {t('filterFiles')}
-            </button>
+          </div>
+          <div className="min-w-0 flex-1 sm:w-36 sm:flex-none">
+            <WorkspaceSelect
+              compact
+              name="type"
+              label={t('allTypes')}
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={(['all', 'pdf', 'word', 'image'] as const).map((value) => ({
+                value,
+                label: t(
+                  value === 'all'
+                    ? 'allTypes'
+                    : value === 'pdf'
+                      ? 'pdfFiles'
+                      : value === 'word'
+                        ? 'wordFiles'
+                        : 'imageFiles',
+                ),
+              }))}
+            />
+          </div>
+          <div className="flex h-9 w-full items-center rounded-full border border-border bg-background/60 px-2 transition focus-within:border-focus focus-within:ring-2 focus-within:ring-focus/15 sm:w-auto">
+            {/* Chrome reserves extra width in date inputs; a fixed width keeps the calendar icon next to the date. */}
+            <input
+              name="from"
+              type="date"
+              aria-label={t('fromDate')}
+              title={t('fromDate')}
+              className="h-full min-w-0 flex-1 bg-transparent px-1 text-base text-foreground outline-none sm:w-26 sm:flex-none sm:text-xs"
+            />
+            <span aria-hidden="true" className="text-xs text-muted-foreground">
+              –
+            </span>
+            <input
+              name="to"
+              type="date"
+              aria-label={t('toDate')}
+              title={t('toDate')}
+              className="h-full min-w-0 flex-1 bg-transparent px-1 text-base text-foreground outline-none sm:w-26 sm:flex-none sm:text-xs"
+            />
+          </div>
+          <button
+            type="submit"
+            className="h-8 w-full rounded-full bg-primary px-3.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary/85 sm:mr-0.5 sm:ml-1.5 sm:w-auto"
+          >
+            {t('filterFiles')}
+          </button>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-3">
+            {listing && t('resultCount', { count: listing.total })}
             <button
               type="button"
               onClick={() => {
@@ -310,14 +339,11 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
                 setQuery('')
                 setError('')
               }}
-              className="py-3 text-sm text-muted-foreground underline underline-offset-4"
+              className="underline underline-offset-4 hover:text-foreground"
             >
               {t('clearFilters')}
             </button>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-          <span>{listing && t('resultCount', { count: listing.total })}</span>
+          </span>
           <span>{t('dateZone')}</span>
         </div>
       </form>
@@ -345,9 +371,9 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
                   .map((item) => (
                     <li
                       key={item.id}
-                      className="rounded-3xl border border-border bg-surface p-5 sm:p-6"
+                      className="relative rounded-3xl border border-border bg-surface p-5 sm:p-6"
                     >
-                      <div className="mb-5 flex items-start gap-3">
+                      <div className="mb-5 flex items-start gap-3 pr-10">
                         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                           <Icon name="files" className="text-brand-ink" />
                         </span>
@@ -372,7 +398,7 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
                       <DocumentProgress
                         status={item.status}
                         stage={item.processing_stage}
-                        exported={item.export_available}
+                        exported={item.export_available || item.zugferd_available}
                         exportState={item.export_state}
                       />
                       {item.status === 'failed' || item.status === 'rejected' ? (
@@ -385,35 +411,13 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
                         </p>
                       ) : null}
                       <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4 text-xs font-medium">
-                        <Link
-                          href={'/portal/files/' + item.id}
-                          className="rounded-full bg-primary/15 px-4 py-2.5 text-brand-ink hover:bg-primary/25"
-                        >
-                          {t('open')}
-                        </Link>
-                        {item.source_available && (
-                          <a
-                            href={'/api/documents/' + item.id + '/source'}
-                            download
-                            className="rounded-full border border-border px-4 py-2.5 hover:bg-accent"
-                          >
-                            {t('downloadSource')}
-                          </a>
-                        )}
-                        {item.export_available && (
-                          <a
-                            href={'/api/documents/' + item.id + '/export'}
-                            download
-                            className="rounded-full border border-primary/40 px-4 py-2.5 text-brand-ink hover:bg-accent"
-                          >
-                            {t('downloadExport')}
-                          </a>
-                        )}
                         <DocumentActions
                           id={item.id}
+                          reviewHref={'/portal/files/' + item.id}
                           name={item.original_name}
                           sourceAvailable={item.source_available}
                           exportAvailable={item.export_available}
+                          zugferdAvailable={item.zugferd_available}
                           canDelete={item.can_delete}
                           busy={item.status === 'processing' || item.export_state === 'generating'}
                           onDeleted={(cleanupPending) => {

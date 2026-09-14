@@ -1,52 +1,13 @@
 import { create } from 'xmlbuilder2'
 import { XMLParser, XMLValidator } from 'fast-xml-parser'
 import Decimal from 'decimal.js'
-import { type DocumentRecord, validateRecord } from './schema'
+import { type DocumentRecord } from './schema'
 import { DocumentError } from './config'
 import { createHash } from 'node:crypto'
 
 export const VALIDATOR_VERSION = 'KoSIT 1.6.3 / XRechnung 3.0.2 / 2026-08-31'
-export function xrechnungRequirements(data: DocumentRecord) {
-  const missing = validateRecord(data).map((issue) => issue.field)
-  if (data.documentType !== 'invoice') missing.push('documentType')
-  for (const side of ['issuer', 'recipient'] as const) {
-    for (const field of [
-      'companyName',
-      'address',
-      'postalCode',
-      'city',
-      'country',
-      'email',
-    ] as const)
-      if (!data[side][field].trim()) missing.push(side + '.' + field)
-    if (!/^[A-Z]{2}$/.test(data[side].country)) missing.push(side + '.country')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data[side].email)) missing.push(side + '.email')
-  }
-  if (!data.issuer.vatId && !data.issuer.taxNumber) missing.push('issuer.vatId')
-  if (!data.issuer.name) missing.push('issuer.name')
-  if (!data.issuer.phone) missing.push('issuer.phone')
-  if (!data.buyerReference) missing.push('buyerReference')
-  if (!data.paymentTerms) missing.push('paymentTerms')
-  if (!['10', '58'].includes(data.paymentMeansCode)) missing.push('paymentMeansCode')
-  if (data.paymentMeansCode === '58' && !validIban(data.bankAccount)) missing.push('bankAccount')
-  if (!data.lines.length) missing.push('lines')
-  for (const [index, line] of data.lines.entries()) {
-    if (!/^[A-Z0-9]{2,3}$/.test(line.unitCode)) missing.push('lines.' + index + '.unitCode')
-    for (const field of ['quantity', 'unitPrice', 'netAmount', 'taxRate'] as const)
-      if (!/^\d{1,15}(\.\d{1,6})?$/.test(line[field])) missing.push('lines.' + index + '.' + field)
-    if (
-      /^\d+(\.\d+)?$/.test(line.taxRate) &&
-      (new Decimal(line.taxRate).lte(0) || new Decimal(line.taxRate).gt(100))
-    )
-      missing.push('lines.' + index + '.taxRate')
-    if (/^\d+(\.\d+)?$/.test(line.quantity) && new Decimal(line.quantity).lte(0))
-      missing.push('lines.' + index + '.quantity')
-  }
-  // Initial profile handles standard positive invoices, without allowances or prepayments.
-  for (const field of ['netAmount', 'taxAmount', 'grossAmount'] as const)
-    if (data[field].startsWith('-')) missing.push(field)
-  return [...new Set(missing)]
-}
+import { xrechnungRequirements } from './invoice-requirements'
+export { invoiceRequirements, xrechnungRequirements, validIban } from './invoice-requirements'
 export function generateXRechnung(data: DocumentRecord) {
   if (xrechnungRequirements(data).length) throw new DocumentError('exportIncomplete')
   const invoice = create({ version: '1.0', encoding: 'UTF-8' }).ele('Invoice', {
@@ -72,6 +33,7 @@ export function generateXRechnung(data: DocumentRecord) {
   text(invoice, 'cbc:ProfileID', 'urn:fdc:peppol.eu:2017:poacc:billing:01:1.0')
   text(invoice, 'cbc:ID', data.documentNumber)
   text(invoice, 'cbc:IssueDate', data.documentDate)
+  if (data.dueDate) text(invoice, 'cbc:DueDate', data.dueDate)
   text(invoice, 'cbc:InvoiceTypeCode', '380')
   text(invoice, 'cbc:DocumentCurrencyCode', data.currency)
   text(invoice, 'cbc:BuyerReference', data.buyerReference)
@@ -101,6 +63,7 @@ export function generateXRechnung(data: DocumentRecord) {
       text(contact, 'cbc:ElectronicMail', info.email)
     }
   }
+  text(invoice.ele('cac:Delivery'), 'cbc:ActualDeliveryDate', data.supplyDate)
   const payment = invoice.ele('cac:PaymentMeans')
   text(payment, 'cbc:PaymentMeansCode', data.paymentMeansCode)
   if (data.paymentMeansCode === '58')
@@ -109,7 +72,7 @@ export function generateXRechnung(data: DocumentRecord) {
       'cbc:ID',
       data.bankAccount.replace(/\s/g, '').toUpperCase(),
     )
-  text(invoice.ele('cac:PaymentTerms'), 'cbc:Note', data.paymentTerms)
+  if (data.paymentTerms) text(invoice.ele('cac:PaymentTerms'), 'cbc:Note', data.paymentTerms)
   const currency = { currencyID: data.currency }
   const total = invoice.ele('cac:TaxTotal')
   text(total, 'cbc:TaxAmount', new Decimal(data.taxAmount).toFixed(2), currency)
@@ -232,13 +195,4 @@ export async function validateXRechnung(
     validator: VALIDATOR_VERSION,
     issues,
   }
-}
-
-export function validIban(value: string) {
-  const iban = value.replace(/\s/g, '').toUpperCase()
-  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(iban)) return false
-  const digits = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, (char) =>
-    String(char.charCodeAt(0) - 55),
-  )
-  return BigInt(digits) % 97n === 1n
 }

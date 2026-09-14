@@ -1,9 +1,10 @@
 import { getLocale, getTranslations } from 'next-intl/server'
-import { requireCustomer } from '@/lib/customer-auth/session'
+import { getCustomerWorkspace } from '@/lib/customer-auth/session'
 import { ProfileForm } from '@/components/customer-auth/profile-form'
+import { CompanyProfileForm } from '@/components/customer-auth/company-profile-form'
 
 export default async function ProfilePage() {
-  const session = await requireCustomer(await getLocale())
+  const { session, organization } = await getCustomerWorkspace(await getLocale())
   const t = await getTranslations('Auth')
   return (
     <div>
@@ -16,6 +17,7 @@ export default async function ProfilePage() {
           email={session.user.email}
         />
       </section>
+      <CompanyProfileForm key={organization?.id || 'none'} />
     </div>
   )
 }

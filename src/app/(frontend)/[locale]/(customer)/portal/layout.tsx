@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { getLocale } from 'next-intl/server'
 import { getCustomerWorkspace } from '@/lib/customer-auth/session'
 import { PortalSidebar } from '@/components/customer-auth/portal-sidebar'
+import { SessionTimeout } from '@/components/customer-auth/session-timeout'
 
 export default async function PortalLayout({ children }: { children: ReactNode }) {
   const { session, organizations, organization } = await getCustomerWorkspace(await getLocale())
@@ -13,6 +14,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
         name={session.user.name}
       />
       <div className="min-w-0">{children}</div>
+      <SessionTimeout />
     </div>
   )
 }

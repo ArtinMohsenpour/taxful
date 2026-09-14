@@ -6,6 +6,7 @@ import { after } from 'next/server'
 import { customerPool } from './database'
 import { emailLocale, sendCustomerEmail } from './email'
 import { customerReturnPath } from './navigation'
+import { trackSessionActivity } from './session-activity'
 
 const baseURL = process.env.BETTER_AUTH_URL
 function customerName(input: object) {
@@ -56,9 +57,10 @@ export const auth = betterAuth({
     modelName: 'customer_sessions',
     expiresIn: 60 * 60 * 24,
     updateAge: 60 * 30,
-    freshAge: 60 * 15,
+    freshAge: 60 * 30,
     cookieCache: { enabled: false },
   },
+  hooks: { before: trackSessionActivity },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 15,

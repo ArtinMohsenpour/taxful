@@ -3,13 +3,25 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { auth } from '@/lib/customer-auth/auth'
 import { requireCustomer } from '@/lib/customer-auth/session'
 import { ChangePasswordForm } from '@/components/customer-auth/profile-form'
+import { FreshSessionGuard } from '@/components/customer-auth/fresh-session-guard'
 import { revokeDevice } from './actions'
+import { isSessionNotFresh, sessionFreshness } from './freshness'
 
 export default async function SecurityPage() {
   const locale = await getLocale()
   const t = await getTranslations('Auth')
   const current = await requireCustomer(locale)
-  const sessions = await auth.api.listSessions({ headers: await headers() })
+  const freshness = await sessionFreshness(current.session.createdAt)
+  let remainingMs = freshness.remainingMs
+  let sessions: Awaited<ReturnType<typeof auth.api.listSessions>> = []
+  if (remainingMs !== 0) {
+    try {
+      sessions = await auth.api.listSessions({ headers: await headers() })
+    } catch (error) {
+      if (!isSessionNotFresh(error)) throw error
+      remainingMs = 0
+    }
+  }
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-8 text-3xl font-medium tracking-tight">{t('security')}</h1>
@@ -21,23 +33,39 @@ export default async function SecurityPage() {
         <section className="rounded-3xl border border-border bg-surface p-6">
           <h2 className="text-xl font-semibold">{t('sessions')}</h2>
           <p className="mt-3 text-sm text-muted-foreground">{t('sessionsHint')}</p>
-          <ul className="mt-5 divide-y divide-border">
-            {sessions.map((session) => (
-              <li key={session.id} className="py-4">
-                <p className="text-xs break-words text-muted-foreground">
-                  {session.userAgent || t('unknownDevice')}
-                </p>
-                {session.id === current.session.id ? (
-                  <p className="mt-2 text-sm font-semibold text-brand-ink">{t('currentSession')}</p>
-                ) : (
-                  <form action={revokeDevice}>
-                    <input type="hidden" name="sessionId" value={session.id} />
-                    <button className="mt-3 text-sm text-brand-ink underline">{t('revoke')}</button>
-                  </form>
-                )}
-              </li>
-            ))}
-          </ul>
+          <FreshSessionGuard
+            key={current.session.id}
+            email={current.user.email}
+            sessionId={current.session.id}
+            activeOrganizationId={current.session.activeOrganizationId ?? null}
+            remainingMs={remainingMs}
+            minutes={freshness.minutes}
+            rememberMe={freshness.rememberMe}
+            revokeSession={revokeDevice}
+          >
+            <ul className="mt-5 divide-y divide-border">
+              {sessions.map((session) => (
+                <li key={session.id} className="py-4">
+                  <p className="text-xs break-words text-muted-foreground">
+                    {session.userAgent || t('unknownDevice')}
+                  </p>
+                  {session.id === current.session.id ? (
+                    <p className="mt-2 text-sm font-semibold text-brand-ink">
+                      {t('currentSession')}
+                    </p>
+                  ) : (
+                    <form action={revokeDevice}>
+                      <input type="hidden" name="locale" value={locale} />
+                      <input type="hidden" name="sessionId" value={session.id} />
+                      <button className="mt-3 text-sm text-brand-ink underline">
+                        {t('revoke')}
+                      </button>
+                    </form>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </FreshSessionGuard>
         </section>
       </div>
     </div>

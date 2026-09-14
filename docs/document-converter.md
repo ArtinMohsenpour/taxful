@@ -2,13 +2,13 @@
 
 ## First supported workflow
 
-Taxful accepts PDF, DOCX, JPEG, PNG, WebP, TIFF, GIF and AVIF. Inputs go through private storage, malware scanning, bounded parsing, Gemini extraction, human review, approval and independently validated export.
+Taxful accepts PDF, DOCX, JPEG, PNG, WebP, TIFF, GIF and AVIF. Inputs go through private storage, malware scanning, bounded parsing, document classification, Gemini invoice extraction, human review, approval and independently validated export.
 
-The first official output is **XRechnung 3.0.2, UBL Invoice**. It currently handles standard positive invoices with positive VAT rates, cash or SEPA credit-transfer payment, and no discounts, prepayments, exemptions, reverse charge or credit notes. Required invoice details must be supplied and reviewed; the application does not invent them. The original document remains the source of truth. Other document types can be extracted and reviewed, but cannot be exported as invoices.
+The outputs are **XRechnung 3.0.2 UBL XML** and **ZUGFeRD EN16931 PDF with embedded CII XML**. It currently handles standard positive invoices with positive VAT rates, cash or SEPA credit-transfer payment, and no discounts, prepayments, exemptions, reverse charge or credit notes. Required invoice details must be supplied and reviewed; the application does not invent them. The original document remains the source of truth. Unrelated or uncertain documents remain available for preview/download/deletion, with no invoice form or export.
 
 ## Export research and future direction
 
-There is no universal pair of “Finanzamt file formats.” XRechnung and ZUGFeRD are invoice formats. ZUGFeRD combines structured invoice data with a PDF/A-3 representation; implementing it requires validating both the XML and PDF container. It is the next recommended invoice export, but is not implemented here. See the [federal e-invoice FAQ](https://www.e-rechnung-bund.de/faq/xrechnung/).
+There is no universal pair of “Finanzamt file formats.” XRechnung and ZUGFeRD are invoice formats. ZUGFeRD combines structured invoice data with a PDF/A-3 representation; implementing it requires validating both the XML and PDF container. It is implemented through Mustangproject with separate CII generation, PDF/A validation and XML validation. See [invoice profile decisions and source verification](invoice-export-profiles.md). See the [federal e-invoice FAQ](https://www.e-rechnung-bund.de/faq/xrechnung/).
 
 Tax-return transmission is a separate integration. [ELSTER's developer documentation](https://www.elster.de/elsterweb/infoseite/entwickler) describes ERiC as a C library for plausibility checks and encrypted transmission, with developer registration and a manufacturer ID. The first integration must select an exact procedure and period (for example a VAT advance return); a generic document-to-XML transformation is insufficient. For [supporting-document submission](https://www.elster.de/elsterweb/helpGlobal?themaGlobal=help_belegnachreichung), ELSTER accepts document attachments through its specified workflow. Invoice exports are never labelled tax returns or submissions.
 
@@ -21,18 +21,19 @@ From the project directory:
 ```sh
 pnpm customer:migrate
 pnpm documents:services
-pnpm documents:worker
+pnpm dev
 ```
 
-Run the website in another terminal with `pnpm dev`. Restart both the worker and website when changing environment settings.
+`pnpm dev` starts the website and document worker together, with live worker logs in the same terminal. The PostgreSQL container must be running. `pnpm documents:services` starts ClamAV and the validators; these services must remain running. For production or a separately supervised worker, use `pnpm documents:worker`. Restart the development command after environment changes.
 
 Set `GEMINI_API_KEY` in ignored `.env.local`. Do not use a `NEXT_PUBLIC` variable. The model is configurable with `GEMINI_MODEL`, currently `gemini-3.8-flash` from the [stable Gemini model catalog](https://ai.google.dev/gemini-api/docs/models). `DOCUMENT_AI_ENABLED=true` enables requests only when a key is present. A live synthetic invoice extraction passed on 2026-09-13. This verifies connectivity and structured extraction, not accuracy across customer documents.
 
 Local services:
 
 - ClamAV on loopback port 3310. Its initial signature update can take time; a failed or unavailable scan prevents parsing/AI extraction.
+- Mustangproject on loopback port 8087 generates and validates ZUGFeRD. Set `ZUGFERD_SERVICE_URL` if needed. Health: `http://127.0.0.1:8087/health`. The pinned, unprivileged service has a read-only filesystem, a bounded temporary directory and one generation slot. Unavailability or invalid PDF/XML blocks release.
 - KoSIT on loopback port 8086. The container runs as an unprivileged user with a read-only filesystem. Health: `http://127.0.0.1:8086/server/health`.
-- Private originals, normalized image previews and validated XML in `.private/documents`, outside `public` and ignored by Git. Files use random identifiers and restrictive permissions. Production requires a persistent private storage volume or an object-storage adapter shared by the application and worker.
+- Private originals, normalized image previews and validated XML/PDF exports in `.private/documents`, outside `public` and ignored by Git. Files use random identifiers and restrictive permissions. Production requires a persistent private storage volume or an object-storage adapter shared by the application and worker.
 
 The scanner and validator images are pinned; KoSIT artifacts are downloaded with SHA-256 verification. The validator is [KoSIT 1.6.3](https://github.com/itplr-kosit/validator/releases/tag/v1.6.3), with the [2026-08-31 XRechnung configuration](https://github.com/itplr-kosit/validator-configuration-xrechnung/releases/tag/v2026-08-31). Acceptance requires the expected XML report, its successful assessment, and its hash matching the generated invoice. Rejection or unavailable validation releases no export.
 
@@ -42,15 +43,15 @@ Migration 0004 adds documents, batches, review revisions, exports, audit events,
 
 Every request requires a verified customer session and current company membership. Mutation transactions recheck and lock membership. All queries use the server-selected company. Members can upload and save drafts. Owners, administrators and reviewers can approve and export. All members can access their company's scanned originals and current approved exports.
 
-Saving any revision clears earlier approval. Approval requires all four review confirmations plus structural and arithmetic checks. Review revisions are immutable records. Exports are immutable, hashed and unique per document/revision/format; changing a review makes earlier exports unavailable from the download endpoint. Tax-ID and VAT-ID format checks do not verify registry existence or ownership.
+Saving any revision clears earlier approval. Approval requires all four review confirmations, common invoice requirements and structural/arithmetic checks. The review UI additionally checks the selected export profile. Review revisions are immutable records. Exports are immutable, hashed and unique per document/revision/format; changing a review makes earlier exports unavailable from the download endpoint. Tax-ID and VAT-ID format checks do not verify registry existence or ownership.
 
 Upload requests use an idempotency key and a payload fingerprint. Quota updates serialize per company in a transaction. Defaults are one file per upload and ten files per Europe/Berlin calendar day; the daily limit is an initial configurable development allowance, not an agreed commercial plan. `document_entitlements` can override the daily and batch limits server-side. Maximum batch size is five, maximum total request size is 20 MiB, and default per-file size is 10 MiB. Accepted files consume quota once; failed requests do not. Retrying extraction does not charge another upload. Concurrent requests cannot exceed the company quota.
 
-The worker claims jobs using PostgreSQL row locks, processes one at a time, and runs each in a separate subprocess with a memory limit and 240-second timeout, allowing a bounded visual fallback. Stale leases fail after five minutes rather than automatically repeating a possibly billed AI request. The user can retry failed extraction up to three total attempts. Request bodies, PDF pages, image pixels, text length, ZIP entry count, expanded ZIP bytes, AI response size and validator responses are bounded.
+The worker claims jobs using PostgreSQL row locks, processes one at a time, and runs each in a separate subprocess with a memory limit and 270-second timeout, allowing a bounded visual fallback. Stale leases fail after five minutes rather than automatically repeating a possibly billed AI request. The user can retry failed extraction up to three total attempts. Request bodies, PDF pages, image pixels, text length, ZIP entry count, expanded ZIP bytes, AI response size and validator responses are bounded.
 
 ## Extraction routing and file library
 
-The implementation plan is local parsing → content-quality routing → structured extraction → deterministic checks → human review → official export validation. Existing PDF.js, Mammoth and Sharp adapters are retained. Duplicate parsers are not installed merely to claim faster processing.
+The implementation plan is local parsing → content-quality routing → document classification → invoice-only structured extraction → deterministic checks → human review → official export validation. Existing PDF.js, Mammoth and Sharp adapters are retained. Duplicate parsers are not installed merely to claim faster processing.
 
 - PDFs preserve text line breaks, column gaps and page markers. A conservative text path requires readable text on every page, no detected raster images and no wide column gaps. Other PDFs use native Gemini vision. Text-only output with missing required fields, inconsistent totals/line sums, low-confidence evidence or an unrecognized type gets at most one visual fallback. Network errors are not automatically retried by this routing layer.
 - DOCX uses local Mammoth text extraction plus normalized embedded images when present. Raster inputs use normalized image content. All supported unstructured input routes still use Gemini to interpret fields; direct import of existing structured invoice XML remains a separate future adapter.
@@ -63,7 +64,9 @@ The six visible milestones are saved, safety check, extraction, review, approval
 
 ## Preview and deletion
 
-File cards and review pages offer an authenticated preview dialog. PDFs render page-by-page on a bounded canvas using the bundled PDF.js worker; images use normalized previews. DOCX previews show extracted text and clearly identify their formatting limitation. The current approved XML is displayed as escaped text in a separate tab. Preview access uses the same company/session and clean-scan checks as downloads; uploaded HTML or Office markup is never injected into the application.
+File cards and document details share `DocumentActions`: review/preview first, then ZUGFeRD and XML downloads, then the original, all in one horizontally scrollable row. Deletion is an accessible icon button in the card's top-right corner. The toolbar uses semantic theme colors and SVG icons from `public/icons`. Review cards collapse independently without discarding input; missing-field navigation opens the relevant card. Disabled idle approval/export buttons use an unavailable cursor, reserving the waiting cursor for actual requests.
+
+File cards and review pages offer an authenticated preview dialog. PDFs render page-by-page on a bounded canvas using the bundled PDF.js worker; images use normalized previews. DOCX previews show extracted text and clearly identify their formatting limitation. The current approved XML is displayed as escaped text; ZUGFeRD PDFs have a separate canvas preview tab. Preview access uses the same company/session and clean-scan checks as downloads; uploaded HTML or Office markup is never injected into the application.
 
 An uploader may delete their own document; company owners/admins may delete any document in their company. Mutation permissions are rechecked against current membership in the transaction. Confirmation explicitly covers the original, preview, extracted data, review history and **all** export revisions. Active extraction/export blocks deletion until finished; queued documents can be deleted. Worker preview writes recheck the lease while holding the document row lock, preventing an expired job from recreating deleted artifacts.
 
@@ -95,3 +98,15 @@ TAXFUL_BUILD_DIR=.next-check pnpm build
 Integration tests use generated synthetic identities, companies and documents and remove only their own records/files. They exercise the real local scanner and KoSIT validator without calling Google. The Gemini adapter test intercepts its HTTP request and checks schema handling.
 
 Before production: supervise worker processes, isolate parser workloads at the container/OS level, configure private persistent/object storage and encrypted backups, set retention/deletion policies with orphan-file reconciliation, protect/rate-limit incoming requests at the reverse proxy, assess AI privacy terms and run representative extraction accuracy tests with the configured model. The current worker process boundary limits time/memory but is not a complete OS sandbox. Validation proves schema/business-rule conformity, not the correctness of the source invoice or tax treatment.
+
+Migration 0007 adds classification, the classifying stage and unsupported status, and moves existing unapproved records explicitly identified as receipts/tax notices/other out of invoice review. Original uploads and immutable history are preserved. Classification uses a conservative local wage-certificate detector, then Gemini. Only high-confidence invoices enter field extraction. Uncertain results may be rechecked within the existing attempt limit. Existing files are not silently sent to AI again.
+
+Exports use separate format keys per approved revision. Generation has a 120-second stale lease, exceeding the bounded 75-second PDF service request; revision/download checks and deletion cover both formats.
+
+## Processing diagnostics
+
+Migration 0008 adds worker heartbeats. A worker checks scanner readiness every five seconds and reports its health to PostgreSQL. The website treats heartbeats older than 20 seconds as offline; a lost worker can therefore take up to 20 seconds plus the UI polling interval to display. Queueing never highlights the safety-check step before a worker claims the document. A scanner outage keeps documents queued without consuming processing attempts. Database reconnect attempts are logged with safe error codes.
+
+Workers emit timestamped JSON records for claim, stage start/finish, elapsed milliseconds, completion and failures. Child output streams directly into the worker terminal. No filenames, document contents, extracted values, keys or raw provider errors are logged. The document's processing-activity panel reads a tenant-scoped, allowlisted subset of persisted audit events, with Berlin timestamps and localized errors.
+
+The clamd client settles on its NUL-terminated reply, rather than waiting for socket closure. Scanning has a 30-second absolute deadline; readiness probes have a 1.5-second deadline. Faster completion never bypasses scanning. A stalled AI call is still separately bounded and surfaced as a failure rather than silently retried.

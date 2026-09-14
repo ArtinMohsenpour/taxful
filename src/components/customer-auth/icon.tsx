@@ -14,6 +14,7 @@ export type IconName =
   | 'preview'
   | 'trash'
   | 'close'
+  | 'download'
 export function Icon({ name, className = '' }: { name: IconName; className?: string }) {
   return (
     <span

@@ -29,7 +29,7 @@ export function DocumentProgress({
       ? 5
       : status === 'needs_review'
         ? 3
-        : stage === 'extracting' || stage === 'checking'
+        : ['reading', 'extracting', 'checking', 'classifying'].includes(stage || '')
           ? 2
           : 1
   const current = exported
@@ -50,11 +50,19 @@ export function DocumentProgress({
                       ? 'reading'
                       : stage === 'checking'
                         ? 'checking'
-                        : 'processing',
+                        : stage === 'classifying'
+                          ? 'classifying'
+                          : 'processing',
                 )
               : status === 'approved'
                 ? t('approved')
                 : t('needs_review')
+  if (status === 'unsupported')
+    return (
+      <p role="status" className="rounded-xl bg-primary/10 p-3 text-sm text-brand-ink">
+        {t('unsupported')}
+      </p>
+    )
   return (
     <div className="space-y-3">
       <p
@@ -66,7 +74,7 @@ export function DocumentProgress({
       <ol aria-label={t('workflow')} className="grid grid-cols-3 gap-x-2 gap-y-3 sm:grid-cols-6">
         {steps.map((step, index) => {
           const done = index < active
-          const isCurrent = index === active
+          const isCurrent = index === active && status !== 'queued'
           const error = isCurrent && (failed || exportState === 'failed')
           const moving = isCurrent && (status === 'processing' || generating)
           return (

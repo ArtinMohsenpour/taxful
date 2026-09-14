@@ -5,7 +5,16 @@ const filters = z
   .object({
     q: z.string().trim().max(120).default(''),
     status: z
-      .enum(['all', 'queued', 'processing', 'needs_review', 'approved', 'exported', 'failed'])
+      .enum([
+        'all',
+        'queued',
+        'processing',
+        'needs_review',
+        'approved',
+        'exported',
+        'failed',
+        'unsupported',
+      ])
       .default('all'),
     type: z.enum(['all', 'pdf', 'word', 'image']).default('all'),
     from: z.union([z.iso.date(), z.literal('')]).default(''),

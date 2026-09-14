@@ -1,6 +1,23 @@
 import type { PreparedDocument } from './prepare'
 import { extractDocument } from './extract'
-import { validateRecord, reviewWarnings } from './schema'
+import { validateRecord, reviewWarnings, emptyRecord } from './schema'
+import type { Classification } from './classify'
+
+export async function extractClassifiedDocument(
+  prepared: PreparedDocument,
+  classification: Classification,
+  extract = extractDocument,
+) {
+  if (classification.kind !== 'invoice' || classification.confidence !== 'high')
+    return {
+      data: emptyRecord(classification.kind),
+      evidence: [],
+      warnings: [],
+      model: 'classification-only',
+      method: prepared.method,
+    }
+  return extractPreparedDocument(prepared, extract)
+}
 
 // Only a structurally valid response can trigger one visual fallback. Network/auth failures
 // are not retried here: another request could duplicate a billed extraction.

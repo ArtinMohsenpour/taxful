@@ -9,6 +9,7 @@ export function WorkspaceSelect({
   onChange,
   disabled = false,
   name,
+  compact = false,
 }: {
   label: string
   value: string
@@ -16,6 +17,7 @@ export function WorkspaceSelect({
   onChange: (value: string) => void
   disabled?: boolean
   name?: string
+  compact?: boolean
 }) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -46,7 +48,11 @@ export function WorkspaceSelect({
       {name && <input type="hidden" name={name} value={value} />}
       <span
         id={id + '-label'}
-        className="mb-2 block text-xs font-semibold tracking-wide text-muted-foreground"
+        className={
+          compact
+            ? 'sr-only'
+            : 'mb-2 block text-xs font-semibold tracking-wide text-muted-foreground'
+        }
       >
         {label}
       </span>
@@ -65,7 +71,7 @@ export function WorkspaceSelect({
             setOpen(true)
           }
         }}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-background px-4 py-3.5 text-left text-sm font-medium transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
+        className={`flex w-full items-center justify-between border border-border bg-background text-left font-medium transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 ${compact ? 'h-9 gap-1.5 rounded-full px-3 text-xs' : 'gap-3 rounded-2xl px-4 py-3.5 text-sm'}`}
       >
         <span id={id + '-value'} className="truncate">
           {options.find((option) => option.value === value)?.label}
@@ -112,7 +118,7 @@ export function WorkspaceSelect({
               ?.focus()
           }
         }}
-        className={`absolute inset-x-0 top-full z-40 mt-2 max-h-64 origin-top overflow-y-auto rounded-2xl border border-border bg-surface p-1.5 shadow-nav transition-[opacity,transform,visibility] duration-200 motion-reduce:transition-none ${open ? 'visible translate-y-0 scale-100 opacity-100' : 'invisible -translate-y-2 scale-95 opacity-0'}`}
+        className={`absolute top-full z-40 mt-2 max-h-64 origin-top overflow-y-auto rounded-2xl border border-border bg-surface p-1.5 shadow-nav transition-[opacity,transform,visibility] duration-200 motion-reduce:transition-none ${compact ? 'left-0 w-max max-w-64 min-w-full' : 'inset-x-0'} ${open ? 'visible translate-y-0 scale-100 opacity-100' : 'invisible -translate-y-2 scale-95 opacity-0'}`}
       >
         {options.map((option) => (
           <button

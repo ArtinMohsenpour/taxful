@@ -2,6 +2,9 @@ import type { DocumentRecord } from '../../src/lib/documents/schema'
 export function invoiceFixture(): DocumentRecord {
   return {
     documentType: 'invoice',
+    supplyDate: '2026-09-12',
+    dueDate: '',
+    buyerType: 'business',
     documentNumber: 'TEST-2026-001',
     documentDate: '2026-09-12',
     currency: 'EUR',

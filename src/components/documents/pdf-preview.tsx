@@ -3,7 +3,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { PDFDocumentProxy, PDFDocumentLoadingTask, RenderTask } from 'pdfjs-dist'
 
-export default function PdfPreview({ id }: { id: string }) {
+export default function PdfPreview({
+  id,
+  kind = 'source',
+}: {
+  id: string
+  kind?: 'source' | 'zugferd'
+}) {
   const t = useTranslations('Documents')
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null)
   const [page, setPage] = useState(1)
@@ -27,7 +33,7 @@ export default function PdfPreview({ id }: { id: string }) {
         'pdfjs-dist/build/pdf.worker.min.mjs',
         import.meta.url,
       ).toString()
-      const response = await fetch('/api/documents/' + id + '/source', {
+      const response = await fetch('/api/documents/' + id + '/' + kind, {
         cache: 'no-store',
         signal: controller.signal,
       })
@@ -44,7 +50,7 @@ export default function PdfPreview({ id }: { id: string }) {
       controller.abort()
       void task?.destroy()
     }
-  }, [id])
+  }, [id, kind])
   useEffect(() => {
     if (!pdf || !canvas.current) return
     let cancelled = false,

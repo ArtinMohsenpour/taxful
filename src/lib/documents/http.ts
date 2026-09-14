@@ -8,7 +8,8 @@ export function json(data: unknown, status = 200) {
   return Response.json(data, { status, headers: privateHeaders })
 }
 export function failure(error: unknown) {
-  if (error instanceof DocumentError) return json({ error: error.code }, error.status)
+  if (error instanceof DocumentError)
+    return json({ error: error.code, issues: error.issues }, error.status)
   // Never log file content, extracted identities, tokens, or provider errors.
   console.error('Document operation failed.')
   return json({ error: 'genericError' }, 500)

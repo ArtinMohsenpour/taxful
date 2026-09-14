@@ -20,9 +20,19 @@ export const partySchema = z
   .strict()
 export const recordSchema = z
   .object({
-    documentType: z.enum(['invoice', 'receipt', 'tax_notice', 'other']),
+    documentType: z.enum([
+      'invoice',
+      'receipt',
+      'tax_notice',
+      'wage_tax_certificate',
+      'bank_statement',
+      'other',
+    ]),
     documentNumber: text,
     documentDate: z.string().max(30),
+    supplyDate: z.string().max(30).default(''),
+    dueDate: z.string().max(30).default(''),
+    buyerType: z.enum(['business', 'public']).default('business'),
     currency: z.string().max(10),
     buyerReference: text,
     paymentTerms: text,
@@ -71,6 +81,38 @@ export const extractionSchema = z
   })
   .strict()
 export type DocumentRecord = z.infer<typeof recordSchema>
+export function emptyRecord(documentType: DocumentRecord['documentType']): DocumentRecord {
+  const party = {
+    name: '',
+    companyName: '',
+    taxId: '',
+    taxNumber: '',
+    vatId: '',
+    address: '',
+    postalCode: '',
+    city: '',
+    country: '',
+    email: '',
+    phone: '',
+  }
+  return recordSchema.parse({
+    documentType,
+    documentNumber: '',
+    documentDate: '',
+    currency: '',
+    buyerReference: '',
+    paymentTerms: '',
+    paymentMeansCode: '',
+    bankAccount: '',
+    issuer: party,
+    recipient: party,
+    netAmount: '',
+    taxAmount: '',
+    grossAmount: '',
+    lines: [],
+    additionalFields: [],
+  })
+}
 export type Evidence = z.infer<typeof extractionSchema>['evidence']
 export const reviewSchema = z
   .object({
@@ -111,6 +153,8 @@ export function validateRecord(data: DocumentRecord): ValidationIssue[] {
       add(key + '.vatId', 'vatId')
   }
   const amounts = ['netAmount', 'taxAmount', 'grossAmount'] as const
+  for (const field of ['supplyDate', 'dueDate'] as const)
+    if (data[field] && !z.iso.date().safeParse(data[field]).success) add(field, 'date')
   for (const field of amounts)
     if (data[field] && !decimalPattern.test(data[field])) add(field, 'amount')
   if (data.documentType === 'invoice' || data.documentType === 'receipt') {

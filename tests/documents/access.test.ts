@@ -130,6 +130,16 @@ test(
       assert.equal(typeof exported, 'string', JSON.stringify(exported))
       cleanupExports.push(exported as string)
       assert.equal(await exportDocument(owner, id), exported)
+      const pdfExport = await exportDocument(owner, id, 'zugferd')
+      assert.equal(typeof pdfExport, 'string')
+      cleanupExports.push(pdfExport as string)
+      assert.notEqual(pdfExport, exported)
+      assert.equal(await exportDocument(owner, id, 'zugferd'), pdfExport)
+      const pdfDownload = await downloadDocument(owner, id, 'zugferd')
+      assert.equal(pdfDownload.bytes.subarray(0, 5).toString(), '%PDF-')
+      await assert.rejects(downloadDocument(outsider, id, 'zugferd'))
+      assert.equal((await getDocument(owner, id)).zugferd_available, true)
+
       assert.equal(
         (await documentLibrary(owner, documentFilters(new URLSearchParams('status=exported'))))
           .total,
@@ -143,6 +153,7 @@ test(
         downloadDocument(owner, id, 'export'),
         (error: unknown) => error instanceof Error && error.message === 'approvalRequired',
       )
+      await assert.rejects(downloadDocument(owner, id, 'zugferd'))
       const concurrent = await Promise.allSettled([
         uploadDocuments(owner, [file], randomUUID()),
         uploadDocuments(owner, [file], randomUUID()),

@@ -51,7 +51,7 @@ export async function deleteDocument(context: DocumentContext, id: string) {
     const role = await lockMembership(client, context)
     const result = await client.query(
       `SELECT uploaded_by,status,export_state,
-      export_started_at>now()-interval '60 seconds' AS export_busy FROM customer_auth.documents
+      export_started_at>now()-interval '120 seconds' AS export_busy FROM customer_auth.documents
       WHERE id=$1 AND organization_id=$2 FOR UPDATE`,
       [id, context.organizationId],
     )

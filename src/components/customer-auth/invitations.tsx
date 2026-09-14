@@ -12,12 +12,12 @@ export function InviteForm({ organizationId, owner }: { organizationId: string; 
   const locale = useLocale()
   const router = useRouter()
   const [pending, setPending] = useState(false)
-  const [message, setMessage] = useState('')
+  const [status, setStatus] = useState<'sent' | 'error' | null>(null)
   const [role, setRole] = useState('member')
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
-    setMessage('')
+    setStatus(null)
     const form = event.currentTarget
     const data = new FormData(form)
     try {
@@ -29,23 +29,36 @@ export function InviteForm({ organizationId, owner }: { organizationId: string; 
         },
         { headers: { 'x-taxful-locale': locale } },
       )
-      setMessage(t(result.error ? 'genericError' : 'invitationSent'))
+      setStatus(result.error ? 'error' : 'sent')
       if (!result.error) {
         form.reset()
         setRole('member')
         router.refresh()
       }
     } catch {
-      setMessage(t('genericError'))
+      setStatus('error')
     } finally {
       setPending(false)
     }
   }
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <label className="block space-y-2 text-sm font-medium">
-        {t('email')}
-        <input name="email" type="email" required className={inputClass} />
+    <form
+      onSubmit={submit}
+      className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-end"
+    >
+      <label className="block">
+        {/* Matches the role select's label so both fields line up. */}
+        <span className="mb-2 block text-xs font-semibold tracking-wide text-muted-foreground">
+          {t('email')}
+        </span>
+        <input
+          name="email"
+          type="email"
+          required
+          maxLength={254}
+          autoComplete="off"
+          className={`${inputClass} sm:text-sm`}
+        />
       </label>
       <WorkspaceSelect
         label={t('role')}
@@ -59,14 +72,17 @@ export function InviteForm({ organizationId, owner }: { organizationId: string; 
           ...(owner ? [{ value: 'admin', label: t('admin') }] : []),
         ]}
       />
-      {message && (
-        <p role="status" className="text-sm text-brand-ink">
-          {message}
+      <button disabled={pending} className={`${buttonClass} w-full sm:h-12.5 sm:w-auto`}>
+        {pending ? t('working') : t('sendInvitation')}
+      </button>
+      {status && (
+        <p
+          role={status === 'error' ? 'alert' : 'status'}
+          className={`rounded-xl p-3 text-sm sm:col-span-3 ${status === 'error' ? 'border border-error/25 bg-error/5 text-error' : 'bg-primary/10 text-brand-ink'}`}
+        >
+          {t(status === 'error' ? 'genericError' : 'invitationSent')}
         </p>
       )}
-      <button disabled={pending} className={buttonClass}>
-        {pending ? t('working') : t('invite')}
-      </button>
     </form>
   )
 }
@@ -120,9 +136,10 @@ export function CancelInvitation({ invitationId }: { invitationId: string }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(false)
   return (
-    <span>
+    <span className="flex flex-col items-start gap-1 sm:items-end">
       <button
-        className="text-sm text-brand-ink underline disabled:opacity-60"
+        type="button"
+        className="rounded-full border border-border px-4 py-2 text-xs font-medium transition-colors hover:bg-accent disabled:opacity-60"
         disabled={pending}
         onClick={async () => {
           setPending(true)
@@ -141,7 +158,7 @@ export function CancelInvitation({ invitationId }: { invitationId: string }) {
         {pending ? t('working') : t('cancelInvitation')}
       </button>
       {error && (
-        <span role="alert" className="block text-sm text-error">
+        <span role="alert" className="text-xs text-error">
           {t('genericError')}
         </span>
       )}

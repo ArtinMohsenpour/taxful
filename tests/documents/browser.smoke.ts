@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { hashPassword } from 'better-auth/crypto'
 import sharp from 'sharp'
 import assert from 'node:assert/strict'
+import { blankCompanyProfile } from '../../src/lib/documents/company-profile-schema'
 import { invoiceFixture } from './fixtures'
 import { syntheticPdf } from './pdf-fixture'
 import { writePrivate, removePrivate, sha256 } from '../../src/lib/documents/storage'
@@ -60,6 +61,10 @@ try {
       invoiceFixture(),
     ],
   )
+  await pool.query(
+    "INSERT INTO customer_auth.document_events(document_id,organization_id,event,details) VALUES($1,$2,'processing_stage',$3)",
+    [doc, org, { stage: 'scanning' }],
+  )
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1050 },
     baseURL: 'http://localhost:3100',
@@ -76,6 +81,27 @@ try {
     data: {},
   })
   assert.equal(csrf.status(), 403)
+  const companyResponse = await context.request.put('/api/company-profile', {
+    headers: { origin: 'http://localhost:3100' },
+    data: {
+      organizationId: org,
+      revision: 0,
+      data: {
+        ...blankCompanyProfile,
+        companyName: 'Synthetic Supplier GmbH',
+        vatId: invoiceFixture().issuer.vatId,
+        country: 'DE',
+      },
+    },
+  })
+  assert.equal(companyResponse.status(), 200)
+  const missingInvoice = invoiceFixture()
+  missingInvoice.supplyDate = ''
+  missingInvoice.issuer.country = ''
+  await pool.query('UPDATE customer_auth.documents SET extracted_data=$2 WHERE id=$1', [
+    doc,
+    missingInvoice,
+  ])
   const page = await context.newPage(),
     errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
@@ -84,6 +110,67 @@ try {
   await page.getByRole('button', { name: 'Filter files', exact: true }).waitFor()
   await page.goto('/en/portal/files/' + doc)
   await page.getByRole('heading', { name: 'Review extracted information' }).waitFor()
+  await page.getByText('Processing activity · Berlin time', { exact: true }).click()
+  await page.getByText('Checking file safety', { exact: true }).waitFor()
+  const detailRoute = '**/api/documents/' + doc + '/detail'
+  await page.route(detailRoute, async (route) => {
+    const response = await route.fetch(),
+      body = await response.json()
+    body.document = {
+      ...body.document,
+      status: 'queued',
+      stage: 'queued',
+      health: { online: false, scannerReady: false },
+    }
+    await route.fulfill({ response, json: body })
+  })
+  await page.reload()
+  await page
+    .getByText(
+      'Processing is paused: the background processor is offline. Your original is saved. Processing resumes when the service is available.',
+      { exact: true },
+    )
+    .waitFor()
+  assert.equal(await page.locator('[aria-current="step"]').count(), 0)
+  await page.unroute(detailRoute)
+  await page.reload()
+  await page.getByRole('heading', { name: 'Review extracted information' }).waitFor()
+
+  assert.equal(await page.locator('[id="field-issuer.country"]').inputValue(), 'DE')
+  assert.equal(
+    await page.locator('[id="field-issuer.companyName"]').inputValue(),
+    'Synthetic Supplier GmbH',
+  )
+  const invoiceSection = page
+    .locator('details')
+    .filter({ has: page.locator('[id="field-supplyDate"]') })
+    .first()
+  await invoiceSection.locator(':scope > summary').click()
+  assert.equal(
+    await invoiceSection.evaluate((element) => (element as HTMLDetailsElement).open),
+    false,
+  )
+  const blockedExport = page.getByRole('button', {
+    name: 'Validate and download ZUGFeRD',
+    exact: true,
+  })
+  assert.equal(
+    await blockedExport.evaluate((element) => getComputedStyle(element).cursor),
+    'not-allowed',
+  )
+  await page.getByRole('button', { name: 'Approve reviewed data', exact: true }).click()
+  assert.equal(await page.evaluate(() => document.activeElement?.id), 'field-supplyDate')
+  assert.equal(
+    await invoiceSection.evaluate((element) => (element as HTMLDetailsElement).open),
+    true,
+  )
+  assert.equal(
+    await page
+      .getByRole('button', { name: 'Validate and download ZUGFeRD', exact: true })
+      .textContent(),
+    'Validate and download ZUGFeRD',
+  )
+  await page.locator('[id="field-supplyDate"]').fill('2026-09-12')
   for (const name of [
     'I checked names, addresses and tax identifiers.',
     'I checked document numbers, dates and payment terms.',
@@ -92,7 +179,15 @@ try {
   ])
     await page.getByRole('checkbox', { name, exact: true }).check()
   await page.getByRole('button', { name: 'Approve reviewed data', exact: true }).click()
-  await page.getByRole('status').filter({ hasText: 'Changes saved.' }).waitFor()
+  await page
+    .getByRole('status')
+    .filter({ hasText: 'Review approved. You can now generate the selected export.' })
+    .waitFor()
+  const pdfDownloading = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Validate and download ZUGFeRD', exact: true }).click()
+  assert.ok((await pdfDownloading).suggestedFilename().endsWith('.pdf'))
+  await page.getByRole('button', { name: 'Export format ZUGFeRD · PDF + XML', exact: true }).click()
+  await page.getByRole('option', { name: 'XRechnung · XML', exact: true }).click()
   const downloading = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Validate and download XRechnung', exact: true }).click()
   const download = await downloading
@@ -105,6 +200,10 @@ try {
   await preview.getByRole('img').waitFor()
   await preview.getByRole('button', { name: 'Exported XML', exact: true }).click()
   await preview.locator('pre').filter({ hasText: 'Invoice' }).waitFor()
+  await preview.getByRole('button', { name: 'ZUGFeRD PDF', exact: true }).click()
+  await preview.getByText(/^Page 1 of \d+$/).waitFor()
+  await page.waitForFunction(() => !!document.querySelector('dialog canvas')?.getAttribute('width'))
+  await page.screenshot({ path: '.private/document-zugferd-preview.png' })
   await preview.getByRole('button', { name: 'Close', exact: true }).click()
   await page
     .getByRole('searchbox', { name: 'Search by filename', exact: true })
@@ -152,7 +251,25 @@ try {
     VALUES($1,$2,$3,$4,'Synthetic preview.pdf','application/pdf',$5,$6,'needs_review',now(),'Synthetic invoice 119.00 EUR','complete')`,
     [pdfDoc, org, batch, user, pdf.length, sha256(pdf)],
   )
+  await pool.query(
+    "UPDATE customer_auth.documents SET status='unsupported',classification=$2 WHERE id=$1",
+    [pdfDoc, { kind: 'wage_tax_certificate', confidence: 'high', reason: 'Synthetic fixture' }],
+  )
   await page.goto('/en/portal/files/' + pdfDoc)
+  await page
+    .getByRole('heading', { name: 'This document needs a different workflow', exact: true })
+    .waitFor()
+  assert.equal(await page.getByRole('heading', { name: 'Review extracted information' }).count(), 0)
+  assert.equal(await page.locator('input').count(), 0)
+  assert.equal(
+    (
+      await context.request.post('/api/documents/' + pdfDoc + '/zugferd', {
+        headers: { origin: 'http://localhost:3100' },
+      })
+    ).status(),
+    409,
+  )
+
   await page.getByRole('button', { name: 'Preview document', exact: true }).click()
   await page.getByRole('dialog').getByText('Page 1 of 1', { exact: true }).waitFor()
   await page.waitForFunction(() => {
@@ -175,10 +292,25 @@ try {
   await page.waitForURL('**/en/portal/files')
   assert.equal((await context.request.get('/api/documents/' + doc + '/source')).status(), 404)
   assert.equal((await context.request.get('/api/documents/' + doc + '/export')).status(), 404)
+  assert.equal((await context.request.get('/api/documents/' + doc + '/zugferd')).status(), 404)
   assert.deepEqual(errors, [])
+  await page.goto('/en/portal/profile#company')
+  const companyForm = page.locator('#company')
+  await companyForm.getByRole('button', { name: 'Save company details', exact: true }).waitFor()
+  const city = companyForm.getByLabel('City (Optional)', { exact: true })
+  await city.fill('Berlin')
+  await companyForm.getByRole('button', { name: 'Save company details', exact: true }).click()
+  await companyForm
+    .getByText('Company details saved for this workspace.', { exact: true })
+    .waitFor()
+  assert.equal(
+    (await (await context.request.get('/api/company-profile')).json()).profile.data.city,
+    'Berlin',
+  )
   console.log(
     'Browser checks passed: review, filters, image/PDF/XML previews, deletion confirmation, downloads and mobile layout.',
   )
+  assert.deepEqual(errors, [])
 } finally {
   await browser.close()
   const exports = await pool.query(

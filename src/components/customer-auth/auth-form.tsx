@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Link } from '@/i18n/navigation'
 import { customerAuth } from '@/lib/customer-auth/client'
 import { customerReturnPath } from '@/lib/customer-auth/navigation'
+import { idleWarningSeconds } from '@/lib/customer-auth/session-timeout'
 
 export type AuthMode = 'login' | 'signup' | 'forgot' | 'reset' | 'verify'
 export const inputClass =
@@ -161,6 +162,16 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
         <p className="mt-2.5 leading-relaxed text-muted-foreground">{t(intro[mode])}</p>
       </div>
       <div className="mt-8 rounded-[1.75rem] border border-border bg-surface p-6 shadow-nav sm:p-8">
+        {mode === 'login' && !error && ['idle', 'ended'].includes(query.get('reason') || '') && (
+          <p
+            role="status"
+            className="mb-5 rounded-xl bg-primary/10 p-3 text-sm leading-relaxed text-brand-ink"
+          >
+            {query.get('reason') === 'idle'
+              ? t('idleSignedOut', { minutes: idleWarningSeconds / 60 })
+              : t('sessionEnded')}
+          </p>
+        )}
         {error && (
           <p
             role="alert"

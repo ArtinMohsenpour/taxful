@@ -3,11 +3,12 @@ import { useEffect, useId, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { Icon } from '@/components/customer-auth/icon'
+import { Link } from '@/i18n/navigation'
 import type { documentMessages } from '../../../messages/documents'
 const PdfPreview = dynamic(() => import('./pdf-preview'), { ssr: false })
 type Key = keyof typeof documentMessages.en
 
-function PreviewContent({ id, kind }: { id: string; kind: 'source' | 'export' }) {
+function PreviewContent({ id, kind }: { id: string; kind: 'source' | 'export' | 'zugferd' }) {
   const t = useTranslations('Documents')
   const [document, setDocument] = useState<{
     mime: string
@@ -19,6 +20,7 @@ function PreviewContent({ id, kind }: { id: string; kind: 'source' | 'export' })
   const [xml, setXml] = useState('')
   const [error, setError] = useState(false)
   useEffect(() => {
+    if (kind === 'zugferd') return
     const controller = new AbortController()
     void (async () => {
       const response = await fetch(
@@ -34,6 +36,7 @@ function PreviewContent({ id, kind }: { id: string; kind: 'source' | 'export' })
     return () => controller.abort()
   }, [id, kind])
   if (error) return <p role="alert">{t('previewUnavailable')}</p>
+  if (kind === 'zugferd') return <PdfPreview id={id} kind="zugferd" />
   if (kind === 'export')
     return xml ? (
       <pre className="max-h-[65dvh] overflow-auto rounded-xl bg-background p-4 text-xs leading-relaxed break-all whitespace-pre-wrap">
@@ -46,7 +49,7 @@ function PreviewContent({ id, kind }: { id: string; kind: 'source' | 'export' })
   if (!document.scanned || document.status === 'rejected') return <p>{t('previewWaiting')}</p>
   if (document.mime === 'application/pdf') return <PdfPreview id={id} />
   if (document.mime.startsWith('image/'))
-    return ['extracting', 'checking', 'complete'].includes(document.stage) ||
+    return ['classifying', 'extracting', 'checking', 'complete'].includes(document.stage) ||
       document.status === 'needs_review' ||
       document.status === 'approved' ? (
       // eslint-disable-next-line @next/next/no-img-element
@@ -74,25 +77,31 @@ export function DocumentActions({
   name,
   sourceAvailable,
   exportAvailable,
+  zugferdAvailable = false,
   canDelete,
   busy,
   onDeleted,
+  reviewHref,
 }: {
   id: string
   name: string
   sourceAvailable: boolean
   exportAvailable: boolean
+  zugferdAvailable?: boolean
   canDelete: boolean
   busy: boolean
   onDeleted: (pending: boolean) => void
+  reviewHref?: string
 }) {
   const t = useTranslations('Documents')
   const [mode, setMode] = useState<'preview' | 'delete' | null>(null)
-  const [kind, setKind] = useState<'source' | 'export'>('source')
+  const [kind, setKind] = useState<'source' | 'export' | 'zugferd'>('source')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const dialog = useRef<HTMLDialogElement>(null)
   const label = useId()
+  const actionClass =
+    'inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap shrink-0 rounded-xl border px-4 py-2.5 text-xs font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink motion-reduce:transition-none sm:justify-start'
   useEffect(() => {
     if (mode) dialog.current?.showModal()
     else dialog.current?.close()
@@ -116,33 +125,65 @@ export function DocumentActions({
     if (!pending) setMode(null)
   }
   return (
-    <>
-      {sourceAvailable && (
-        <button
-          type="button"
-          onClick={() => {
-            setKind('source')
-            setMode('preview')
-          }}
-          className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 hover:bg-accent"
-        >
-          <Icon name="preview" />
-          {t('preview')}
-        </button>
-      )}
+    <div className="w-full min-w-0">
+      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-2">
+        {reviewHref && (
+          <Link
+            href={reviewHref}
+            className={`${actionClass} border-primary/30 bg-primary/20 text-brand-ink hover:bg-primary/30`}
+          >
+            <Icon name="files" />
+            {t('open')}
+          </Link>
+        )}
+        {sourceAvailable && (
+          <button
+            type="button"
+            onClick={() => {
+              setKind('source')
+              setMode('preview')
+            }}
+            className={`${actionClass} border-border bg-surface text-foreground hover:bg-accent`}
+          >
+            <Icon name="preview" />
+            {t('preview')}
+          </button>
+        )}
+
+        {(
+          [
+            ['zugferd', zugferdAvailable, 'downloadZugferd'],
+            ['export', exportAvailable, 'downloadExport'],
+            ['source', sourceAvailable, 'downloadSource'],
+          ] as const
+        ).map(
+          ([kind, available, title]) =>
+            available && (
+              <a
+                key={kind}
+                href={'/api/documents/' + id + '/' + kind}
+                download
+                className={`${actionClass} ${kind === 'source' ? 'border-border bg-surface text-muted-foreground hover:bg-accent hover:text-foreground' : 'border-primary/30 bg-primary/10 text-brand-ink hover:bg-primary/20'}`}
+              >
+                <Icon name="download" />
+                {t(title)}
+              </a>
+            ),
+        )}
+      </div>
       {canDelete && (
         <button
           type="button"
           disabled={busy}
-          title={busy ? t('deleteBusy') : undefined}
+          title={busy ? t('deleteBusy') : t('deleteFile')}
+          aria-label={t('deleteFile')}
           onClick={() => {
             setError('')
             setMode('delete')
           }}
-          className="inline-flex items-center gap-2 rounded-full border border-error/20 px-4 py-2.5 text-error hover:bg-error/5 disabled:opacity-40"
+          className="absolute top-4 right-4 inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-error/5 hover:text-error focus-visible:outline-2 focus-visible:outline-brand-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Icon name="trash" />
-          {t('deleteFile')}
         </button>
       )}
       <dialog
@@ -197,12 +238,28 @@ export function DocumentActions({
                       {t('exportedFile')}
                     </button>
                   )}
+                  {zugferdAvailable && (
+                    <button
+                      type="button"
+                      aria-pressed={kind === 'zugferd'}
+                      onClick={() => setKind('zugferd')}
+                      className={`rounded-full px-4 py-2 ${kind === 'zugferd' ? 'bg-primary/20 text-brand-ink' : 'border border-border'}`}
+                    >
+                      {t('zugferdFile')}
+                    </button>
+                  )}
                   <a
                     href={'/api/documents/' + id + '/' + kind}
                     download
                     className="ml-auto text-brand-ink underline underline-offset-4"
                   >
-                    {t(kind === 'source' ? 'downloadSource' : 'downloadExport')}
+                    {t(
+                      kind === 'source'
+                        ? 'downloadSource'
+                        : kind === 'zugferd'
+                          ? 'downloadZugferd'
+                          : 'downloadExport',
+                    )}
                   </a>
                 </div>
                 <PreviewContent key={kind} id={id} kind={kind} />
@@ -241,6 +298,6 @@ export function DocumentActions({
           </div>
         )}
       </dialog>
-    </>
+    </div>
   )
 }

@@ -19,5 +19,16 @@ services:
     security_opt: [no-new-privileges:true]
     mem_limit: 768m
     restart: unless-stopped
+  zugferd-generator:
+    build: ./infrastructure/zugferd
+    ports:
+      - '127.0.0.1:8087:8080'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    restart: unless-stopped
 volumes:
   document_scan_signatures:
