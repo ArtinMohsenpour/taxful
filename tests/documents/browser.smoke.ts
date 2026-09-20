@@ -141,6 +141,21 @@ try {
     await page.locator('[id="field-issuer.companyName"]').inputValue(),
     'Synthetic Supplier GmbH',
   )
+  const unit = page.locator('[id="field-lines.0.unitCode"]')
+  await unit.click()
+  await page.getByRole('option', { name: 'Service / unit', exact: true }).click()
+  const price = page.locator('[id="field-lines.0.unitPrice"]')
+  await price.fill('10,69')
+  assert.equal(await price.inputValue(), '10.69')
+  assert.equal(await page.locator('[id="field-lines.0.netAmount"]').inputValue(), '10.69')
+  await page
+    .getByRole('button', { name: 'This price includes VAT — convert to net', exact: true })
+    .click()
+  assert.equal(await page.locator('[id="field-lines.0.netAmount"]').inputValue(), '8.98')
+  await page.locator('#line-gross-0').fill('119.00')
+  await page.locator('#line-gross-0').blur()
+  assert.equal(await price.inputValue(), '100.00')
+  await price.fill('100')
   const invoiceSection = page
     .locator('details')
     .filter({ has: page.locator('[id="field-supplyDate"]') })
@@ -183,6 +198,12 @@ try {
     .getByRole('status')
     .filter({ hasText: 'Review approved. You can now generate the selected export.' })
     .waitFor()
+  assert.equal(
+    await page
+      .getByText('Complete the four review confirmations before approving.', { exact: true })
+      .count(),
+    0,
+  )
   const pdfDownloading = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Validate and download ZUGFeRD', exact: true }).click()
   assert.ok((await pdfDownloading).suggestedFilename().endsWith('.pdf'))
@@ -234,6 +255,21 @@ try {
   await page.setViewportSize({ width: 1440, height: 1050 })
   await page.goto('/en/portal/files/' + doc)
   await page.getByRole('heading', { name: 'Review extracted information' }).waitFor()
+  const collapsedHeights = await page
+    .locator('.review-sections > details')
+    .evaluateAll((sections) => {
+      for (const section of sections) (section as HTMLDetailsElement).open = false
+      return sections.map((section) => section.getBoundingClientRect().height)
+    })
+  assert.ok(collapsedHeights.length >= 8)
+  assert.ok(
+    Math.max(...collapsedHeights) - Math.min(...collapsedHeights) <= 1,
+    JSON.stringify(collapsedHeights),
+  )
+  await page.screenshot({ path: '.private/document-sections-collapsed.png', fullPage: true })
+  await page.locator('.review-sections > details').evaluateAll((sections) => {
+    for (const section of sections) (section as HTMLDetailsElement).open = true
+  })
   await page.evaluate(() => window.scrollTo(0, 0))
   await page.screenshot({ path: '.private/document-review-desktop.png', fullPage: false })
   await page.setViewportSize({ width: 390, height: 844 })

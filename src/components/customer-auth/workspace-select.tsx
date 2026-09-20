@@ -10,6 +10,9 @@ export function WorkspaceSelect({
   disabled = false,
   name,
   compact = false,
+  triggerId,
+  invalid = false,
+  hideLabel = false,
 }: {
   label: string
   value: string
@@ -18,6 +21,9 @@ export function WorkspaceSelect({
   disabled?: boolean
   name?: string
   compact?: boolean
+  triggerId?: string
+  invalid?: boolean
+  hideLabel?: boolean
 }) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -49,7 +55,7 @@ export function WorkspaceSelect({
       <span
         id={id + '-label'}
         className={
-          compact
+          compact || hideLabel
             ? 'sr-only'
             : 'mb-2 block text-xs font-semibold tracking-wide text-muted-foreground'
         }
@@ -58,6 +64,8 @@ export function WorkspaceSelect({
       </span>
       <button
         ref={trigger}
+        id={triggerId}
+        aria-describedby={invalid && triggerId ? triggerId.replace(/^field-/, 'error-') : undefined}
         type="button"
         disabled={disabled}
         aria-labelledby={id + '-label ' + id + '-value'}
@@ -71,7 +79,7 @@ export function WorkspaceSelect({
             setOpen(true)
           }
         }}
-        className={`flex w-full items-center justify-between border border-border bg-background text-left font-medium transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 ${compact ? 'h-9 gap-1.5 rounded-full px-3 text-xs' : 'gap-3 rounded-2xl px-4 py-3.5 text-sm'}`}
+        className={`flex w-full items-center justify-between border ${invalid ? 'border-error' : 'border-border'} bg-background text-left font-medium transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 ${compact ? 'h-9 gap-1.5 rounded-full px-3 text-xs' : 'gap-3 rounded-2xl px-4 py-3.5 text-sm'}`}
       >
         <span id={id + '-value'} className="truncate">
           {options.find((option) => option.value === value)?.label}

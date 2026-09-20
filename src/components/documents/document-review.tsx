@@ -1,4 +1,12 @@
 'use client'
+import {
+  calculateLineNet,
+  netFromGrossLine,
+  lineAmounts,
+  netFromGrossPrice,
+  normalizeDecimalInput,
+} from '@/lib/documents/invoice-calculation'
+import Decimal from 'decimal.js'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
@@ -54,14 +62,7 @@ type Detail = {
 }
 const blankConfirm = { identity: false, dates: false, amounts: false, completeness: false }
 const partyFields = ['companyName', 'address', 'postalCode', 'city', 'country'] as const
-const lineFields = [
-  'description',
-  'quantity',
-  'unitCode',
-  'unitPrice',
-  'netAmount',
-  'taxRate',
-] as const
+const lineFields = ['description', 'quantity', 'unitCode', 'unitPrice', 'taxRate'] as const
 
 export function DocumentReview({ id }: { id: string }) {
   const router = useRouter()
@@ -111,7 +112,16 @@ export function DocumentReview({ id }: { id: string }) {
           next && body.document.status === 'needs_review' ? applyReviewDefaults(next) : null
         if (defaults) next = defaults.data
         setDefaulted(defaults?.fields || [])
-        setData(next)
+        const totals = calculateInvoice(next)
+        setData(
+          totals
+            ? {
+                ...next,
+                netAmount: next.netAmount || totals.net,
+                taxAmount: next.taxAmount || totals.tax,
+              }
+            : next,
+        )
         setPrefilled(filled)
         setDirty(filled.length > 0 || !!defaults?.fields.length)
       }
@@ -150,6 +160,7 @@ export function DocumentReview({ id }: { id: string }) {
     setData(next)
     setDirty(true)
     setConfirm(blankConfirm)
+    setApprovalAttempted(false)
     setMessage('')
     setExportIssues([])
   }
@@ -203,6 +214,7 @@ export function DocumentReview({ id }: { id: string }) {
       await load()
       setDirty(false)
       setConfirm(blankConfirm)
+      setApprovalAttempted(false)
       setMessage(kind === 'review' ? (approve ? 'reviewApproved' : 'saved') : '')
     } catch (error) {
       setError(
@@ -224,6 +236,7 @@ export function DocumentReview({ id }: { id: string }) {
     const oneOf = ['issuer.vatId', 'issuer.taxNumber', 'paymentTerms', 'dueDate'].includes(path)
     const required =
       !oneOf &&
+      !['netAmount', 'taxAmount', 'unitPrice'].includes(label) &&
       ([
         'documentNumber',
         'documentDate',
@@ -245,12 +258,20 @@ export function DocumentReview({ id }: { id: string }) {
             'recipient.email',
           ].includes(path)))
     return (
-      <label className="block space-y-2 text-sm font-medium" key={path}>
+      <div className="block space-y-2 text-sm font-medium" key={path}>
         <span className="flex items-center justify-between gap-2">
           <span>
-            {t(label)}{' '}
+            <label htmlFor={'field-' + path}>{t(label)}</label>{' '}
             <span className="text-xs text-muted-foreground">
-              {t(oneOf ? 'oneOfMark' : required ? 'requiredMark' : 'optionalMark')}
+              {t(
+                ['netAmount', 'taxAmount', 'unitPrice'].includes(label)
+                  ? 'calculatedMark'
+                  : oneOf
+                    ? 'oneOfMark'
+                    : required
+                      ? 'requiredMark'
+                      : 'optionalMark',
+              )}
             </span>
           </span>
           {evidence?.confidence === 'low' && (
@@ -258,26 +279,26 @@ export function DocumentReview({ id }: { id: string }) {
           )}
         </span>
         {label === 'unitCode' ? (
-          <select
-            id={'field-' + path}
+          <WorkspaceSelect
+            triggerId={'field-' + path}
+            label={t('unitCode')}
+            hideLabel
             value={value}
-            aria-invalid={invalid}
-            aria-required={required}
+            invalid={invalid}
             disabled={pending}
-            className={`${inputClass} ${invalid ? 'border-error' : ''}`}
-            onChange={(event) => onChange(event.target.value)}
-          >
-            <option value="">{t('chooseUnit')}</option>
-            {['C62', 'H87', 'HUR', 'DAY', 'MON', 'KGM', 'MTR', 'LTR', 'MTK'].map((code) => (
-              <option key={code} value={code}>
-                {t(('unit' + code) as Key)} · {code}
-              </option>
-            ))}
-            {value &&
-              !['C62', 'H87', 'HUR', 'DAY', 'MON', 'KGM', 'MTR', 'LTR', 'MTK'].includes(value) && (
-                <option value={value}>{value}</option>
-              )}
-          </select>
+            options={[
+              { value: '', label: t('chooseUnit') },
+              ...['C62', 'H87', 'HUR', 'DAY', 'MON', 'KGM', 'MTR', 'LTR', 'MTK'].map((code) => ({
+                value: code,
+                label: t(('unit' + code) as Key),
+              })),
+              ...(value &&
+              !['C62', 'H87', 'HUR', 'DAY', 'MON', 'KGM', 'MTR', 'LTR', 'MTK'].includes(value)
+                ? [{ value, label: value }]
+                : []),
+            ]}
+            onChange={onChange}
+          />
         ) : (
           <input
             id={'field-' + path}
@@ -305,7 +326,20 @@ export function DocumentReview({ id }: { id: string }) {
                       ? 150
                       : 1000
             }
-            onChange={(event) => onChange(event.target.value)}
+            onChange={(event) =>
+              onChange(
+                [
+                  'quantity',
+                  'unitPrice',
+                  'netAmount',
+                  'taxAmount',
+                  'grossAmount',
+                  'taxRate',
+                ].includes(label)
+                  ? normalizeDecimalInput(event.target.value)
+                  : event.target.value,
+              )
+            }
             disabled={pending}
             className={`${inputClass} ${invalid ? 'border-error focus:border-error' : ''}`}
           />
@@ -335,7 +369,7 @@ export function DocumentReview({ id }: { id: string }) {
             {evidence.quote}
           </span>
         )}
-      </label>
+      </div>
     )
   }
   const fieldName = (path: string) =>
@@ -352,6 +386,7 @@ export function DocumentReview({ id }: { id: string }) {
       )
     : []
   const calculated = data ? calculateInvoice(data) : null
+  const rows = data ? lineAmounts(data) : []
   const missingFields = [...new Set([...issues.map((issue) => issue.field), ...profileIssues])]
   function focusField(path: string) {
     const element =
@@ -397,7 +432,7 @@ export function DocumentReview({ id }: { id: string }) {
       )[code] || (t.has(code as Key) ? (code as Key) : 'genericError'),
     )
   return (
-    <div className="space-y-6">
+    <div className="review-sections space-y-4">
       <Link href="/portal/files" className="text-sm text-brand-ink underline">
         {t('back')}
       </Link>
@@ -535,7 +570,7 @@ export function DocumentReview({ id }: { id: string }) {
           {data &&
             data.documentType === 'invoice' &&
             ['needs_review', 'approved'].includes(doc.status) && (
-              <div className="space-y-6">
+              <div className="review-sections space-y-4">
                 <details
                   open
                   className="rounded-3xl border border-border bg-surface p-5 [&[open]>summary>.section-chevron]:rotate-180"
@@ -771,9 +806,25 @@ export function DocumentReview({ id }: { id: string }) {
                       className="section-chevron transition-transform duration-200 motion-reduce:transition-none"
                     />
                   </summary>
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-3">
                     {(['netAmount', 'taxAmount', 'grossAmount'] as const).map((key) =>
-                      field(key, data[key], key, (value) => edit({ ...data, [key]: value })),
+                      field(key, data[key], key, (value) => {
+                        const rates = [...new Set(data.lines.map((line) => line.taxRate))]
+                        const derived =
+                          key === 'grossAmount' && rates.length === 1
+                            ? netFromGrossLine('1', value, rates[0])
+                            : null
+                        edit({
+                          ...data,
+                          [key]: value,
+                          ...(derived
+                            ? {
+                                netAmount: derived.netAmount,
+                                taxAmount: new Decimal(value).minus(derived.netAmount).toFixed(2),
+                              }
+                            : {}),
+                        })
+                      }),
                     )}
                   </div>
                   {calculated && (
@@ -810,12 +861,116 @@ export function DocumentReview({ id }: { id: string }) {
                             edit({
                               ...data,
                               lines: data.lines.map((row, i) =>
-                                i === index ? { ...row, [key]: value } : row,
+                                i === index
+                                  ? {
+                                      ...row,
+                                      [key]: value,
+                                      ...(['quantity', 'unitPrice'].includes(key)
+                                        ? {
+                                            netAmount:
+                                              calculateLineNet(
+                                                key === 'quantity' ? value : row.quantity,
+                                                key === 'unitPrice' ? value : row.unitPrice,
+                                              ) ?? row.netAmount,
+                                          }
+                                        : {}),
+                                    }
+                                  : row,
                               ),
                             }),
                           ),
                         )}
                       </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        {field(
+                          'netAmount',
+                          line.netAmount,
+                          'lines.' + index + '.netAmount',
+                          (value) =>
+                            edit({
+                              ...data,
+                              lines: data.lines.map((row, i) =>
+                                i === index ? { ...row, netAmount: value } : row,
+                              ),
+                            }),
+                        )}
+                        <div className="space-y-2 text-sm font-medium">
+                          <span>
+                            {t('taxAmount')}{' '}
+                            <span className="text-xs text-muted-foreground">
+                              {t('calculatedMark')}
+                            </span>
+                          </span>
+                          <input
+                            readOnly
+                            aria-label={t('taxAmount')}
+                            value={rows[index]?.tax || ''}
+                            className={inputClass + ' w-full min-w-0'}
+                          />
+                        </div>
+                        <div className="space-y-2 text-sm font-medium">
+                          <label htmlFor={'line-gross-' + index}>
+                            {t('grossAmount')}{' '}
+                            <span className="text-xs text-muted-foreground">
+                              {t('requiredMark')}
+                            </span>
+                          </label>
+                          <input
+                            id={'line-gross-' + index}
+                            key={rows[index]?.gross || 'empty'}
+                            defaultValue={rows[index]?.gross || ''}
+                            inputMode="decimal"
+                            aria-required="true"
+                            disabled={pending}
+                            className={inputClass + ' w-full min-w-0'}
+                            onBlur={(event) => {
+                              const value = normalizeDecimalInput(event.target.value)
+                              const next = netFromGrossLine(line.quantity, value, line.taxRate)
+                              if (!next) {
+                                edit({
+                                  ...data,
+                                  lines: data.lines.map((row, i) =>
+                                    i === index ? { ...row, netAmount: '', unitPrice: '' } : row,
+                                  ),
+                                })
+                                return
+                              }
+                              if (next)
+                                edit({
+                                  ...data,
+                                  lines: data.lines.map((row, i) =>
+                                    i === index ? { ...row, ...next } : row,
+                                  ),
+                                })
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{t('unitHelp')}</p>
+                      <p className="text-xs text-muted-foreground">{t('netPriceHelp')}</p>
+                      <button
+                        type="button"
+                        disabled={
+                          pending || !netFromGrossPrice(line.quantity, line.unitPrice, line.taxRate)
+                        }
+                        className="rounded-xl border border-border px-3 py-2 text-sm text-brand-ink disabled:opacity-40"
+                        onClick={() => {
+                          const converted = netFromGrossPrice(
+                            line.quantity,
+                            line.unitPrice,
+                            line.taxRate,
+                          )
+                          if (converted)
+                            edit({
+                              ...data,
+                              lines: data.lines.map((row, i) =>
+                                i === index ? { ...row, ...converted } : row,
+                              ),
+                            })
+                        }}
+                      >
+                        {t('convertGrossPrice')}
+                      </button>
                       <button
                         disabled={pending}
                         onClick={() =>
@@ -942,7 +1097,13 @@ export function DocumentReview({ id }: { id: string }) {
                   </details>
                 )}
                 <details className="rounded-2xl border border-border p-5">
-                  <summary className="cursor-pointer font-medium">{t('evidence')}</summary>
+                  <summary className="cursor-pointer font-semibold">
+                    <span>{t('evidence')}</span>
+                    <Icon
+                      name="chevron"
+                      className="section-chevron transition-transform duration-200 motion-reduce:transition-none"
+                    />
+                  </summary>
                   <p className="my-4 text-xs text-muted-foreground">{t('evidenceHint')}</p>
                   <ul className="max-h-80 space-y-3 overflow-auto text-xs">
                     {doc.evidence
@@ -1016,16 +1177,21 @@ export function DocumentReview({ id }: { id: string }) {
                       {t('missingCount', { count: missingFields.length })}
                     </p>
                   )}
-                  {approvalAttempted && !Object.values(confirm).every(Boolean) && (
-                    <p role="alert" className="text-sm text-error">
-                      {t('confirmMissing')}
-                    </p>
-                  )}
+                  {approvalAttempted &&
+                    (dirty || doc.status !== 'approved') &&
+                    !Object.values(confirm).every(Boolean) && (
+                      <p role="alert" className="text-sm text-error">
+                        {t('confirmMissing')}
+                      </p>
+                    )}
                   {!canApprove && (
                     <p className="text-xs text-muted-foreground">{t('approvalRole')}</p>
                   )}
                   {message && (
-                    <p role="status" className="text-sm text-brand-ink">
+                    <p
+                      role="status"
+                      className="rounded-xl border border-primary/30 bg-primary/15 px-4 py-3 text-sm font-medium text-brand-ink"
+                    >
                       {t(message as Key)}
                     </p>
                   )}

@@ -1,10 +1,11 @@
 import { GoogleGenAI } from '@google/genai'
 import type { Part } from '@google/genai'
 import { z } from 'zod'
+import { netFromGrossPrice } from './invoice-calculation'
 import { extractionSchema } from './schema'
 import { DocumentError, extractionReady } from './config'
 
-export const PROMPT_VERSION = 'taxful-extraction-3'
+export const PROMPT_VERSION = 'taxful-extraction-4'
 // Provider grammar stays compact; the full strict schema and all size limits are
 // still enforced locally below. Large nested maxItems constraints can exceed
 // Gemini's structured-output grammar complexity limits.
@@ -58,7 +59,7 @@ export async function extractDocument(parts: Part[]) {
         'address is the street and building number; city and postalCode are separate. email is a printed electronic address.',
         'buyerReference must be printed, not invented. paymentTerms must reflect printed terms.',
         'paymentMeansCode is 10 for explicitly stated cash, 58 for explicitly stated SEPA credit transfer; otherwise empty. bankAccount is the printed IBAN. unitCode uses UN/ECE unit codes only when the source unit is clear; otherwise empty.',
-        'Include invoice line items only. Never calculate a missing amount. Leave additionalFields empty.',
+        'Include invoice line items only. unitPrice and line netAmount MUST EXCLUDE VAT. Printed Einzelpreis or Gesamtpreis may include VAT: enthaltene MwSt., inkl. USt. and Zwischensumme brutto explicitly indicate gross prices. NEVER copy these prices into net fields. If a net line price is not printed, leave it empty. In grossPrices, capture only explicitly VAT-inclusive unit prices, their zero-based lineIndex, exact source quote and page; use an empty array otherwise. Never put invoice totals in grossPrices. Preserve the printed quantity and VAT rate in the corresponding line. The application calculates net prices deterministically. Preserve explicitly printed invoice netAmount, taxAmount and grossAmount independently. Never calculate a missing amount. Leave additionalFields empty.',
         'For every populated field include evidence: exact field path (including zero-based array indices), page (null for Word), a short source quote and low/medium/high confidence.',
         'Confidence is your estimate, not a verified probability. Add warnings for ambiguous values, missing pages, multiple independent documents, discounts, exemptions, reverse charge or unreadable content.',
         'If several separate invoices are present, do not merge them: return documentType other and explain in warnings.',
@@ -73,5 +74,23 @@ export async function extractDocument(parts: Part[]) {
     throw new DocumentError('extractionFailed')
   const result = extractionSchema.safeParse(JSON.parse(response.text))
   if (!result.success) throw new DocumentError('extractionFailed')
-  return { ...result.data, model }
+  const { data, evidence, warnings, grossPrices = [] } = result.data
+  for (const input of grossPrices) {
+    const line = data.lines[input.lineIndex]
+    if (!line || line.unitPrice || line.netAmount || !input.quote.trim()) continue
+    const converted = netFromGrossPrice(line.quantity, input.unitPrice, line.taxRate)
+    if (!converted) continue
+    Object.assign(line, converted)
+    for (const field of ['unitPrice', 'netAmount'])
+      evidence.push({
+        field: `lines.${input.lineIndex}.${field}`,
+        page: input.page,
+        quote: input.quote,
+        confidence: 'low',
+      })
+    warnings.push(
+      `Line ${input.lineIndex + 1}: net amounts calculated from the printed VAT-inclusive unit price ${input.unitPrice} and VAT rate ${line.taxRate}%. Verify against the invoice.`,
+    )
+  }
+  return { data, evidence: evidence.slice(0, 1000), warnings: warnings.slice(0, 30), model }
 }

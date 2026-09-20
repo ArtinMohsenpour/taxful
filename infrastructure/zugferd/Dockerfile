@@ -6,6 +6,7 @@ RUN javac -cp mustang.jar InvoiceService.java
 # The bundled government-oriented renderer labels every BT-10 as Leitweg-ID.
 # Use the general buyer-reference label for this B2B EN16931 export.
 RUN jar xf mustang.jar stylesheets/l10n/de.xml && sed -i 's|<entry key="xr:Buyer_reference" id="BT-10">Leitweg-ID</entry>|<entry key="xr:Buyer_reference" id="BT-10">Käuferreferenz</entry>|' stylesheets/l10n/de.xml
+COPY compact-pdf.xsl /app/stylesheets/xr-pdf.xsl
 FROM eclipse-temurin:21-jre-jammy@sha256:bce52ea7da1f72e6bf5bec505e63b6eb55ba79ad1226903579f77eab1a80139a
 WORKDIR /app
 COPY --from=build /app/ /app/

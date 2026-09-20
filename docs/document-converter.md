@@ -110,3 +110,11 @@ Migration 0008 adds worker heartbeats. A worker checks scanner readiness every f
 Workers emit timestamped JSON records for claim, stage start/finish, elapsed milliseconds, completion and failures. Child output streams directly into the worker terminal. No filenames, document contents, extracted values, keys or raw provider errors are logged. The document's processing-activity panel reads a tenant-scoped, allowlisted subset of persisted audit events, with Berlin timestamps and localized errors.
 
 The clamd client settles on its NUL-terminated reply, rather than waiting for socket closure. Scanning has a 30-second absolute deadline; readiness probes have a 1.5-second deadline. Faster completion never bypasses scanning. A stalled AI call is still separately bounded and surfaced as a failure rather than silently retried.
+
+## VAT-inclusive source prices and review arithmetic
+
+Extraction version 4 distinguishes printed VAT-inclusive prices from net prices. Explicit gross unit prices travel in an extraction-only `grossPrices` list; deterministic Decimal arithmetic derives missing net prices with six decimal places and line totals rounded to cents. Derived fields retain source quotes, low-confidence review markers and a warning. Printed invoice totals are never replaced. Existing saved reviews are not automatically rewritten.
+
+The review accepts decimal commas, calculates line net amounts when quantity or unit net price changes, and offers an explicit gross-to-net conversion action. The themed billing-unit selector describes C62 as Service / unit; selecting a unit does not change money. The regression case uses gross prices 10.69 and 17.19 at 19%: line net amounts 8.98 and 14.45, total net 23.43, tax 4.45 and gross 27.88. SEPA direct debit remains unsupported and must not be labelled as SEPA credit transfer.
+
+The compact ZUGFeRD renderer uses `infrastructure/zugferd/compact-pdf.xsl`, a presentation override for the existing normalized invoice model. It preserves independent PDF/A and XML validation, shows repeated line-table headers on subsequent pages and includes a pale Taxful generator footer. Existing immutable exports retain their prior appearance; new exports use the installed template.

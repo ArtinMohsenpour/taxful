@@ -65,6 +65,19 @@ export const recordSchema = z
 export const extractionSchema = z
   .object({
     data: recordSchema,
+    grossPrices: z
+      .array(
+        z
+          .object({
+            lineIndex: z.number().int().min(0).max(199),
+            unitPrice: z.string().regex(/^\d{1,15}(\.\d{1,6})?$/),
+            quote: z.string().max(500),
+            page: z.number().int().min(1).max(50).nullable(),
+          })
+          .strict(),
+      )
+      .max(200)
+      .optional(),
     evidence: z
       .array(
         z

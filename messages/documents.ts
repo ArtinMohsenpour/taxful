@@ -1,7 +1,13 @@
 export const documentMessages = {
   en: {
+    calculatedMark: '(Calculated)',
+    unitHelp:
+      'For a flat-fee service, domain or subscription item, choose Service / unit (C62). Use Hour for hourly billing, or Month only when the quantity counts months. This choice does not change the price.',
+    netPriceHelp:
+      'Enter a price excluding VAT. Quantity × net unit price calculates the line net amount. If you entered a VAT-inclusive price, convert it once using the button below. Invoice totals remain as printed.',
+    convertGrossPrice: 'This price includes VAT — convert to net',
     chooseUnit: 'Choose a unit',
-    unitC62: 'Unit',
+    unitC62: 'Service / unit',
     unitH87: 'Piece',
     unitHUR: 'Hour',
     unitDAY: 'Day',
@@ -227,8 +233,8 @@ export const documentMessages = {
     grossAmount: 'Gross amount',
     description: 'Description',
     quantity: 'Quantity',
-    unitCode: 'Unit code (e.g. C62)',
-    unitPrice: 'Unit price',
+    unitCode: 'Billing unit',
+    unitPrice: 'Unit price (net, excluding VAT)',
     taxRate: 'VAT rate (%)',
     label: 'Field',
     value: 'Value',
@@ -302,8 +308,14 @@ export const documentMessages = {
     validatorUnavailable: 'The official invoice validator is unavailable. No export was released.',
   },
   de: {
+    calculatedMark: '(Berechnet)',
+    unitHelp:
+      'Für eine pauschale Leistung, Domain oder Abo-Position wählen Sie Leistung / Einheit (C62). Stunde gilt für Stundenabrechnung; Monat nur, wenn die Menge Monate zählt. Die Einheit ändert den Preis nicht.',
+    netPriceHelp:
+      'Preis ohne Umsatzsteuer eingeben. Menge × Netto-Einzelpreis ergibt den Positionsnettobetrag. Einen eingegebenen Bruttopreis können Sie unten einmalig in netto umrechnen. Rechnungssummen bleiben wie im Original.',
+    convertGrossPrice: 'Dieser Preis enthält USt. — in netto umrechnen',
     chooseUnit: 'Einheit auswählen',
-    unitC62: 'Einheit',
+    unitC62: 'Leistung / Einheit',
     unitH87: 'Stück',
     unitHUR: 'Stunde',
     unitDAY: 'Tag',
@@ -538,8 +550,8 @@ export const documentMessages = {
     grossAmount: 'Bruttobetrag',
     description: 'Beschreibung',
     quantity: 'Menge',
-    unitCode: 'Einheitencode (z. B. C62)',
-    unitPrice: 'Einzelpreis',
+    unitCode: 'Abrechnungseinheit',
+    unitPrice: 'Einzelpreis (netto, ohne Umsatzsteuer)',
     taxRate: 'Umsatzsteuersatz (%)',
     label: 'Feld',
     value: 'Wert',

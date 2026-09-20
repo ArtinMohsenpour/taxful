@@ -124,3 +124,41 @@
     @apply bg-primary text-primary-foreground;
   }
 }
+
+/* Keep closed review cards identical, independent of their expanded contents. */
+.review-sections > details {
+  padding: 0;
+}
+.review-sections > details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 72px;
+  margin: 0;
+  padding: 1.25rem;
+  list-style: none;
+}
+.review-sections > details > summary::-webkit-details-marker {
+  display: none;
+}
+.review-sections > details > summary > h2,
+.review-sections > details > summary > h3 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+.review-sections > details:not([open]) > summary {
+  margin-block: 0;
+}
+.review-sections > details[open] {
+  padding: 0 1.25rem 1.25rem;
+}
+.review-sections > details[open] > summary {
+  margin-inline: -1.25rem;
+  margin-bottom: 0;
+}
+
+.review-sections > details[open] > summary > .section-chevron {
+  transform: rotate(180deg);
+}
