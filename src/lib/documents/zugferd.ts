@@ -6,6 +6,9 @@ import { invoiceRequirements } from './xrechnung'
 import { DocumentError } from './config'
 import { sha256 } from './storage'
 import { zugferdIssues } from './validation-report'
+import { calculateInvoice } from './invoice-calculation'
+import { invoiceTypeCodes, type InvoiceAdjustment } from './invoice-types'
+import { invoiceNote, paymentAttachment } from './invoice-notes'
 
 export function generateCII(data: DocumentRecord) {
   if (invoiceRequirements(data, 'zugferd').length) throw new DocumentError('exportIncomplete')
@@ -23,6 +26,26 @@ export function generateCII(data: DocumentRecord) {
   ) => node.ele(name, attrs).txt(value).up()
   const date = (node: typeof root, name: string, value: string) =>
     text(node.ele(name), 'udt:DateTimeString', value.replaceAll('-', ''), { format: '102' })
+  const calculated = calculateInvoice(data)!
+  const adjustment = (
+    parent: typeof root,
+    item: InvoiceAdjustment,
+    charge: boolean,
+    document: boolean,
+  ) => {
+    const node = parent.ele('ram:SpecifiedTradeAllowanceCharge')
+    text(node.ele('ram:ChargeIndicator'), 'udt:Indicator', String(charge))
+    if (item.percentage) text(node, 'ram:CalculationPercent', item.percentage)
+    if (item.baseAmount) text(node, 'ram:BasisAmount', new Decimal(item.baseAmount).toFixed(2))
+    text(node, 'ram:ActualAmount', new Decimal(item.amount).toFixed(2))
+    text(node, 'ram:Reason', item.reason)
+    if (document) {
+      const tax = node.ele('ram:CategoryTradeTax')
+      text(tax, 'ram:TypeCode', 'VAT')
+      text(tax, 'ram:CategoryCode', item.taxCategory || 'S')
+      text(tax, 'ram:RateApplicablePercent', item.taxRate!)
+    }
+  }
   text(
     root.ele('rsm:ExchangedDocumentContext').ele('ram:GuidelineSpecifiedDocumentContextParameter'),
     'ram:ID',
@@ -30,26 +53,28 @@ export function generateCII(data: DocumentRecord) {
   )
   const doc = root.ele('rsm:ExchangedDocument')
   text(doc, 'ram:ID', data.documentNumber)
-  text(doc, 'ram:TypeCode', '380')
+  text(doc, 'ram:TypeCode', invoiceTypeCodes[data.invoiceKind || 'standard'])
   date(doc, 'ram:IssueDateTime', data.documentDate)
+  if (invoiceNote(data)) text(doc.ele('ram:IncludedNote'), 'ram:Content', invoiceNote(data))
   const transaction = root.ele('rsm:SupplyChainTradeTransaction')
   for (const [index, line] of data.lines.entries()) {
     const item = transaction.ele('ram:IncludedSupplyChainTradeLineItem')
     text(item.ele('ram:AssociatedDocumentLineDocument'), 'ram:LineID', String(index + 1))
     text(item.ele('ram:SpecifiedTradeProduct'), 'ram:Name', line.description)
-    text(
-      item.ele('ram:SpecifiedLineTradeAgreement').ele('ram:NetPriceProductTradePrice'),
-      'ram:ChargeAmount',
-      line.unitPrice,
-    )
+    const price = item.ele('ram:SpecifiedLineTradeAgreement').ele('ram:NetPriceProductTradePrice')
+    text(price, 'ram:ChargeAmount', line.unitPrice)
+    if (line.priceBaseQuantity)
+      text(price, 'ram:BasisQuantity', line.priceBaseQuantity, { unitCode: line.unitCode })
     text(item.ele('ram:SpecifiedLineTradeDelivery'), 'ram:BilledQuantity', line.quantity, {
       unitCode: line.unitCode,
     })
     const settlement = item.ele('ram:SpecifiedLineTradeSettlement'),
       tax = settlement.ele('ram:ApplicableTradeTax')
     text(tax, 'ram:TypeCode', 'VAT')
-    text(tax, 'ram:CategoryCode', 'S')
+    text(tax, 'ram:CategoryCode', line.taxCategory || 'S')
     text(tax, 'ram:RateApplicablePercent', line.taxRate)
+    for (const value of line.allowances || []) adjustment(settlement, value, false, false)
+    for (const value of line.charges || []) adjustment(settlement, value, true, false)
     text(
       settlement.ele('ram:SpecifiedTradeSettlementLineMonetarySummation'),
       'ram:LineTotalAmount',
@@ -77,11 +102,24 @@ export function generateCII(data: DocumentRecord) {
     else if (side === 'issuer' && info.taxNumber)
       text(party.ele('ram:SpecifiedTaxRegistration'), 'ram:ID', info.taxNumber, { schemeID: 'FC' })
   }
-  date(
-    transaction.ele('ram:ApplicableHeaderTradeDelivery').ele('ram:ActualDeliverySupplyChainEvent'),
-    'ram:OccurrenceDateTime',
-    data.supplyDate,
-  )
+  const payments = paymentAttachment(data)
+  if (payments) {
+    const attachment = agreement.ele('ram:AdditionalReferencedDocument')
+    text(attachment, 'ram:IssuerAssignedID', 'payments.csv')
+    text(attachment, 'ram:TypeCode', '916')
+    text(attachment, 'ram:Name', 'Vereinnahmte Teilentgelte / Advance payments')
+    text(attachment, 'ram:AttachmentBinaryObject', payments, {
+      mimeCode: 'text/csv',
+      filename: 'payments.csv',
+    })
+  }
+  const delivery = transaction.ele('ram:ApplicableHeaderTradeDelivery')
+  if (data.supplyDate)
+    date(
+      delivery.ele('ram:ActualDeliverySupplyChainEvent'),
+      'ram:OccurrenceDateTime',
+      data.supplyDate,
+    )
   const settlement = transaction.ele('ram:ApplicableHeaderTradeSettlement')
   text(settlement, 'ram:InvoiceCurrencyCode', data.currency)
   const payment = settlement.ele('ram:SpecifiedTradeSettlementPaymentMeans')
@@ -92,19 +130,24 @@ export function generateCII(data: DocumentRecord) {
       'ram:IBANID',
       data.bankAccount.replace(/\s/g, '').toUpperCase(),
     )
-  const groups = new Map<string, Decimal>()
-  for (const line of data.lines) {
-    const rate = new Decimal(line.taxRate).toString()
-    groups.set(rate, (groups.get(rate) || new Decimal(0)).plus(line.netAmount))
-  }
-  for (const [rate, net] of groups) {
+  for (const group of calculated.breakdown) {
     const tax = settlement.ele('ram:ApplicableTradeTax')
-    text(tax, 'ram:CalculatedAmount', net.times(rate).div(100).toFixed(2))
+    text(tax, 'ram:CalculatedAmount', group.tax)
     text(tax, 'ram:TypeCode', 'VAT')
-    text(tax, 'ram:BasisAmount', net.toFixed(2))
-    text(tax, 'ram:CategoryCode', 'S')
-    text(tax, 'ram:RateApplicablePercent', rate)
+    if (group.category === 'E') text(tax, 'ram:ExemptionReason', data.taxExemptionReason!)
+    if (group.category === 'AE') text(tax, 'ram:ExemptionReason', data.reverseChargeReason!)
+    text(tax, 'ram:BasisAmount', group.net)
+    text(tax, 'ram:CategoryCode', group.category)
+    if (group.category === 'AE') text(tax, 'ram:ExemptionReasonCode', 'VATEX-EU-AE')
+    text(tax, 'ram:RateApplicablePercent', group.rate)
   }
+  if (data.periodStart || data.periodEnd) {
+    const period = settlement.ele('ram:BillingSpecifiedPeriod')
+    if (data.periodStart) date(period, 'ram:StartDateTime', data.periodStart)
+    if (data.periodEnd) date(period, 'ram:EndDateTime', data.periodEnd)
+  }
+  for (const value of data.allowances || []) adjustment(settlement, value, false, true)
+  for (const value of data.charges || []) adjustment(settlement, value, true, true)
   const terms = settlement.ele('ram:SpecifiedTradePaymentTerms')
   if (data.paymentTerms) text(terms, 'ram:Description', data.paymentTerms)
   if (data.dueDate) date(terms, 'ram:DueDateDateTime', data.dueDate)
@@ -114,15 +157,25 @@ export function generateCII(data: DocumentRecord) {
     'ram:LineTotalAmount',
     data.lines.reduce((sum, line) => sum.plus(line.netAmount), new Decimal(0)).toFixed(2),
   )
-  text(total, 'ram:ChargeTotalAmount', '0.00')
-  text(total, 'ram:AllowanceTotalAmount', '0.00')
+  text(total, 'ram:ChargeTotalAmount', calculated.charges)
+  text(total, 'ram:AllowanceTotalAmount', calculated.allowances)
   text(total, 'ram:TaxBasisTotalAmount', new Decimal(data.netAmount).toFixed(2))
   text(total, 'ram:TaxTotalAmount', new Decimal(data.taxAmount).toFixed(2), {
     currencyID: data.currency,
   })
   text(total, 'ram:GrandTotalAmount', new Decimal(data.grossAmount).toFixed(2))
-  text(total, 'ram:TotalPrepaidAmount', '0.00')
-  text(total, 'ram:DuePayableAmount', new Decimal(data.grossAmount).toFixed(2))
+  text(total, 'ram:TotalPrepaidAmount', new Decimal(data.prepaidAmount || '0').toFixed(2))
+  text(total, 'ram:DuePayableAmount', calculated.payable)
+  for (const ref of data.precedingInvoices || []) {
+    const node = settlement.ele('ram:InvoiceReferencedDocument')
+    text(node, 'ram:IssuerAssignedID', ref.number)
+    text(
+      node.ele('ram:FormattedIssueDateTime'),
+      'qdt:DateTimeString',
+      ref.date.replaceAll('-', ''),
+      { format: '102', 'xmlns:qdt': 'urn:un:unece:uncefact:data:standard:QualifiedDataType:100' },
+    )
+  }
   return root.end({ prettyPrint: true })
 }
 const responseSchema = z.object({

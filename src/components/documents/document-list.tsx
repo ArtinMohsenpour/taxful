@@ -11,6 +11,9 @@ import { WorkspaceSelect } from '@/components/customer-auth/workspace-select'
 import type { documentMessages } from '../../../messages/documents'
 type Key = keyof typeof documentMessages.en
 type Item = {
+  source_kind: 'manual' | 'upload'
+  workflow: 'incoming' | 'outgoing' | 'unclassified'
+  invoice_state: 'draft' | 'issued' | 'sent' | 'paid'
   id: string
   original_name: string
   status: Key
@@ -42,7 +45,14 @@ type Listing = {
   aiReady: boolean
 }
 
-export function DocumentList({ upload = false }: { upload?: boolean }) {
+export function DocumentList({
+  upload = false,
+  workflow = 'all',
+}: {
+  upload?: boolean
+  workflow?: 'all' | 'incoming' | 'outgoing' | 'unclassified'
+}) {
+  const invoices = useTranslations('Invoices')
   const t = useTranslations('Documents'),
     locale = useLocale()
   const [listing, setListing] = useState<Listing | null>(null),
@@ -62,7 +72,10 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
     async (signal?: AbortSignal) => {
       const version = ++latest.current
       try {
-        const response = await fetch('/api/documents?' + query, { cache: 'no-store', signal })
+        const response = await fetch('/api/documents?' + query + '&workflow=' + workflow, {
+          cache: 'no-store',
+          signal,
+        })
         const body = await response.json()
         if (!response.ok) throw new Error(body.error)
         if (version === latest.current) setListing(body)
@@ -74,7 +87,7 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
           setError(error instanceof Error ? error.message : 'genericError')
       }
     },
-    [query],
+    [query, workflow],
   )
   useEffect(() => {
     const controller = new AbortController()
@@ -113,6 +126,7 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
     setNotice('')
     try {
       const form = new FormData()
+      form.append('workflow', workflow === 'incoming' ? 'incoming' : 'outgoing')
       files.forEach((file) => form.append('files', file))
       const response = await fetch('/api/documents', {
         method: 'POST',
@@ -155,7 +169,9 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
           role="alert"
           className="rounded-2xl border border-error/20 bg-error/5 p-4 text-sm text-error"
         >
-          {t(t.has(error as Key) ? (error as Key) : 'genericError')}
+          {invoices.has(error as never)
+            ? invoices(error as never)
+            : t(t.has(error as Key) ? (error as Key) : 'genericError')}
         </p>
       )}
       {upload && (
@@ -176,6 +192,7 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
             <Icon name="converter" className="mb-4 size-9 text-brand-ink" />
             <p className="text-lg font-medium">{t('drop')}</p>
             <p className="mt-2 max-w-md text-xs leading-relaxed text-muted-foreground">
+              {workflow === 'incoming' ? 'XML · ' : ''}
               {t('formats')}
             </p>
             <label className="mt-5 cursor-pointer rounded-full border border-border bg-surface px-5 py-3 text-sm font-medium focus-within:outline-2 focus-within:outline-primary">
@@ -186,7 +203,11 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
                 className="sr-only"
                 disabled={pending}
                 multiple={(listing?.limits.batchLimit || 1) > 1}
-                accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.tif,.tiff,.gif,.avif"
+                accept={
+                  workflow === 'incoming'
+                    ? '.xml,.pdf,.docx,.jpg,.jpeg,.png,.webp,.tif,.tiff,.gif,.avif'
+                    : '.pdf,.docx,.jpg,.jpeg,.png,.webp,.tif,.tiff,.gif,.avif'
+                }
                 onChange={(event) => select(Array.from(event.target.files || []))}
               />
             </label>
@@ -213,16 +234,18 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
               </p>
             </div>
           )}
-          <p className="my-5 text-sm leading-relaxed text-muted-foreground">{t('aiNotice')}</p>
+          <p className="my-5 text-sm leading-relaxed text-muted-foreground">
+            {workflow === 'incoming' ? invoices('importPrivacy') : t('aiNotice')}
+          </p>
           {listing && !listing.aiReady && (
-            <p className="mb-4 text-sm text-brand-ink">{t('aiUnavailable')}</p>
+            <p className="mb-4 text-sm text-brand-ink">{invoices('aiOptional')}</p>
           )}
           <button
             onClick={submit}
             disabled={
               pending ||
               !files.length ||
-              !listing?.aiReady ||
+              !listing ||
               listing.limits.used >= listing.limits.dailyLimit
             }
             className={buttonClass}
@@ -286,17 +309,20 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
               label={t('allTypes')}
               value={typeFilter}
               onChange={setTypeFilter}
-              options={(['all', 'pdf', 'word', 'image'] as const).map((value) => ({
+              options={(['all', 'pdf', 'word', 'image', 'xml'] as const).map((value) => ({
                 value,
-                label: t(
-                  value === 'all'
-                    ? 'allTypes'
-                    : value === 'pdf'
-                      ? 'pdfFiles'
-                      : value === 'word'
-                        ? 'wordFiles'
-                        : 'imageFiles',
-                ),
+                label:
+                  value === 'xml'
+                    ? 'XML'
+                    : t(
+                        value === 'all'
+                          ? 'allTypes'
+                          : value === 'pdf'
+                            ? 'pdfFiles'
+                            : value === 'word'
+                              ? 'wordFiles'
+                              : 'imageFiles',
+                      ),
               }))}
             />
           </div>
@@ -386,16 +412,26 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
                             {item.original_name}
                           </Link>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {(item.size_bytes / 1024 / 1024).toFixed(2)} MB ·{' '}
+                            {item.source_kind === 'manual'
+                              ? invoices('manual')
+                              : (item.size_bytes / 1024 / 1024).toFixed(2) + ' MB'}{' '}
+                            ·{' '}
                             {new Intl.DateTimeFormat(locale, {
                               timeStyle: 'short',
                               timeZone: 'Europe/Berlin',
                             }).format(new Date(item.created_at))}{' '}
-                            · {t('storedOriginal')}
+                            ·{' '}
+                            {item.workflow === 'outgoing'
+                              ? invoices(item.invoice_state)
+                              : item.workflow === 'incoming'
+                                ? invoices('incoming')
+                                : invoices('unclassified')}
                           </p>
                         </div>
                       </div>
                       <DocumentProgress
+                        manual={item.source_kind === 'manual'}
+                        incoming={item.workflow === 'incoming'}
                         status={item.status}
                         stage={item.processing_stage}
                         exported={item.export_available || item.zugferd_available}
@@ -403,11 +439,13 @@ export function DocumentList({ upload = false }: { upload?: boolean }) {
                       />
                       {item.status === 'failed' || item.status === 'rejected' ? (
                         <p className="mt-3 text-xs text-error">
-                          {t(
-                            t.has(item.error_code as Key)
-                              ? (item.error_code as Key)
-                              : 'genericError',
-                          )}
+                          {invoices.has(item.error_code as never)
+                            ? invoices(item.error_code as never)
+                            : t(
+                                t.has(item.error_code as Key)
+                                  ? (item.error_code as Key)
+                                  : 'genericError',
+                              )}
                         </p>
                       ) : null}
                       <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4 text-xs font-medium">

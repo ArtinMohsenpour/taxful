@@ -9,6 +9,8 @@ import { generateXRechnung, validateXRechnung, invoiceRequirements } from './xre
 import { generateZugferd } from './zugferd'
 import type { PoolClient } from 'pg'
 import { documentFilters, type DocumentFilters } from './listing'
+import { saveInvoiceCustomer } from '../invoices/save-customer'
+import { canManageCompany } from './company-profile'
 
 export async function event(
   client: PoolClient,
@@ -40,7 +42,12 @@ export async function entitlements(context: DocumentContext) {
     maxRequestBytes: limits.maxRequestBytes,
   }
 }
-export async function uploadDocuments(context: DocumentContext, files: File[], key: string) {
+export async function uploadDocuments(
+  context: DocumentContext,
+  files: File[],
+  key: string,
+  workflow: 'incoming' | 'outgoing' | 'unclassified' = 'unclassified',
+) {
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(key)) throw new DocumentError('invalidRequest')
   const limits = documentLimits()
   if (!files.length || files.length > 5) throw new DocumentError('batchLimit')
@@ -57,7 +64,10 @@ export async function uploadDocuments(context: DocumentContext, files: File[], k
     }),
   )
   const fingerprint = sha256(
-    JSON.stringify(input.map((file) => ({ hash: file.hash, name: file.name }))),
+    JSON.stringify({
+      workflow,
+      files: input.map((file) => ({ hash: file.hash, name: file.name })),
+    }),
   )
   const client = await customerPool.connect()
   const written: string[] = []
@@ -105,7 +115,7 @@ export async function uploadDocuments(context: DocumentContext, files: File[], k
       await writePrivate(id, file.bytes)
       written.push(id)
       await client.query(
-        'INSERT INTO customer_auth.documents(id,organization_id,batch_id,uploaded_by,original_name,mime_type,size_bytes,source_sha256) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
+        'INSERT INTO customer_auth.documents(id,organization_id,batch_id,uploaded_by,original_name,mime_type,size_bytes,source_sha256,workflow) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',
         [
           id,
           context.organizationId,
@@ -115,6 +125,7 @@ export async function uploadDocuments(context: DocumentContext, files: File[], k
           file.mime,
           file.bytes.length,
           file.hash,
+          workflow,
         ],
       )
       await event(client, context, id, 'uploaded')
@@ -146,14 +157,14 @@ export async function documentLibrary(
   context: DocumentContext,
   filters: DocumentFilters = documentFilters(),
 ) {
-  const where = `d.organization_id=$1
+  const where = `d.organization_id=$1 AND ($7='all' OR d.workflow=$7)
     AND ($2='' OR position(lower($2) in lower(d.original_name))>0)
     AND ($3='all' OR ($3='exported' AND d.status='approved' AND e.id IS NOT NULL)
       OR ($3='approved' AND d.status='approved' AND e.id IS NULL)
       OR ($3='processing' AND (d.status='processing' OR (d.export_state='generating' AND d.export_started_at>now()-interval '120 seconds')))
       OR ($3='failed' AND (d.status IN ('failed','rejected') OR d.export_state='failed' OR (d.export_state='generating' AND d.export_started_at<=now()-interval '120 seconds')))
       OR ($3 NOT IN ('all','exported','approved','failed','processing') AND d.status=$3))
-    AND ($4='all' OR ($4='pdf' AND d.mime_type='application/pdf')
+    AND ($4='all' OR ($4='pdf' AND d.mime_type='application/pdf') OR ($4='xml' AND d.mime_type='application/xml')
       OR ($4='word' AND d.mime_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
       OR ($4='image' AND d.mime_type LIKE 'image/%'))
     AND ($5::date IS NULL OR d.created_at >= ($5::date::timestamp AT TIME ZONE 'Europe/Berlin'))
@@ -168,6 +179,7 @@ export async function documentLibrary(
     filters.type,
     filters.from || null,
     filters.to || null,
+    filters.workflow,
   ]
   const client = await customerPool.connect()
   try {
@@ -176,7 +188,7 @@ export async function documentLibrary(
     const total = count.rows[0].total as number
     const page = Math.min(filters.page, Math.max(1, Math.ceil(total / 20)))
     const result = await client.query(
-      `SELECT d.id,d.uploaded_by,d.original_name,d.mime_type,d.size_bytes,d.status,d.error_code,
+      `SELECT d.id,d.uploaded_by,d.original_name,d.mime_type,d.size_bytes,d.status,d.error_code,d.workflow,d.source_kind,d.invoice_state,
       d.processing_stage,d.extraction_method,
       CASE WHEN d.export_state='generating' AND d.export_started_at<=now()-interval '120 seconds' THEN 'failed' ELSE d.export_state END AS export_state,
       d.created_at,d.updated_at,
@@ -184,14 +196,14 @@ export async function documentLibrary(
       (COALESCE(e.xrechnung,false) AND d.status='approved') AS export_available,
       (COALESCE(e.zugferd,false) AND d.status='approved') AS zugferd_available,
       to_char(d.created_at AT TIME ZONE 'Europe/Berlin','YYYY-MM-DD') AS upload_date
-      ${join} WHERE ${where} ORDER BY d.created_at DESC,d.id DESC LIMIT 20 OFFSET $7`,
+      ${join} WHERE ${where} ORDER BY d.created_at DESC,d.id DESC LIMIT 20 OFFSET $8`,
       [...values, (page - 1) * 20],
     )
     await client.query('COMMIT')
     return {
       documents: result.rows.map(({ uploaded_by, ...row }) => ({
         ...row,
-        can_delete: canDeleteDocument(context, uploaded_by),
+        can_delete: row.invoice_state === 'draft' && canDeleteDocument(context, uploaded_by),
       })),
       total,
       page,
@@ -219,18 +231,35 @@ export async function getDocument(context: DocumentContext, id: string) {
 export async function saveReview(context: DocumentContext, id: string, input: unknown) {
   const parsed = reviewSchema.safeParse(input)
   if (!parsed.success) throw new DocumentError('invalidRequest')
-  const { data, revision, approve, confirmations } = parsed.data
+  const { data, revision, approve, confirmations, saveCustomer } = parsed.data
   if (approve && (!Object.values(confirmations).every(Boolean) || invoiceRequirements(data).length))
     throw new DocumentError('reviewInvalid')
   const client = await customerPool.connect()
   try {
     await client.query('BEGIN')
-    await lockMembership(client, context, approve)
+    const role = await lockMembership(client, context, approve)
+    if (saveCustomer && (!approve || !canManageCompany(role)))
+      throw new DocumentError('forbidden', 403)
     const document = await client.query(
-      "SELECT status,revision,export_state,export_started_at>now()-interval '120 seconds' AS export_busy FROM customer_auth.documents WHERE id=$1 AND organization_id=$2 FOR UPDATE",
+      "SELECT status,revision,workflow,source_kind,invoice_state,export_state,export_started_at>now()-interval '120 seconds' AS export_busy FROM customer_auth.documents WHERE id=$1 AND organization_id=$2 FOR UPDATE",
       [id, context.organizationId],
     )
     if (!document.rows[0]) throw new DocumentError('notFound', 404)
+    if (document.rows[0].workflow !== 'outgoing') throw new DocumentError('workflowRequired', 409)
+    if (document.rows[0].invoice_state !== 'draft') throw new DocumentError('invoiceLocked', 409)
+    const number = await client.query(
+      'SELECT number FROM customer_auth.invoice_numbers WHERE document_id=$1',
+      [id],
+    )
+    if (number.rows[0] && number.rows[0].number !== data.documentNumber)
+      throw new DocumentError('numberLocked', 409)
+    if (approve && !number.rows[0]) {
+      const reserved = await client.query(
+        'INSERT INTO customer_auth.invoice_numbers(organization_id,number,document_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING number',
+        [context.organizationId, data.documentNumber, id],
+      )
+      if (!reserved.rowCount) throw new DocumentError('numberTaken', 409)
+    }
     if (document.rows[0].export_state === 'generating' && document.rows[0].export_busy)
       throw new DocumentError('exportBusy', 409)
     if (document.rows[0].revision !== revision) throw new DocumentError('conflict', 409)
@@ -242,7 +271,7 @@ export async function saveReview(context: DocumentContext, id: string, input: un
       [randomUUID(), id, next, data, context.userId, approve],
     )
     await client.query(
-      "UPDATE customer_auth.documents SET reviewed_data=$3,revision=$4,status=$5,export_state='idle',export_issues='[]',approved_by=$6,approved_at=CASE WHEN $6::text IS NULL THEN NULL ELSE now() END,updated_at=now() WHERE id=$1 AND organization_id=$2",
+      "UPDATE customer_auth.documents SET reviewed_data=$3,revision=$4,status=$5,saved_customer_id=NULL,export_state='idle',export_issues='[]',approved_by=$6,approved_at=CASE WHEN $6::text IS NULL THEN NULL ELSE now() END,updated_at=now() WHERE id=$1 AND organization_id=$2",
       [
         id,
         context.organizationId,
@@ -256,6 +285,14 @@ export async function saveReview(context: DocumentContext, id: string, input: un
       revision: next,
       confirmations: approve ? confirmations : undefined,
     })
+    if (saveCustomer) {
+      const customerId = await saveInvoiceCustomer(client, context, data.recipient)
+      await client.query('UPDATE customer_auth.documents SET saved_customer_id=$2 WHERE id=$1', [
+        id,
+        customerId,
+      ])
+      await event(client, context, id, 'customer_saved', { customerId })
+    }
     await client.query('COMMIT')
     return { revision: next, status: approve ? 'approved' : 'needs_review' }
   } catch (error) {
@@ -296,7 +333,7 @@ export async function exportDocument(
     await lockMembership(claim, context, true)
     const result = await claim.query(
       `UPDATE customer_auth.documents SET export_state='generating',export_issues='[]',export_started_at=now(),updated_at=now()
-      WHERE id=$1 AND organization_id=$2 AND status='approved'
+      WHERE id=$1 AND organization_id=$2 AND status='approved' AND workflow='outgoing'
       AND (export_state<>'generating' OR export_started_at<now()-interval '120 seconds') RETURNING export_started_at::text`,
       [id, context.organizationId],
     )
@@ -361,6 +398,7 @@ async function generateDocumentExport(
     )
     const doc = result.rows[0]
     if (!doc) throw new DocumentError('notFound', 404)
+    if (doc.workflow !== 'outgoing') throw new DocumentError('workflowRequired', 409)
     if (doc.status !== 'approved') throw new DocumentError('approvalRequired', 409)
     const existing = await client.query(
       'SELECT id FROM customer_auth.document_exports WHERE document_id=$1 AND revision=$2 AND format=$3',
@@ -401,6 +439,10 @@ async function generateDocumentExport(
       exportId: written,
       format: formatId,
     })
+    await client.query(
+      "UPDATE customer_auth.documents SET invoice_state=CASE WHEN invoice_state='draft' THEN 'issued' ELSE invoice_state END,issued_at=COALESCE(issued_at,now()) WHERE id=$1",
+      [id],
+    )
     await client.query('COMMIT')
     return written
   } catch (error) {
@@ -423,7 +465,8 @@ export async function downloadDocument(
   kind: 'source' | 'preview' | 'export' | 'zugferd',
 ) {
   const doc = await getDocument(context, id)
-  if (!doc.scanned_at || doc.status === 'rejected') throw new DocumentError('invalidState', 409)
+  if ((doc.source_kind !== 'manual' && !doc.scanned_at) || doc.status === 'rejected')
+    throw new DocumentError('invalidState', 409)
   if (kind === 'export' || kind === 'zugferd') {
     if (doc.status !== 'approved') throw new DocumentError('approvalRequired', 409)
     const result = await customerPool.query(
@@ -439,6 +482,7 @@ export async function downloadDocument(
       name: kind === 'export' ? 'xrechnung-' + id + '.xml' : 'zugferd-' + id + '.pdf',
     }
   }
+  if (doc.source_kind === 'manual') throw new DocumentError('notFound', 404)
   if (kind === 'preview' && !doc.mime_type.startsWith('image/'))
     throw new DocumentError('notFound', 404)
   const bytes = await readPrivate(id, kind)

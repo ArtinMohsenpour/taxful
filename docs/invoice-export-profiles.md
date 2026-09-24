@@ -1,6 +1,6 @@
 # Invoice exports: decisions and verified boundaries
 
-Reviewed 13 September 2026.
+Coverage updated 23 September 2026.
 
 ## Product decision
 
@@ -38,7 +38,9 @@ The supplied table was a useful starting point, but omitted the supply/service d
 
 The [federal e-invoice FAQ](https://e-rechnung-bund.de/faq/) explains routing and recipient-specific requirements. A valid generic ZUGFeRD invoice is not a promise that every government receiving portal accepts it. Confirm the receiving entity's profile and channel.
 
-This implementation supports standard positive-VAT invoices without allowances, exemptions, reverse charge, credit notes or prepayments. It does not yet model delivery periods, partial deliveries, foreign-tax scenarios or every permissible payment/end-point code. These boundaries must remain visible; never infer tax treatment to make validation pass. Supplying a service date is this workflow's explicit representation, not a claim that a single date is the only legally permitted representation.
+The supported profile now includes commercial credit notes, corrections, partial/advance/final invoices, line/document discounts and charges, service periods, multiple VAT rates, zero-rating, exemptions and reverse charge. See [invoice workflows](invoice-workflows.md#invoice-coverage) for exact codes and conditions. XRechnung rejects advance-payment type 386 in the installed rules; that choice requires ZUGFeRD. Self-billing, foreign sales tax, unmodeled tax categories and all possible payment/endpoint codes are not covered. Never infer tax treatment to make validation pass.
+
+For final invoices, [§14(5) UStG](https://www.gesetze-im-internet.de/ustg_1980/__14.html) and question 7b of the [BMF FAQ](https://www.bundesfinanzministerium.de/Content/DE/FAQ/e-rechnung.html) inform the received-payment deduction schedule. Both adapters explicitly reference and embed `payments.csv`; the invoice note and PDF also show net/VAT/gross deductions and the remainder. This is a supported representation, not automated verification of the legal or accounting status of the payments.
 
 ## Generator and validator
 
@@ -51,7 +53,7 @@ The build overrides only the bundled German display label for BT-10 to “Käufe
 Generation steps:
 
 1. Validate generated CII; stop on rejection.
-2. Render the approved CII using the bundled invoice visualizer and embedded fonts.
+2. Render the approved CII using the compact Taxful stylesheet and embedded fonts. Document headings, references, adjustments, tax reasons and payment deductions must agree with the XML. Invoice-wide adjustments must never be assigned to an individual line's displayed VAT.
 3. Embed that exact CII with EN16931 profile metadata into PDF/A-3.
 4. Independently validate the PDF container and require extracted XML to equal the input.
 5. Validate the combined file; return bytes only on success, with input/output SHA-256 hashes.

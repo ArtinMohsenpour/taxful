@@ -4,6 +4,7 @@ import { DocumentError } from './config'
 const filters = z
   .object({
     q: z.string().trim().max(120).default(''),
+    workflow: z.enum(['all', 'incoming', 'outgoing', 'unclassified']).default('all'),
     status: z
       .enum([
         'all',
@@ -16,7 +17,7 @@ const filters = z
         'unsupported',
       ])
       .default('all'),
-    type: z.enum(['all', 'pdf', 'word', 'image']).default('all'),
+    type: z.enum(['all', 'pdf', 'word', 'image', 'xml']).default('all'),
     from: z.union([z.iso.date(), z.literal('')]).default(''),
     to: z.union([z.iso.date(), z.literal('')]).default(''),
     page: z.coerce.number().int().min(1).max(100000).default(1),

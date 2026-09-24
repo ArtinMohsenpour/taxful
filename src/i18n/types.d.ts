@@ -1,6 +1,7 @@
 import type messages from '../../messages/de.json'
 import type { customerMessages } from '../../messages/customer'
 import type { documentMessages } from '../../messages/documents'
+import type { invoiceMessages } from '../../messages/invoices'
 import type { routing } from './routing'
 
 declare module 'next-intl' {
@@ -9,6 +10,7 @@ declare module 'next-intl' {
     Messages: typeof messages & {
       Auth: typeof customerMessages.en
       Documents: typeof documentMessages.en
+      Invoices: typeof invoiceMessages.en
     }
   }
 }

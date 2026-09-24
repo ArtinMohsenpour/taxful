@@ -10,6 +10,7 @@ type Key = keyof typeof documentMessages.en
 
 function PreviewContent({ id, kind }: { id: string; kind: 'source' | 'export' | 'zugferd' }) {
   const t = useTranslations('Documents')
+  const invoices = useTranslations('Invoices')
   const [document, setDocument] = useState<{
     mime: string
     text: string | null
@@ -64,7 +65,9 @@ function PreviewContent({ id, kind }: { id: string; kind: 'source' | 'export' | 
     )
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">{t('wordPreviewHint')}</p>
+      <p className="text-xs text-muted-foreground">
+        {document.mime === 'application/xml' ? invoices('xmlPreviewHint') : t('wordPreviewHint')}
+      </p>
       <pre className="max-h-[65dvh] overflow-auto rounded-xl bg-background p-5 text-sm leading-relaxed break-words whitespace-pre-wrap">
         {document.text || t('previewWaiting')}
       </pre>
@@ -136,11 +139,11 @@ export function DocumentActions({
             {t('open')}
           </Link>
         )}
-        {sourceAvailable && (
+        {(sourceAvailable || exportAvailable || zugferdAvailable) && (
           <button
             type="button"
             onClick={() => {
-              setKind('source')
+              setKind(sourceAvailable ? 'source' : zugferdAvailable ? 'zugferd' : 'export')
               setMode('preview')
             }}
             className={`${actionClass} border-border bg-surface text-foreground hover:bg-accent`}
@@ -220,14 +223,16 @@ export function DocumentActions({
             {mode === 'preview' ? (
               <>
                 <div className="mb-5 flex flex-wrap items-center gap-3 text-sm">
-                  <button
-                    type="button"
-                    aria-pressed={kind === 'source'}
-                    onClick={() => setKind('source')}
-                    className={`rounded-full px-4 py-2 ${kind === 'source' ? 'bg-primary/20 text-brand-ink' : 'border border-border'}`}
-                  >
-                    {t('original')}
-                  </button>
+                  {sourceAvailable && (
+                    <button
+                      type="button"
+                      aria-pressed={kind === 'source'}
+                      onClick={() => setKind('source')}
+                      className={`rounded-full px-4 py-2 ${kind === 'source' ? 'bg-primary/20 text-brand-ink' : 'border border-border'}`}
+                    >
+                      {t('original')}
+                    </button>
+                  )}
                   {exportAvailable && (
                     <button
                       type="button"

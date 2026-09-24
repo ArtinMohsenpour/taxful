@@ -50,13 +50,14 @@ export async function deleteDocument(context: DocumentContext, id: string) {
     await client.query('BEGIN')
     const role = await lockMembership(client, context)
     const result = await client.query(
-      `SELECT uploaded_by,status,export_state,
+      `SELECT uploaded_by,status,export_state,invoice_state,
       export_started_at>now()-interval '120 seconds' AS export_busy FROM customer_auth.documents
       WHERE id=$1 AND organization_id=$2 FOR UPDATE`,
       [id, context.organizationId],
     )
     const doc = result.rows[0]
     if (!doc) throw new DocumentError('notFound', 404)
+    if (doc.invoice_state !== 'draft') throw new DocumentError('invoiceLocked', 409)
     if (!canDeleteDocument({ ...context, role }, doc.uploaded_by))
       throw new DocumentError('forbidden', 403)
     if (doc.status === 'processing' || (doc.export_state === 'generating' && doc.export_busy))

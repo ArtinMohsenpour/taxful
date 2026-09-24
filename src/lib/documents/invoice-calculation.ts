@@ -1,5 +1,40 @@
 import Decimal from 'decimal.js'
 import type { DocumentRecord } from './schema'
+import type { InvoiceAdjustment } from './invoice-types'
+export const numericAmount = (value: string | undefined): value is string =>
+  !!value && /^\d{1,15}(\.\d{1,6})?$/.test(value)
+export const sumAdjustments = (items: InvoiceAdjustment[] = []) =>
+  items.reduce((sum, item) => sum.plus(item.amount), new Decimal(0))
+export function adjustedLineNet(line: DocumentRecord['lines'][number]) {
+  if (
+    ![line.quantity, line.unitPrice, line.priceBaseQuantity || '1'].every(numericAmount) ||
+    new Decimal(line.priceBaseQuantity || '1').lte(0) ||
+    [...(line.allowances || []), ...(line.charges || [])].some((a) => !numericAmount(a.amount))
+  )
+    return null
+  return new Decimal(line.quantity)
+    .times(line.unitPrice)
+    .div(line.priceBaseQuantity || '1')
+    .minus(sumAdjustments(line.allowances))
+    .plus(sumAdjustments(line.charges))
+    .toFixed(2)
+}
+export function priceForLineNet(line: DocumentRecord['lines'][number], net: string) {
+  if (
+    !numericAmount(net) ||
+    !numericAmount(line.quantity) ||
+    new Decimal(line.quantity).lte(0) ||
+    !numericAmount(line.priceBaseQuantity || '1') ||
+    [...(line.allowances || []), ...(line.charges || [])].some((a) => !numericAmount(a.amount))
+  )
+    return null
+  return new Decimal(net)
+    .plus(sumAdjustments(line.allowances))
+    .minus(sumAdjustments(line.charges))
+    .times(line.priceBaseQuantity || '1')
+    .div(line.quantity)
+    .toFixed(2)
+}
 export function calculateInvoice(data: DocumentRecord) {
   if (
     !data.lines.length ||
@@ -10,22 +45,38 @@ export function calculateInvoice(data: DocumentRecord) {
     )
   )
     return null
-  const groups = new Map<string, Decimal>(),
+  if (
+    [...(data.allowances || []), ...(data.charges || [])].some(
+      (a) => !numericAmount(a.amount) || !numericAmount(a.taxRate),
+    ) ||
+    (data.prepaidAmount && !numericAmount(data.prepaidAmount))
+  )
+    return null
+  const groups = new Map<string, { category: string; rate: string; net: Decimal }>(),
     invalidLines: number[] = []
+  const accumulate = (category: string, rate: string, net: Decimal) => {
+    const key = `${category}:${new Decimal(rate).toString()}`
+    const group = groups.get(key) || {
+      category,
+      rate: new Decimal(rate).toString(),
+      net: new Decimal(0),
+    }
+    group.net = group.net.plus(net)
+    groups.set(key, group)
+  }
   for (const [index, line] of data.lines.entries()) {
     const rate = new Decimal(line.taxRate).toString()
-    groups.set(rate, (groups.get(rate) || new Decimal(0)).plus(line.netAmount))
-    if (
-      !new Decimal(line.quantity)
-        .times(line.unitPrice)
-        .toDecimalPlaces(2)
-        .minus(line.netAmount)
-        .abs()
-        .lte(0.02)
-    )
+    accumulate(line.taxCategory || 'S', rate, new Decimal(line.netAmount))
+    const expected = adjustedLineNet(line)
+    if (expected === null || !new Decimal(expected).minus(line.netAmount).abs().lte(0.02))
       invalidLines.push(index)
   }
-  const breakdown = [...groups].map(([rate, net]) => ({
+  for (const item of data.allowances || [])
+    accumulate(item.taxCategory || 'S', item.taxRate!, new Decimal(item.amount).negated())
+  for (const item of data.charges || [])
+    accumulate(item.taxCategory || 'S', item.taxRate!, new Decimal(item.amount))
+  const breakdown = [...groups.values()].map(({ category, rate, net }) => ({
+    category,
     rate,
     net: net.toFixed(2),
     tax: net.times(rate).div(100).toFixed(2),
@@ -37,6 +88,13 @@ export function calculateInvoice(data: DocumentRecord) {
     net: net.toFixed(2),
     tax: tax.toFixed(2),
     gross: net.plus(tax).toFixed(2),
+    payable: net
+      .plus(tax)
+      .minus(data.prepaidAmount || '0')
+      .toFixed(2),
+    lineNet: data.lines.reduce((sum, line) => sum.plus(line.netAmount), new Decimal(0)).toFixed(2),
+    allowances: sumAdjustments(data.allowances).toFixed(2),
+    charges: sumAdjustments(data.charges).toFixed(2),
     invalidLines,
   }
 }

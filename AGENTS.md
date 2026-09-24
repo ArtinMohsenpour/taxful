@@ -31,6 +31,8 @@ The provisional conversion MVP is: upload, extract, normalize, human review, val
 
 Outputs are XRechnung 3.0.2 UBL and ZUGFeRD EN16931 PDF/CII for supported standard invoices. Classify before invoice extraction; unrelated and uncertain documents must not show invoice fields or permit invoice export. Company owners, admins and reviewers may approve and export. The first ELSTER procedure and authorized submitting party remain product decisions; do not make irreversible submission-model choices that depend on them.
 
+Invoice coverage now includes commercial credits (381), corrections (384), partial invoices (326), advance-payment invoices (386, ZUGFeRD only), final invoices (380 with explicit note), line/document adjustments and VAT categories S/Z/E/AE. Coverage fields extend existing JSONB snapshots without a new SQL migration. See `docs/invoice-workflows.md` for required references, actual-payment deductions and boundaries. Keep originals immutable; related drafts receive new numbers. Final invoices must disclose actual net/VAT/gross payment deductions, not just reduce the payable total. Run coverage fixtures through both official validators and inspect the visible PDF after renderer changes. Do not claim support for self-billing, all tax categories or direct tax submission.
+
 ## Current technical baseline
 
 This repository was generated from the Payload blank template with PostgreSQL.
@@ -253,6 +255,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 <!-- END:nextjs-agent-rules -->
 
 ## Local processing visibility
+
+Customer invoice workflows separate outgoing, incoming and unclassified uploads. See `docs/invoice-workflows.md`. Manual drafts share canonical review/export records but have no source file; never fake a scan or extraction. Directory data is copied into draft snapshots. Invoice numbers are reserved per company/year and never reused after deletion. First validated export locks an outgoing invoice; issued records cannot be edited/deleted. Incoming documents retain the supplier original and cannot enter outgoing approval/export. Sent/paid are manual tracking states. Incoming XRechnung XML and single-attachment ZUGFeRD PDFs are parsed locally without AI, validated against the original hashes, and preserved unchanged. Invalid reports block marking reviewed; malformed structured files never fall back to AI. See docs/invoice-workflows.md for profile and resource limits. Customer saving is explicit, approval-transactional and restricted to owners/admins. Preserve explicit classification of older uploads and separate Payload authentication.
 
 Company invoice profiles live in `customer_auth.company_invoice_profiles`, editable by current owners/admins. Review shows all saved company details; prefill only fills blanks for an explicitly selected party or an unambiguous tax-identifier match. EUR/DE are marked defaults for blank fields, never replacements for source values. Keep approval field navigation, decimal arithmetic checks, official unit-code validation and persisted export failures. Never silently repair tax treatment or alter approved snapshots.
 

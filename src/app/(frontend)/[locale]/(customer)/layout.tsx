@@ -17,6 +17,7 @@ export default async function CustomerLayout({ children }: { children: ReactNode
         Auth: messages.Auth,
         Preferences: messages.Preferences,
         Documents: messages.Documents,
+        Invoices: messages.Invoices,
       }}
     >
       <div className="min-h-dvh pt-3 sm:pt-6">

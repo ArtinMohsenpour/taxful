@@ -4,9 +4,15 @@ import mammoth from 'mammoth'
 import yauzl from 'yauzl'
 import { documentLimits, DocumentError } from './config'
 import type { Part } from '@google/genai'
+import {
+  decodeInvoiceXml,
+  parseStructuredInvoice,
+  type StructuredInvoice,
+} from './structured-invoice'
 
 export const supportedMimes = new Set([
   'application/pdf',
+  'application/xml',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'image/jpeg',
   'image/png',
@@ -15,7 +21,28 @@ export const supportedMimes = new Set([
   'image/gif',
   'image/avif',
 ])
+export function invoiceAttachment(attachments: { filename: string; content: Uint8Array }[]) {
+  if (
+    attachments.length !== 1 ||
+    !/^(factur-x|zugferd-invoice|xrechnung)\.xml$/i.test(attachments[0].filename)
+  )
+    throw new DocumentError('activePdf')
+  const embedded = Buffer.from(attachments[0].content)
+  return { embedded, structured: parseStructuredInvoice(embedded) }
+}
 export async function detectDocument(bytes: Buffer) {
+  // Detect XML by content, never by an extension supplied by the uploader.
+  if (
+    bytes
+      .subarray(0, 256)
+      .toString('utf8')
+      .replace(/^\uFEFF/, '')
+      .trimStart()
+      .startsWith('<')
+  ) {
+    decodeInvoiceXml(bytes)
+    return 'application/xml'
+  }
   const type = await fileTypeFromBuffer(bytes)
   if (!type || !supportedMimes.has(type.mime)) throw new DocumentError('unsupportedFile')
   return type.mime
@@ -84,6 +111,10 @@ async function normalizeImage(bytes: Buffer) {
     .toBuffer()
 }
 export async function prepareDocument(bytes: Buffer, mime: string): Promise<PreparedDocument> {
+  if (mime === 'application/xml') {
+    const structured = parseStructuredInvoice(bytes)
+    return { text: structured.xml, pages: null, parts: [], method: 'structured_xml', structured }
+  }
   if (mime.startsWith('image/')) {
     const preview = await normalizeImage(bytes)
     return {
@@ -104,12 +135,27 @@ export async function prepareDocument(bytes: Buffer, mime: string): Promise<Prep
     try {
       const pdf = await task.promise
       if (pdf.numPages > documentLimits().maxPages) throw new DocumentError('tooManyPages')
-      if (Object.keys((await pdf.getAttachments()) || {}).length || (await pdf.getJSActions()))
-        throw new DocumentError('activePdf')
+      if (await pdf.getJSActions()) throw new DocumentError('activePdf')
+      const attachments = await pdf.getAttachments()
+      let structured: StructuredInvoice | undefined
+      let embedded: Buffer | undefined
+      if (attachments?.size) {
+        if (attachments.size !== 1) throw new DocumentError('activePdf')
+        const [id, attachment] = attachments.entries().next().value!
+        if (!/^(factur-x|zugferd-invoice|xrechnung)\.xml$/i.test(attachment.filename))
+          throw new DocumentError('activePdf')
+        const content = attachment.content ?? (await pdf.getAttachmentContent(id))
+        if (!content) throw new DocumentError('invalidInvoiceXml')
+        ;({ embedded, structured } = invoiceAttachment([
+          { filename: attachment.filename, content },
+        ]))
+      }
       let text = ''
       let textSafe = true
       for (let page = 1; page <= pdf.numPages; page++) {
         const pdfPage = await pdf.getPage(page)
+        if (await pdfPage.getJSActions()) throw new DocumentError('activePdf')
+        if (structured) continue
         const content = await pdfPage.getTextContent()
         const items = content.items.filter((item) => 'str' in item)
         // Keep actual line breaks and column gaps; never flatten invoice tables into one sentence.
@@ -143,6 +189,15 @@ export async function prepareDocument(bytes: Buffer, mime: string): Promise<Prep
       const visual: Part[] = [
         { inlineData: { mimeType: 'application/pdf', data: bytes.toString('base64') } },
       ]
+      if (structured)
+        return {
+          text: structured.xml,
+          pages: pdf.numPages,
+          parts: [],
+          method: 'embedded_xml',
+          structured,
+          embedded,
+        }
       return {
         text,
         pages: pdf.numPages,
@@ -173,7 +228,9 @@ export type PreparedDocument = {
   parts: Part[]
   fallbackParts?: Part[]
   preview?: Buffer
-  method: 'text' | 'vision' | 'text_images'
+  method: 'text' | 'vision' | 'text_images' | 'structured_xml' | 'embedded_xml'
+  structured?: StructuredInvoice
+  embedded?: Buffer
 }
 export function readableText(text: string) {
   const value = text.trim()

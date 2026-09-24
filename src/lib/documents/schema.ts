@@ -1,5 +1,11 @@
 import { z } from 'zod'
 import Decimal from 'decimal.js'
+import {
+  adjustmentSchema,
+  invoiceKindSchema,
+  precedingInvoiceSchema,
+  taxCategorySchema,
+} from './invoice-types'
 
 const text = z.string().max(1000)
 const amount = z.string().max(30) // Keep uncertain OCR values editable until approval.
@@ -29,6 +35,31 @@ export const recordSchema = z
       'other',
     ]),
     documentNumber: text,
+    invoiceKind: invoiceKindSchema.optional(),
+    // Structured imports can contain the full final-invoice payment schedule.
+    invoiceNote: z.string().max(65536).optional(),
+    periodStart: z.string().max(30).optional(),
+    periodEnd: z.string().max(30).optional(),
+    precedingInvoices: z.array(precedingInvoiceSchema).max(50).optional(),
+    prepaidAmount: amount.optional(),
+    advancePayments: z
+      .array(
+        z
+          .object({
+            invoiceNumber: text,
+            paymentDate: z.string().max(30),
+            netAmount: amount,
+            taxAmount: amount,
+            grossAmount: amount,
+          })
+          .strict(),
+      )
+      .max(50)
+      .optional(),
+    allowances: z.array(adjustmentSchema).max(50).optional(),
+    charges: z.array(adjustmentSchema).max(50).optional(),
+    taxExemptionReason: text.optional(),
+    reverseChargeReason: text.optional(),
     documentDate: z.string().max(30),
     supplyDate: z.string().max(30).default(''),
     dueDate: z.string().max(30).default(''),
@@ -53,6 +84,10 @@ export const recordSchema = z
             unitPrice: amount,
             netAmount: amount,
             taxRate: amount,
+            taxCategory: taxCategorySchema.optional(),
+            priceBaseQuantity: amount.optional(),
+            allowances: z.array(adjustmentSchema).max(20).optional(),
+            charges: z.array(adjustmentSchema).max(20).optional(),
           })
           .strict(),
       )
@@ -132,6 +167,7 @@ export const reviewSchema = z
     revision: z.number().int().nonnegative(),
     data: recordSchema,
     approve: z.boolean(),
+    saveCustomer: z.boolean().default(false),
     confirmations: z
       .object({
         identity: z.boolean(),
@@ -206,7 +242,20 @@ export function reviewWarnings(data: DocumentRecord): string[] {
     data.lines.every((line) => decimalPattern.test(line.netAmount)) &&
     decimalPattern.test(data.netAmount)
   ) {
-    const sum = data.lines.reduce((sum, line) => sum.plus(line.netAmount), new Decimal(0))
+    const sum = data.lines
+      .reduce((sum, line) => sum.plus(line.netAmount), new Decimal(0))
+      .minus(
+        (data.allowances || []).reduce(
+          (n, a) => n.plus(decimalPattern.test(a.amount) ? a.amount : 0),
+          new Decimal(0),
+        ),
+      )
+      .plus(
+        (data.charges || []).reduce(
+          (n, a) => n.plus(decimalPattern.test(a.amount) ? a.amount : 0),
+          new Decimal(0),
+        ),
+      )
     if (!sum.toDecimalPlaces(2).equals(new Decimal(data.netAmount).toDecimalPlaces(2)))
       warnings.push('lineSum')
   }

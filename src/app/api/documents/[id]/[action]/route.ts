@@ -10,6 +10,7 @@ import {
 } from '@/lib/documents/service'
 import { DocumentError } from '@/lib/documents/config'
 import { getCompanyProfile } from '@/lib/documents/company-profile'
+import { canManageCompany } from '@/lib/documents/company-profile'
 import { processingHealth, processingActivity } from '@/lib/documents/diagnostics'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -24,6 +25,13 @@ export async function GET(request: Request, { params }: Params) {
       return json({
         document: {
           id: doc.id,
+          organizationId: context.organizationId,
+          workflow: doc.workflow,
+          sourceKind: doc.source_kind,
+          invoiceState: doc.invoice_state,
+          inputValidation: doc.input_validation,
+          savedCustomerId: doc.saved_customer_id,
+          canManageCustomers: canManageCompany(context.role),
           name: doc.original_name,
           mime: doc.mime_type,
           status: doc.status,
@@ -42,7 +50,7 @@ export async function GET(request: Request, { params }: Params) {
           exportState: doc.export_state,
           exportIssues: doc.export_issues,
           exportAvailable: doc.export_available && doc.status === 'approved',
-          canDelete: canDeleteDocument(context, doc.uploaded_by),
+          canDelete: doc.invoice_state === 'draft' && canDeleteDocument(context, doc.uploaded_by),
           zugferdAvailable: doc.zugferd_available && doc.status === 'approved',
           classification: doc.classification,
           companyProfile: (await getCompanyProfile(context))?.data || null,

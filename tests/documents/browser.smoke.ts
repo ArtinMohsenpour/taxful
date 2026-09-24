@@ -98,15 +98,15 @@ try {
   const missingInvoice = invoiceFixture()
   missingInvoice.supplyDate = ''
   missingInvoice.issuer.country = ''
-  await pool.query('UPDATE customer_auth.documents SET extracted_data=$2 WHERE id=$1', [
-    doc,
-    missingInvoice,
-  ])
+  await pool.query(
+    "UPDATE customer_auth.documents SET workflow='outgoing',extracted_data=$2 WHERE id=$1",
+    [doc, missingInvoice],
+  )
   const page = await context.newPage(),
     errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/en/portal/converter')
-  await page.getByRole('heading', { name: 'Document converter', exact: true }).waitFor()
+  await page.getByRole('heading', { name: 'Import an existing draft', exact: true }).waitFor()
   await page.getByRole('button', { name: 'Filter files', exact: true }).waitFor()
   await page.goto('/en/portal/files/' + doc)
   await page.getByRole('heading', { name: 'Review extracted information' }).waitFor()
@@ -157,10 +157,9 @@ try {
   assert.equal(await price.inputValue(), '100.00')
   await price.fill('100')
   const invoiceSection = page
-    .locator('details')
-    .filter({ has: page.locator('[id="field-supplyDate"]') })
-    .first()
-  await invoiceSection.locator(':scope > summary').click()
+    .getByText('Different service date or service period', { exact: true })
+    .locator('..')
+  assert.equal(await page.locator('[id="field-supplyDate"]').inputValue(), '2026-09-12')
   assert.equal(
     await invoiceSection.evaluate((element) => (element as HTMLDetailsElement).open),
     false,
@@ -173,19 +172,12 @@ try {
     await blockedExport.evaluate((element) => getComputedStyle(element).cursor),
     'not-allowed',
   )
-  await page.getByRole('button', { name: 'Approve reviewed data', exact: true }).click()
-  assert.equal(await page.evaluate(() => document.activeElement?.id), 'field-supplyDate')
-  assert.equal(
-    await invoiceSection.evaluate((element) => (element as HTMLDetailsElement).open),
-    true,
-  )
   assert.equal(
     await page
       .getByRole('button', { name: 'Validate and download ZUGFeRD', exact: true })
       .textContent(),
     'Validate and download ZUGFeRD',
   )
-  await page.locator('[id="field-supplyDate"]').fill('2026-09-12')
   for (const name of [
     'I checked names, addresses and tax identifiers.',
     'I checked document numbers, dates and payment terms.',
@@ -207,7 +199,10 @@ try {
   const pdfDownloading = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Validate and download ZUGFeRD', exact: true }).click()
   assert.ok((await pdfDownloading).suggestedFilename().endsWith('.pdf'))
-  await page.getByRole('button', { name: 'Export format ZUGFeRD · PDF + XML', exact: true }).click()
+  await page
+    .getByRole('button', { name: 'Export format ZUGFeRD · PDF + XML', exact: true })
+    .last()
+    .click()
   await page.getByRole('option', { name: 'XRechnung · XML', exact: true }).click()
   const downloading = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Validate and download XRechnung', exact: true }).click()
@@ -317,6 +312,8 @@ try {
   await page.screenshot({ path: '.private/document-pdf-preview-mobile.png', fullPage: false })
   await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
   await page.goto('/en/portal/files/' + doc)
+  assert.equal(await page.getByRole('button', { name: 'Delete', exact: true }).count(), 0)
+  await page.goto('/en/portal/files/' + pdfDoc)
   await page.getByRole('button', { name: 'Delete', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click()
   assert.equal((await context.request.get('/api/documents/' + doc + '/source')).status(), 200)
@@ -326,9 +323,9 @@ try {
     .getByRole('button', { name: 'Delete permanently', exact: true })
     .click()
   await page.waitForURL('**/en/portal/files')
-  assert.equal((await context.request.get('/api/documents/' + doc + '/source')).status(), 404)
-  assert.equal((await context.request.get('/api/documents/' + doc + '/export')).status(), 404)
-  assert.equal((await context.request.get('/api/documents/' + doc + '/zugferd')).status(), 404)
+  assert.equal((await context.request.get('/api/documents/' + pdfDoc + '/source')).status(), 404)
+  assert.equal((await context.request.get('/api/documents/' + doc + '/export')).status(), 200)
+  assert.equal((await context.request.get('/api/documents/' + doc + '/zugferd')).status(), 200)
   assert.deepEqual(errors, [])
   await page.goto('/en/portal/profile#company')
   const companyForm = page.locator('#company')

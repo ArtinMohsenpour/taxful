@@ -301,7 +301,8 @@ export const documentMessages = {
     invalidFile: 'The file is damaged or cannot be processed safely.',
     multiPageImage: 'Use a single-frame image or a PDF for multiple pages.',
     tooManyPages: 'This PDF exceeds the page limit.',
-    activePdf: 'This PDF contains attachments or scripts. Upload a flattened copy.',
+    activePdf:
+      'This PDF contains scripts, unsupported attachments or multiple attachments. A single invoice XML attachment is supported.',
     tooMuchText: 'This document is too large to process in one extraction.',
     extractionFailed: 'Extraction could not be completed. Check the document and retry.',
     processingTimeout: 'Processing stopped or timed out. You can retry.',
@@ -621,7 +622,8 @@ export const documentMessages = {
     invalidFile: 'Die Datei ist beschädigt oder kann nicht sicher verarbeitet werden.',
     multiPageImage: 'Verwenden Sie ein Einzelbild oder für mehrere Seiten eine PDF.',
     tooManyPages: 'Diese PDF überschreitet die maximale Seitenzahl.',
-    activePdf: 'Diese PDF enthält Anhänge oder Skripte. Laden Sie eine reduzierte Kopie hoch.',
+    activePdf:
+      'Diese PDF enthält Skripte, nicht unterstützte oder mehrere Anhänge. Ein einzelner Rechnungs-XML-Anhang wird unterstützt.',
     tooMuchText: 'Dieses Dokument ist für eine einzelne Extraktion zu umfangreich.',
     extractionFailed:
       'Die Extraktion konnte nicht abgeschlossen werden. Prüfen Sie das Dokument und versuchen Sie es erneut.',

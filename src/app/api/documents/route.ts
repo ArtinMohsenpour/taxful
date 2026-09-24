@@ -23,7 +23,6 @@ export async function POST(request: Request) {
   try {
     checkOrigin(request)
     const context = await documentContext(request.headers)
-    if (!extractionReady()) throw new DocumentError('aiUnavailable', 503)
     const bytes = await boundedBody(request, documentLimits().maxRequestBytes)
     const type = request.headers.get('content-type') || ''
     if (!type.startsWith('multipart/form-data;')) throw new DocumentError('invalidRequest')
@@ -31,6 +30,9 @@ export async function POST(request: Request) {
       headers: { 'Content-Type': type },
     }).formData()
     const files = form.getAll('files')
+    const workflow = form.get('workflow')
+    if (workflow !== 'incoming' && workflow !== 'outgoing')
+      throw new DocumentError('workflowRequired')
     if (files.some((file) => !(file instanceof File))) throw new DocumentError('invalidRequest')
     return json(
       {
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
           context,
           files as File[],
           request.headers.get('idempotency-key') || '',
+          workflow,
         ),
       },
       201,

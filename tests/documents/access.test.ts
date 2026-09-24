@@ -102,7 +102,7 @@ test(
       )
       // This seeds only synthetic extraction output; no AI provider request is made.
       await pool.query(
-        "UPDATE customer_auth.documents SET status='needs_review',scanned_at=now(),extracted_data=$2 WHERE id=$1",
+        "UPDATE customer_auth.documents SET workflow='outgoing',status='needs_review',scanned_at=now(),extracted_data=$2 WHERE id=$1",
         [id, invoiceFixture()],
       )
       const review = {
@@ -148,12 +148,11 @@ test(
       assert.equal((await getDocument(owner, id)).export_state, 'idle')
       assert.ok((await downloadDocument(owner, id, 'export')).bytes.length)
       await assert.rejects(downloadDocument(outsider, id, 'export'))
-      await saveReview(owner, id, { ...review, revision: 1, approve: false })
       await assert.rejects(
-        downloadDocument(owner, id, 'export'),
-        (error: unknown) => error instanceof Error && error.message === 'approvalRequired',
+        saveReview(owner, id, { ...review, revision: 1, approve: false }),
+        (error: unknown) => error instanceof Error && error.message === 'invoiceLocked',
       )
-      await assert.rejects(downloadDocument(owner, id, 'zugferd'))
+      assert.ok((await downloadDocument(owner, id, 'zugferd')).bytes.length)
       const concurrent = await Promise.allSettled([
         uploadDocuments(owner, [file], randomUUID()),
         uploadDocuments(owner, [file], randomUUID()),

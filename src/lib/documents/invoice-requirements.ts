@@ -2,6 +2,9 @@ import Decimal from 'decimal.js'
 import { type DocumentRecord, validateRecord } from './schema'
 import unitCodes from './unit-codes.json'
 import { calculateInvoice } from './invoice-calculation'
+import { numericAmount } from './invoice-calculation'
+import type { InvoiceAdjustment } from './invoice-types'
+import { z } from 'zod'
 const validUnits = new Set(unitCodes)
 
 export function xrechnungRequirements(data: DocumentRecord) {
@@ -26,7 +29,115 @@ export function invoiceRequirements(
     if (!data.issuer.phone) missing.push('issuer.phone')
     if (!data.buyerReference) missing.push('buyerReference')
   }
-  if (!data.supplyDate) missing.push('supplyDate')
+  if (!data.supplyDate && !(data.periodStart && data.periodEnd)) missing.push('supplyDate')
+  for (const key of ['periodStart', 'periodEnd'] as const)
+    if (data[key] && !z.iso.date().safeParse(data[key]).success) missing.push(key)
+  if (data.periodStart && data.periodEnd && data.periodStart > data.periodEnd)
+    missing.push('periodEnd')
+  const kind = data.invoiceKind || 'standard'
+  if (format === 'xrechnung' && kind === 'prepayment') missing.push('invoiceKind')
+  if (['credit_note', 'correction', 'final'].includes(kind) && !data.precedingInvoices?.length)
+    missing.push('precedingInvoices')
+  if (['credit_note', 'correction'].includes(kind) && !data.invoiceNote?.trim())
+    missing.push('invoiceNote')
+  for (const [index, ref] of (data.precedingInvoices || []).entries()) {
+    if (!ref.number.trim() || ref.number === data.documentNumber)
+      missing.push(`precedingInvoices.${index}.number`)
+    if (!z.iso.date().safeParse(ref.date).success || ref.date > data.documentDate)
+      missing.push(`precedingInvoices.${index}.date`)
+  }
+  if (
+    new Set(data.precedingInvoices?.map((ref) => ref.number)).size !==
+    (data.precedingInvoices?.length || 0)
+  )
+    missing.push('precedingInvoices')
+  if (data.advancePayments?.length && kind !== 'final') missing.push('advancePayments')
+  if (kind === 'final') {
+    if (
+      numericAmount(data.prepaidAmount) &&
+      new Decimal(data.prepaidAmount).gt(0) &&
+      !data.advancePayments?.length
+    )
+      missing.push('advancePayments')
+    let paid = new Decimal(0),
+      paidNet = new Decimal(0),
+      paidTax = new Decimal(0)
+    for (const [index, payment] of (data.advancePayments || []).entries()) {
+      const path = `advancePayments.${index}`
+      if (
+        !payment.invoiceNumber ||
+        !data.precedingInvoices?.some((ref) => ref.number === payment.invoiceNumber)
+      )
+        missing.push(path + '.invoiceNumber')
+      if (
+        !z.iso.date().safeParse(payment.paymentDate).success ||
+        payment.paymentDate > data.documentDate
+      )
+        missing.push(path + '.paymentDate')
+      for (const field of ['netAmount', 'taxAmount', 'grossAmount'] as const)
+        if (!numericAmount(payment[field]) || new Decimal(payment[field]).decimalPlaces() > 2)
+          missing.push(path + '.' + field)
+      if ([payment.netAmount, payment.taxAmount, payment.grossAmount].every(numericAmount)) {
+        if (!new Decimal(payment.netAmount).plus(payment.taxAmount).eq(payment.grossAmount))
+          missing.push(path + '.grossAmount')
+        paid = paid.plus(payment.grossAmount)
+        paidNet = paidNet.plus(payment.netAmount)
+        paidTax = paidTax.plus(payment.taxAmount)
+      }
+    }
+    if (
+      data.advancePayments?.length &&
+      (!numericAmount(data.prepaidAmount) || !paid.eq(data.prepaidAmount))
+    )
+      missing.push('prepaidAmount')
+    if (numericAmount(data.netAmount) && paidNet.gt(data.netAmount)) missing.push('advancePayments')
+    if (numericAmount(data.taxAmount) && paidTax.gt(data.taxAmount)) missing.push('advancePayments')
+  }
+  const checkTax = (category: string, rate: string, path: string) => {
+    if (
+      !numericAmount(rate) ||
+      new Decimal(rate).gt(100) ||
+      (category === 'S' ? new Decimal(rate).lte(0) : !new Decimal(rate).isZero())
+    )
+      missing.push(path + '.taxRate')
+    if (category === 'E' && !data.taxExemptionReason?.trim()) missing.push('taxExemptionReason')
+    if (category === 'AE') {
+      if (!data.reverseChargeReason?.trim()) missing.push('reverseChargeReason')
+      if (!data.recipient.vatId) missing.push('recipient.vatId')
+    }
+  }
+  const checkAdjustments = (
+    items: InvoiceAdjustment[] | undefined,
+    path: string,
+    document: boolean,
+  ) => {
+    for (const [i, item] of (items || []).entries()) {
+      const prefix = `${path}.${i}`
+      if (!item.reason.trim()) missing.push(prefix + '.reason')
+      if (!numericAmount(item.amount) || new Decimal(item.amount).decimalPlaces() > 2)
+        missing.push(prefix + '.amount')
+      if (item.percentage || item.baseAmount) {
+        if (!numericAmount(item.percentage) || new Decimal(item.percentage).gt(100))
+          missing.push(prefix + '.percentage')
+        if (!numericAmount(item.baseAmount) || new Decimal(item.baseAmount).decimalPlaces() > 2)
+          missing.push(prefix + '.baseAmount')
+        if (
+          numericAmount(item.amount) &&
+          numericAmount(item.percentage) &&
+          numericAmount(item.baseAmount) &&
+          !new Decimal(item.baseAmount)
+            .times(item.percentage)
+            .div(100)
+            .toDecimalPlaces(2)
+            .eq(item.amount)
+        )
+          missing.push(prefix + '.amount')
+      }
+      if (document) checkTax(item.taxCategory || 'S', item.taxRate || '', prefix)
+    }
+  }
+  checkAdjustments(data.allowances, 'allowances', true)
+  checkAdjustments(data.charges, 'charges', true)
   if (!data.paymentTerms && !data.dueDate) missing.push('paymentTerms')
   if (!['10', '58'].includes(data.paymentMeansCode)) missing.push('paymentMeansCode')
   if (data.paymentMeansCode === '58' && !validIban(data.bankAccount)) missing.push('bankAccount')
@@ -35,19 +146,25 @@ export function invoiceRequirements(
     if (!validUnits.has(line.unitCode)) missing.push('lines.' + index + '.unitCode')
     for (const field of ['quantity', 'unitPrice', 'netAmount', 'taxRate'] as const)
       if (!/^\d{1,15}(\.\d{1,6})?$/.test(line[field])) missing.push('lines.' + index + '.' + field)
+    checkTax(line.taxCategory || 'S', line.taxRate, 'lines.' + index)
+    checkAdjustments(line.allowances, `lines.${index}.allowances`, false)
+    checkAdjustments(line.charges, `lines.${index}.charges`, false)
     if (
-      /^\d+(\.\d+)?$/.test(line.taxRate) &&
-      (new Decimal(line.taxRate).lte(0) || new Decimal(line.taxRate).gt(100))
+      line.priceBaseQuantity &&
+      (!numericAmount(line.priceBaseQuantity) || new Decimal(line.priceBaseQuantity).lte(0))
     )
-      missing.push('lines.' + index + '.taxRate')
+      missing.push(`lines.${index}.priceBaseQuantity`)
     if (/^\d+(\.\d+)?$/.test(line.quantity) && new Decimal(line.quantity).lte(0))
       missing.push('lines.' + index + '.quantity')
   }
-  // Initial profile handles standard positive invoices, without allowances or prepayments.
+  // Credit notes use positive amounts and an explicit credit-note document type.
   for (const field of ['netAmount', 'taxAmount', 'grossAmount'] as const)
     if (data[field].startsWith('-')) missing.push(field)
   const calculated = calculateInvoice(data)
   if (calculated) {
+    if (calculated.breakdown.some((group) => new Decimal(group.net).lt(0)))
+      missing.push('allowances')
+    if (new Decimal(calculated.payable).lt(0)) missing.push('prepaidAmount')
     for (const [field, expected] of [
       ['netAmount', calculated.net],
       ['taxAmount', calculated.tax],
@@ -57,6 +174,13 @@ export function invoiceRequirements(
         missing.push(field)
     for (const index of calculated.invalidLines) missing.push('lines.' + index + '.netAmount')
   }
+  if (
+    data.prepaidAmount &&
+    (!numericAmount(data.prepaidAmount) ||
+      new Decimal(data.prepaidAmount).decimalPlaces() > 2 ||
+      (kind === 'credit_note' && !new Decimal(data.prepaidAmount).isZero()))
+  )
+    missing.push('prepaidAmount')
   return [...new Set(missing)]
 }
 export function validIban(value: string) {

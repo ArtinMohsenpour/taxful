@@ -16,15 +16,26 @@ export function PortalSidebar({
   name: string
 }) {
   const t = useTranslations('Auth')
+  const invoices = useTranslations('Invoices')
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const links: {
     href: string
     label: 'overview' | 'converter' | 'files' | 'team' | 'profile' | 'security'
     icon: IconName
+    invoiceLabel?: 'new' | 'incoming' | 'outgoing' | 'customers' | 'products'
   }[] = [
     { href: '/portal', label: 'overview', icon: 'overview' },
-    { href: '/portal/converter', label: 'converter', icon: 'converter' },
+    { href: '/portal/invoices/new', label: 'converter', icon: 'converter', invoiceLabel: 'new' },
+    { href: '/portal/invoices/outgoing', label: 'files', icon: 'files', invoiceLabel: 'outgoing' },
+    { href: '/portal/invoices/incoming', label: 'files', icon: 'files', invoiceLabel: 'incoming' },
+    { href: '/portal/invoices/customers', label: 'team', icon: 'team', invoiceLabel: 'customers' },
+    {
+      href: '/portal/invoices/products',
+      label: 'converter',
+      icon: 'converter',
+      invoiceLabel: 'products',
+    },
     { href: '/portal/files', label: 'files', icon: 'files' },
     { href: '/portal/team', label: 'team', icon: 'team' },
     { href: '/portal/profile', label: 'profile', icon: 'profile' },
@@ -61,7 +72,7 @@ export function PortalSidebar({
             aria-label={t('workspaceMenu')}
             className={`mt-5 space-y-1 transition-[visibility,opacity] duration-250 motion-reduce:transition-none lg:visible lg:opacity-100 ${open ? 'visible opacity-100' : 'invisible opacity-0'}`}
           >
-            {links.map(({ href, label, icon }, index) => (
+            {links.map(({ href, label, icon, invoiceLabel }) => (
               <Link
                 key={href}
                 href={href}
@@ -71,10 +82,10 @@ export function PortalSidebar({
                     ? 'page'
                     : undefined
                 }
-                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${index === 4 ? 'mt-5' : ''} ${pathname === href || (href !== '/portal' && pathname.startsWith(href + '/')) ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${label === 'profile' ? 'mt-5' : ''} ${pathname === href || (href !== '/portal' && pathname.startsWith(href + '/')) ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
               >
                 <Icon name={icon} />
-                {t(label)}
+                {invoiceLabel ? invoices(invoiceLabel) : t(label)}
                 {pathname === href && (
                   <span className="ml-auto size-1.5 rounded-full bg-brand-ink" />
                 )}

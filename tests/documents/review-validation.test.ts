@@ -33,7 +33,7 @@ test('rate/total mismatches and unknown units block approval before XML generati
   data.lines[1].netAmount = '31'
   assert.ok(invoiceRequirements(data).includes('lines.1.netAmount'))
 })
-test('EUR/DE defaults fill blanks without replacing explicit source values', () => {
+test('review defaults fill EUR, DE and a missing service date without replacing source values', () => {
   const data = invoiceFixture()
   data.currency = 'USD'
   data.issuer.country = 'US'
@@ -45,6 +45,11 @@ test('EUR/DE defaults fill blanks without replacing explicit source values', () 
   assert.deepEqual(result.fields, ['recipient.country'])
   data.currency = ''
   assert.equal(applyReviewDefaults(data).data.currency, 'EUR')
+  data.supplyDate = ''
+  assert.equal(applyReviewDefaults(data).data.supplyDate, data.documentDate)
+  data.periodStart = '2026-09-01'
+  data.periodEnd = '2026-09-30'
+  assert.equal(applyReviewDefaults(data).data.supplyDate, '')
 })
 test('validator errors retain rules and field paths, excluding nonfatal notices', () => {
   const report = `<validation><xml><messages><error location="/IncludedSupplyChainTradeLineItem[3]/BilledQuantity">Value of '@unitCode' is not allowed. [ID FX-SCH-A-000613]</error><error>[BR-CO-14]-Invoice total VAT amount must equal the sum. [ID BR-CO-14]</error><notice>Optional profile notice</notice></messages></xml></validation>`

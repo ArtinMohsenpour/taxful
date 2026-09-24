@@ -70,6 +70,39 @@ public class InvoiceService {
         exchange.sendResponseHeaders(500,-1);
       } finally {if(acquired)CAPACITY.release();exchange.close();}
     });
+    server.createContext("/validate-import", exchange -> {
+      boolean acquired=CAPACITY.tryAcquire();
+      try {
+        if(!acquired) { exchange.sendResponseHeaders(503,-1); return; }
+        if(!exchange.getRequestMethod().equals("POST")) { exchange.sendResponseHeaders(405,-1); return; }
+        byte[] input=exchange.getRequestBody().readNBytes(15728641);
+        boolean pdf="application/pdf".equals(exchange.getRequestHeaders().getFirst("Content-Type"));
+        if(input.length>(pdf?15728640:1000000)) { exchange.sendResponseHeaders(413,-1); return; }
+        String xml;
+        boolean pdfValid=true;
+        if(pdf) {
+          // Read-only validation: do not regenerate, attach, flatten or rewrite the original.
+          ValidationContext context=new ValidationContext(null);
+          PDFValidator validator=new PDFValidator(context);
+          validator.setFilenameAndContents("invoice.pdf",input);
+          validator.validate();
+          xml=validator.getRawXML();
+          pdfValid=context.isValid();
+        } else xml=new String(input,StandardCharsets.UTF_8);
+        if(xml==null || xml.length()>1000000 || xml.toUpperCase(Locale.ROOT).contains("<!DOCTYPE") || xml.toUpperCase(Locale.ROOT).contains("<!ENTITY")) { exchange.sendResponseHeaders(400,-1); return; }
+        ZUGFeRDValidator validator=new ZUGFeRDValidator();
+        String report=validator.validate(xml.getBytes(StandardCharsets.UTF_8),"factur-x.xml");
+        Map<String,Object> result=new LinkedHashMap<>();
+        result.put("valid",pdfValid && validator.wasCompletelyValid());
+        result.put("pdfValid",pdfValid);result.put("report",report);
+        result.put("inputSha256",hash(input));result.put("xmlSha256",hash(xml.getBytes(StandardCharsets.UTF_8)));
+        result.put("validator","Mustangproject 2.26.0 / bundled veraPDF / EN16931");
+        byte[] body=JSON.writeValueAsBytes(result);
+        exchange.getResponseHeaders().set("Content-Type","application/json");
+        exchange.sendResponseHeaders(200,body.length);exchange.getResponseBody().write(body);
+      } catch(Exception error) { exchange.sendResponseHeaders(500,-1); }
+      finally { if(acquired)CAPACITY.release();exchange.close(); }
+    });
     server.start();
   }
 }

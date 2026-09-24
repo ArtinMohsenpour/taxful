@@ -6,13 +6,18 @@ export function DocumentProgress({
   stage,
   exported = false,
   exportState = 'idle',
+  manual = false,
+  incoming = false,
 }: {
   status: string
   stage?: string
   exported?: boolean
   exportState?: string
+  manual?: boolean
+  incoming?: boolean
 }) {
   const t = useTranslations('Documents')
+  const invoices = useTranslations('Invoices')
   const steps = [
     'stepSaved',
     'stepScan',
@@ -21,6 +26,9 @@ export function DocumentProgress({
     'stepApproved',
     'stepExport',
   ] as const
+  const visibleSteps = steps
+    .map((step, index) => ({ step, index }))
+    .filter(({ index }) => (!manual || (index !== 1 && index !== 2)) && (!incoming || index < 4))
   const failed = status === 'failed' || status === 'rejected'
   const generating = exportState === 'generating'
   const active = exported
@@ -69,10 +77,13 @@ export function DocumentProgress({
         role="status"
         className={`text-xs font-medium ${failed || exportState === 'failed' ? 'text-error' : 'text-brand-ink'}`}
       >
-        {current}
+        {incoming && status === 'approved' ? invoices('receivedReviewed') : current}
       </p>
-      <ol aria-label={t('workflow')} className="grid grid-cols-3 gap-x-2 gap-y-3 sm:grid-cols-6">
-        {steps.map((step, index) => {
+      <ol
+        aria-label={t('workflow')}
+        className={`grid gap-x-2 gap-y-3 ${manual || incoming ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3 sm:grid-cols-6'}`}
+      >
+        {visibleSteps.map(({ step, index }, position) => {
           const done = index < active
           const isCurrent = index === active && status !== 'queued'
           const error = isCurrent && (failed || exportState === 'failed')
@@ -85,7 +96,7 @@ export function DocumentProgress({
               <span
                 className={`text-[0.65rem] leading-tight sm:text-xs ${done || isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}
               >
-                {step === 'stepSaved' ? '✓ ' : done ? '✓ ' : `${index + 1}. `}
+                {step === 'stepSaved' ? '✓ ' : done ? '✓ ' : `${position + 1}. `}
                 {t(step)}
               </span>
             </li>

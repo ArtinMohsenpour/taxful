@@ -4,17 +4,25 @@ import Decimal from 'decimal.js'
 import { type DocumentRecord } from './schema'
 import { DocumentError } from './config'
 import { createHash } from 'node:crypto'
+import { calculateInvoice } from './invoice-calculation'
+import { invoiceTypeCodes, type InvoiceAdjustment } from './invoice-types'
+import { invoiceNote, paymentAttachment } from './invoice-notes'
 
 export const VALIDATOR_VERSION = 'KoSIT 1.6.3 / XRechnung 3.0.2 / 2026-08-31'
 import { xrechnungRequirements } from './invoice-requirements'
 export { invoiceRequirements, xrechnungRequirements, validIban } from './invoice-requirements'
 export function generateXRechnung(data: DocumentRecord) {
   if (xrechnungRequirements(data).length) throw new DocumentError('exportIncomplete')
-  const invoice = create({ version: '1.0', encoding: 'UTF-8' }).ele('Invoice', {
-    xmlns: 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
-    'xmlns:cac': 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2',
-    'xmlns:cbc': 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2',
-  })
+  const credit = data.invoiceKind === 'credit_note'
+  const calculated = calculateInvoice(data)!
+  const invoice = create({ version: '1.0', encoding: 'UTF-8' }).ele(
+    credit ? 'CreditNote' : 'Invoice',
+    {
+      xmlns: `urn:oasis:names:specification:ubl:schema:xsd:${credit ? 'CreditNote' : 'Invoice'}-2`,
+      'xmlns:cac': 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2',
+      'xmlns:cbc': 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2',
+    },
+  )
   const text = (
     node: typeof invoice,
     name: string,
@@ -33,10 +41,35 @@ export function generateXRechnung(data: DocumentRecord) {
   text(invoice, 'cbc:ProfileID', 'urn:fdc:peppol.eu:2017:poacc:billing:01:1.0')
   text(invoice, 'cbc:ID', data.documentNumber)
   text(invoice, 'cbc:IssueDate', data.documentDate)
-  if (data.dueDate) text(invoice, 'cbc:DueDate', data.dueDate)
-  text(invoice, 'cbc:InvoiceTypeCode', '380')
+  if (data.dueDate && !credit) text(invoice, 'cbc:DueDate', data.dueDate)
+  text(
+    invoice,
+    credit ? 'cbc:CreditNoteTypeCode' : 'cbc:InvoiceTypeCode',
+    invoiceTypeCodes[data.invoiceKind || 'standard'],
+  )
+  if (invoiceNote(data)) text(invoice, 'cbc:Note', invoiceNote(data))
   text(invoice, 'cbc:DocumentCurrencyCode', data.currency)
   text(invoice, 'cbc:BuyerReference', data.buyerReference)
+  if (data.periodStart || data.periodEnd) {
+    const period = invoice.ele('cac:InvoicePeriod')
+    if (data.periodStart) text(period, 'cbc:StartDate', data.periodStart)
+    if (data.periodEnd) text(period, 'cbc:EndDate', data.periodEnd)
+  }
+  for (const ref of data.precedingInvoices || []) {
+    const reference = invoice.ele('cac:BillingReference').ele('cac:InvoiceDocumentReference')
+    text(reference, 'cbc:ID', ref.number)
+    text(reference, 'cbc:IssueDate', ref.date)
+  }
+  const payments = paymentAttachment(data)
+  if (payments) {
+    const attachment = invoice.ele('cac:AdditionalDocumentReference')
+    text(attachment, 'cbc:ID', 'payments.csv')
+    text(attachment, 'cbc:DocumentDescription', 'Vereinnahmte Teilentgelte / Advance payments')
+    text(attachment.ele('cac:Attachment'), 'cbc:EmbeddedDocumentBinaryObject', payments, {
+      mimeCode: 'text/csv',
+      filename: 'payments.csv',
+    })
+  }
   for (const [side, tag] of [
     ['issuer', 'cac:AccountingSupplierParty'],
     ['recipient', 'cac:AccountingCustomerParty'],
@@ -63,7 +96,7 @@ export function generateXRechnung(data: DocumentRecord) {
       text(contact, 'cbc:ElectronicMail', info.email)
     }
   }
-  text(invoice.ele('cac:Delivery'), 'cbc:ActualDeliveryDate', data.supplyDate)
+  if (data.supplyDate) text(invoice.ele('cac:Delivery'), 'cbc:ActualDeliveryDate', data.supplyDate)
   const payment = invoice.ele('cac:PaymentMeans')
   text(payment, 'cbc:PaymentMeansCode', data.paymentMeansCode)
   if (data.paymentMeansCode === '58')
@@ -72,22 +105,51 @@ export function generateXRechnung(data: DocumentRecord) {
       'cbc:ID',
       data.bankAccount.replace(/\s/g, '').toUpperCase(),
     )
-  if (data.paymentTerms) text(invoice.ele('cac:PaymentTerms'), 'cbc:Note', data.paymentTerms)
+  if (data.paymentTerms || (credit && data.dueDate))
+    text(
+      invoice.ele('cac:PaymentTerms'),
+      'cbc:Note',
+      [data.paymentTerms, credit && data.dueDate ? `Fällig am / Due: ${data.dueDate}` : '']
+        .filter(Boolean)
+        .join(' · '),
+    )
   const currency = { currencyID: data.currency }
+  const allowance = (
+    parent: typeof invoice,
+    item: InvoiceAdjustment,
+    charge: boolean,
+    document: boolean,
+  ) => {
+    const node = parent.ele('cac:AllowanceCharge')
+    text(node, 'cbc:ChargeIndicator', String(charge))
+    text(node, 'cbc:AllowanceChargeReason', item.reason)
+    if (item.percentage) text(node, 'cbc:MultiplierFactorNumeric', item.percentage)
+    text(node, 'cbc:Amount', new Decimal(item.amount).toFixed(2), currency)
+    if (item.baseAmount)
+      text(node, 'cbc:BaseAmount', new Decimal(item.baseAmount).toFixed(2), currency)
+    if (document) {
+      const tax = node.ele('cac:TaxCategory')
+      text(tax, 'cbc:ID', item.taxCategory || 'S')
+      text(tax, 'cbc:Percent', item.taxRate!)
+      text(tax.ele('cac:TaxScheme'), 'cbc:ID', 'VAT')
+    }
+  }
+  for (const item of data.allowances || []) allowance(invoice, item, false, true)
+  for (const item of data.charges || []) allowance(invoice, item, true, true)
   const total = invoice.ele('cac:TaxTotal')
   text(total, 'cbc:TaxAmount', new Decimal(data.taxAmount).toFixed(2), currency)
-  const groups = new Map<string, Decimal>()
-  for (const line of data.lines) {
-    const rate = new Decimal(line.taxRate).toString()
-    groups.set(rate, (groups.get(rate) || new Decimal(0)).plus(line.netAmount))
-  }
-  for (const [rate, net] of groups) {
+  for (const group of calculated.breakdown) {
     const sub = total.ele('cac:TaxSubtotal')
-    text(sub, 'cbc:TaxableAmount', net.toFixed(2), currency)
-    text(sub, 'cbc:TaxAmount', net.times(rate).div(100).toFixed(2), currency)
+    text(sub, 'cbc:TaxableAmount', group.net, currency)
+    text(sub, 'cbc:TaxAmount', group.tax, currency)
     const category = sub.ele('cac:TaxCategory')
-    text(category, 'cbc:ID', 'S')
-    text(category, 'cbc:Percent', rate)
+    text(category, 'cbc:ID', group.category)
+    text(category, 'cbc:Percent', group.rate)
+    if (group.category === 'E') text(category, 'cbc:TaxExemptionReason', data.taxExemptionReason!)
+    if (group.category === 'AE') {
+      text(category, 'cbc:TaxExemptionReasonCode', 'VATEX-EU-AE')
+      text(category, 'cbc:TaxExemptionReason', data.reverseChargeReason!)
+    }
     text(category.ele('cac:TaxScheme'), 'cbc:ID', 'VAT')
   }
   const sum = data.lines.reduce((sum, line) => sum.plus(line.netAmount), new Decimal(0))
@@ -95,19 +157,31 @@ export function generateXRechnung(data: DocumentRecord) {
   text(monetary, 'cbc:LineExtensionAmount', sum.toFixed(2), currency)
   text(monetary, 'cbc:TaxExclusiveAmount', new Decimal(data.netAmount).toFixed(2), currency)
   text(monetary, 'cbc:TaxInclusiveAmount', new Decimal(data.grossAmount).toFixed(2), currency)
-  text(monetary, 'cbc:PayableAmount', new Decimal(data.grossAmount).toFixed(2), currency)
+  if (data.allowances?.length)
+    text(monetary, 'cbc:AllowanceTotalAmount', calculated.allowances, currency)
+  if (data.charges?.length) text(monetary, 'cbc:ChargeTotalAmount', calculated.charges, currency)
+  if (data.prepaidAmount)
+    text(monetary, 'cbc:PrepaidAmount', new Decimal(data.prepaidAmount).toFixed(2), currency)
+  text(monetary, 'cbc:PayableAmount', calculated.payable, currency)
   for (const [index, line] of data.lines.entries()) {
-    const item = invoice.ele('cac:InvoiceLine')
+    const item = invoice.ele(credit ? 'cac:CreditNoteLine' : 'cac:InvoiceLine')
     text(item, 'cbc:ID', String(index + 1))
-    text(item, 'cbc:InvoicedQuantity', line.quantity, { unitCode: line.unitCode })
+    text(item, credit ? 'cbc:CreditedQuantity' : 'cbc:InvoicedQuantity', line.quantity, {
+      unitCode: line.unitCode,
+    })
     text(item, 'cbc:LineExtensionAmount', new Decimal(line.netAmount).toFixed(2), currency)
+    for (const adjustment of line.allowances || []) allowance(item, adjustment, false, false)
+    for (const adjustment of line.charges || []) allowance(item, adjustment, true, false)
     const product = item.ele('cac:Item')
     text(product, 'cbc:Name', line.description)
     const category = product.ele('cac:ClassifiedTaxCategory')
-    text(category, 'cbc:ID', 'S')
+    text(category, 'cbc:ID', line.taxCategory || 'S')
     text(category, 'cbc:Percent', line.taxRate)
     text(category.ele('cac:TaxScheme'), 'cbc:ID', 'VAT')
-    text(item.ele('cac:Price'), 'cbc:PriceAmount', line.unitPrice, currency)
+    const price = item.ele('cac:Price')
+    text(price, 'cbc:PriceAmount', line.unitPrice, currency)
+    if (line.priceBaseQuantity)
+      text(price, 'cbc:BaseQuantity', line.priceBaseQuantity, { unitCode: line.unitCode })
   }
   return invoice.end({ prettyPrint: true })
 }

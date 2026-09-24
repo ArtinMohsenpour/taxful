@@ -9,6 +9,7 @@ import { DocumentList } from '@/components/documents/document-list'
 export default async function Page() {
   await requireCustomer(await getLocale())
   const t = await getTranslations('Documents')
+  const invoices = await getTranslations('Invoices')
   let organizationId: string | undefined
   try {
     organizationId = (await documentContext(await headers())).organizationId
@@ -17,10 +18,10 @@ export default async function Page() {
   }
   return (
     <div>
-      <h1 className="mb-3 text-3xl font-medium tracking-tight">{t('title')}</h1>
-      <p className="mb-8 text-muted-foreground">{t('intro')}</p>
+      <h1 className="mb-3 text-3xl font-medium tracking-tight">{invoices('importDraft')}</h1>
+      <p className="mb-8 text-muted-foreground">{invoices('importHint')}</p>
       {organizationId ? (
-        <DocumentList key={organizationId} upload={true} />
+        <DocumentList key={organizationId} upload={true} workflow="outgoing" />
       ) : (
         <section className="rounded-3xl border border-border bg-surface p-6">
           <p className="mb-6 text-muted-foreground">{t('workspaceRequired')}</p>
