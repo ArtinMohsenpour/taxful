@@ -11,6 +11,7 @@ import type { PoolClient } from 'pg'
 import { documentFilters, type DocumentFilters } from './listing'
 import { saveInvoiceCustomer } from '../invoices/save-customer'
 import { canManageCompany } from './company-profile'
+import { availableUsage, billingLock, consumeDocuments, consumeExport } from '../billing/usage'
 
 export async function event(
   client: PoolClient,
@@ -26,18 +27,11 @@ export async function event(
 }
 export async function entitlements(context: DocumentContext) {
   const limits = documentLimits()
-  const result = await customerPool.query(
-    'SELECT daily_limit, batch_limit FROM customer_auth.document_entitlements WHERE organization_id=$1',
-    [context.organizationId],
-  )
-  const usage = await customerPool.query(
-    "SELECT used FROM customer_auth.document_usage WHERE organization_id=$1 AND usage_day=(now() AT TIME ZONE 'Europe/Berlin')::date",
-    [context.organizationId],
-  )
+  const { plan, used } = await availableUsage(context.organizationId)
   return {
-    dailyLimit: result.rows[0]?.daily_limit ?? limits.dailyLimit,
-    batchLimit: result.rows[0]?.batch_limit ?? 1,
-    used: usage.rows[0]?.used ?? 0,
+    dailyLimit: plan.daily_uploads,
+    batchLimit: plan.batch_uploads,
+    used: used.uploads,
     maxFileBytes: limits.maxFileBytes,
     maxRequestBytes: limits.maxRequestBytes,
   }
@@ -90,21 +84,13 @@ export async function uploadDocuments(
       await client.query('COMMIT')
       return result.rows.map((row) => row.id as string)
     }
-    const plan = await client.query(
-      'SELECT daily_limit,batch_limit FROM customer_auth.document_entitlements WHERE organization_id=$1',
-      [context.organizationId],
+    await consumeDocuments(
+      client,
+      context.organizationId,
+      'upload:' + key,
+      files.length,
+      input.reduce((sum, file) => sum + file.bytes.length, 0),
     )
-    const daily = plan.rows[0]?.daily_limit ?? limits.dailyLimit
-    if (files.length > (plan.rows[0]?.batch_limit ?? 1)) throw new DocumentError('batchLimit')
-    await client.query(
-      "INSERT INTO customer_auth.document_usage(organization_id,usage_day) VALUES($1,(now() AT TIME ZONE 'Europe/Berlin')::date) ON CONFLICT DO NOTHING",
-      [context.organizationId],
-    )
-    const usage = await client.query(
-      "UPDATE customer_auth.document_usage SET used=used+$2 WHERE organization_id=$1 AND usage_day=(now() AT TIME ZONE 'Europe/Berlin')::date AND used+$2<=$3 RETURNING used",
-      [context.organizationId, files.length, daily],
-    )
-    if (!usage.rowCount) throw new DocumentError('dailyLimit', 429)
     const batch = randomUUID()
     await client.query(
       'INSERT INTO customer_auth.document_batches(id,organization_id,request_key,fingerprint) VALUES($1,$2,$3,$4)',
@@ -392,6 +378,7 @@ async function generateDocumentExport(
   try {
     await client.query('BEGIN')
     await lockMembership(client, context, true)
+    await billingLock(client, context.organizationId)
     const result = await client.query(
       'SELECT * FROM customer_auth.documents WHERE id=$1 AND organization_id=$2 FOR UPDATE',
       [id, context.organizationId],
@@ -408,6 +395,7 @@ async function generateDocumentExport(
       await client.query('COMMIT')
       return existing.rows[0].id as string
     }
+    await consumeExport(client, context.organizationId, id, 0, false)
     const data = recordSchema.parse(doc.reviewed_data)
     const missing = invoiceRequirements(data, format)
     if (missing.length) {
@@ -428,11 +416,12 @@ async function generateDocumentExport(
       await client.query('COMMIT')
       return { issues: report.issues }
     }
+    await consumeExport(client, context.organizationId, id, bytes.length)
     written = randomUUID()
     await writePrivate(written, bytes, 'export')
     await client.query(
-      'INSERT INTO customer_auth.document_exports(id,document_id,revision,format,sha256,validation_report,created_by) VALUES($1,$2,$3,$4,$5,$6,$7)',
-      [written, id, doc.revision, formatId, sha256(bytes), report, context.userId],
+      'INSERT INTO customer_auth.document_exports(id,document_id,revision,format,sha256,validation_report,created_by,size_bytes) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
+      [written, id, doc.revision, formatId, sha256(bytes), report, context.userId, bytes.length],
     )
     await event(client, context, id, 'export_validated', {
       revision: doc.revision,

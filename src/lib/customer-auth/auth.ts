@@ -38,6 +38,19 @@ export const auth = betterAuth({
     },
   },
   databaseHooks: {
+    session: {
+      create: {
+        before: async (session) => {
+          const result = await customerPool.query(
+            'SELECT suspended FROM customer_auth.customer_users WHERE id=$1',
+            [session.userId],
+          )
+          if (!result.rows[0] || result.rows[0].suspended)
+            throw new APIError('FORBIDDEN', { message: 'Account unavailable.' })
+          return { data: session }
+        },
+      },
+    },
     user: {
       create: { before: async (user) => ({ data: { ...user, ...customerName(user) } }) },
       update: {
@@ -128,6 +141,31 @@ export const auth = betterAuth({
       allowUserToCreateOrganization: (user) => user.emailVerified,
       organizationLimit: 10,
       membershipLimit: 100,
+      organizationHooks: {
+        beforeAddMember: async ({ member }) => {
+          const existing = await customerPool.query(
+            'SELECT 1 FROM customer_auth.organization_memberships WHERE "organizationId"=$1 LIMIT 1',
+            [member.organizationId],
+          )
+          if (member.role !== 'owner' || existing.rowCount)
+            throw new APIError('FORBIDDEN', { message: 'Use the workspace team controls.' })
+        },
+        afterCreateOrganization: async ({ organization, user }) => {
+          await customerPool.query(
+            'INSERT INTO customer_auth.team_audit_events(organization_id,actor_id,event,target_label) VALUES($1,$2,$3,$4)',
+            [organization.id, user.id, 'created', organization.name],
+          )
+        },
+        beforeCreateInvitation: async ({ organization }) => {
+          const { availableUsage } = await import('../billing/usage')
+          const { plan, used } = await availableUsage(organization.id)
+          if (used.seats >= plan.team_members)
+            throw new APIError('FORBIDDEN', {
+              code: 'TEAM_LIMIT',
+              message: 'Team seat limit reached. Ask the owner to update the subscription.',
+            })
+        },
+      },
       requireEmailVerificationOnInvitation: true,
       invitationExpiresIn: 60 * 60 * 24 * 7,
       disableOrganizationDeletion: true,

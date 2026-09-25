@@ -3,7 +3,8 @@ import { z } from 'zod'
 import { customerPool } from '../customer-auth/database'
 import { lockMembership, type DocumentContext } from '../documents/access'
 import { canManageCompany } from '../documents/company-profile'
-import { DocumentError, documentLimits } from '../documents/config'
+import { DocumentError } from '../documents/config'
+import { consumeDocuments } from '../billing/usage'
 import { emptyRecord, recordSchema } from '../documents/schema'
 import { companyProfileSchema } from '../documents/company-profile-schema'
 import { calculateInvoice } from '../documents/invoice-calculation'
@@ -11,6 +12,7 @@ import { event } from '../documents/service'
 import { sha256 } from '../documents/storage'
 import { customerSchema, productSchema, draftSchema } from './schema'
 import type { PoolClient } from 'pg'
+import { hasPermission } from '../customer-auth/permissions'
 
 export type DirectoryKind = 'customers' | 'products'
 const tables = { customers: 'invoice_customers', products: 'invoice_products' } as const
@@ -59,7 +61,7 @@ export async function saveDirectory(context: DocumentContext, kind: DirectoryKin
     throw new DocumentError('invalidRequest')
   const value = parsed.data
   return invoiceTransaction(context, async (client, role) => {
-    if (!canManageCompany(role)) throw new DocumentError('forbidden', 403)
+    if (!hasPermission(role,'directory')) throw new DocumentError('forbidden', 403)
     if (value.id) {
       const result = await client.query(
         `UPDATE customer_auth.${tables[kind]}
@@ -99,19 +101,7 @@ export async function createInvoiceDraft(context: DocumentContext, input: unknow
         throw new DocumentError('conflict', 409)
       return { id: previous.rows[0].document_id as string }
     }
-    const plan = await client.query(
-      'SELECT daily_limit FROM customer_auth.document_entitlements WHERE organization_id=$1',
-      [context.organizationId],
-    )
-    await client.query(
-      "INSERT INTO customer_auth.document_usage(organization_id,usage_day) VALUES($1,(now() AT TIME ZONE 'Europe/Berlin')::date) ON CONFLICT DO NOTHING",
-      [context.organizationId],
-    )
-    const used = await client.query(
-      "UPDATE customer_auth.document_usage SET used=used+1 WHERE organization_id=$1 AND usage_day=(now() AT TIME ZONE 'Europe/Berlin')::date AND used<$2 RETURNING used",
-      [context.organizationId, plan.rows[0]?.daily_limit ?? documentLimits().dailyLimit],
-    )
-    if (!used.rowCount) throw new DocumentError('dailyLimit', 429)
+    await consumeDocuments(client, context.organizationId, 'draft:' + value.requestKey, 1)
     const data = emptyRecord('invoice')
     data.invoiceKind = value.invoiceKind || 'standard'
     data.currency = 'EUR'
@@ -249,7 +239,7 @@ export async function updateInvoiceWorkflow(context: DocumentContext, id: string
   if (!parsed.success || parsed.data.organizationId !== context.organizationId)
     throw new DocumentError('invalidRequest')
   return invoiceTransaction(context, async (client, role) => {
-    if (!canManageCompany(role) && !role.split(',').includes('reviewer'))
+    if (!hasPermission(role,'approve'))
       throw new DocumentError('forbidden', 403)
     const result = await client.query(
       'SELECT * FROM customer_auth.documents WHERE id=$1 AND organization_id=$2 FOR UPDATE',

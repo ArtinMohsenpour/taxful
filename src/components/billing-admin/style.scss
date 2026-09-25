@@ -1,0 +1,219 @@
+.taxful-billing-admin {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    opacity: 0.6;
+  }
+  header {
+    margin-bottom: 24px;
+  }
+  .notice {
+    background: var(--theme-elevation-100);
+    padding: 16px;
+    border-radius: 10px;
+    margin: 16px 0;
+  }
+  .error {
+    border-left: 4px solid var(--theme-error-500);
+  }
+  nav,
+  .search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    margin: 20px 0;
+  }
+  nav {
+    padding: 6px;
+    gap: 6px;
+    border: 1px solid var(--theme-elevation-200);
+    border-radius: 12px;
+    background: var(--theme-elevation-50);
+    button {
+      flex: 1 1 120px;
+      border-color: transparent;
+      background: transparent;
+    }
+  }
+  button {
+    min-height: 44px;
+    font: inherit;
+    border: 1px solid var(--theme-elevation-300);
+    border-radius: 8px;
+    padding: 10px 16px;
+    cursor: pointer;
+    background: var(--theme-elevation-100);
+    color: var(--theme-text);
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease;
+  }
+  button:hover:not(:disabled) {
+    border-color: var(--theme-elevation-500);
+  }
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--theme-text);
+    outline-offset: 3px;
+  }
+  button[aria-pressed='true'] {
+    background: var(--theme-text);
+    color: var(--theme-bg);
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  fieldset {
+    border: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  .plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+    gap: 20px;
+  }
+  form,
+  details {
+    border: 1px solid var(--theme-elevation-200);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  form.search {
+    border: 0;
+    padding: 0;
+    label {
+      flex: 1 1 240px;
+      max-width: 520px;
+      margin: 0;
+    }
+  }
+  .fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+    align-items: stretch;
+    > label {
+      margin: 0;
+      > input,
+      > select {
+        margin-top: auto;
+      }
+    }
+  }
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    min-width: 0;
+  }
+  input,
+  select {
+    min-width: 0;
+    width: 100%;
+    height: 44px;
+    box-sizing: border-box;
+    font: inherit;
+    border: 1px solid var(--theme-elevation-300);
+    border-radius: 6px;
+    background: var(--theme-input-bg);
+    color: var(--theme-text);
+    padding: 8px;
+  }
+  .checkbox {
+    flex-direction: row;
+    align-items: center;
+  }
+  .checkbox input {
+    width: auto;
+    height: auto;
+    min-height: auto;
+  }
+  details > p {
+    overflow-wrap: anywhere;
+  }
+  .billing-details {
+    margin: 18px 0;
+    padding: 18px;
+    border: 1px solid var(--theme-elevation-200);
+    border-radius: 10px;
+    background: var(--theme-elevation-50);
+    h3,
+    h4 {
+      margin-top: 0;
+    }
+    dl {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+      gap: 14px;
+      margin: 16px 0;
+    }
+    dl > div {
+      min-width: 0;
+    }
+    dt,
+    .safe-data-note {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+    dd {
+      margin: 4px 0 0;
+      overflow-wrap: anywhere;
+    }
+    .payment-methods {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .payment-methods li {
+      margin: 6px 0;
+    }
+  }
+  @media (max-width: 600px) {
+    padding: 24px 12px 40px;
+    form,
+    details {
+      padding: 16px;
+    }
+    .fields {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    form.search label {
+      max-width: none;
+    }
+  }
+  summary {
+    cursor: pointer;
+    padding: 4px;
+    overflow-wrap: anywhere;
+  }
+  details[open] summary {
+    margin-bottom: 20px;
+  }
+  .table {
+    overflow-x: auto;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+  }
+  th,
+  td {
+    padding: 12px;
+    border-bottom: 1px solid var(--theme-elevation-200);
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+}

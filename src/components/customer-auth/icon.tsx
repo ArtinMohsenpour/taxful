@@ -1,4 +1,5 @@
 export type IconName =
+  | 'billing'
   | 'overview'
   | 'converter'
   | 'files'

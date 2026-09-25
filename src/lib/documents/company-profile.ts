@@ -3,9 +3,9 @@ import { lockMembership, type DocumentContext } from './access'
 import { companyProfileSchema } from './company-profile-schema'
 import { DocumentError } from './config'
 import { z } from 'zod'
+import { hasPermission } from '../customer-auth/permissions'
 
-export const canManageCompany = (role: string) =>
-  role.split(',').some((value) => ['owner', 'admin'].includes(value))
+export const canManageCompany = (role: string) => hasPermission(role, 'settings')
 export async function getCompanyProfile(context: DocumentContext) {
   const result = await customerPool.query(
     'SELECT data,revision FROM customer_auth.company_invoice_profiles WHERE organization_id=$1',

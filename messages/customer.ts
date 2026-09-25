@@ -130,6 +130,8 @@ export const customerMessages = {
     invite: 'Invite teammate',
     sendInvitation: 'Send invitation',
     invitationSent: 'Invitation sent.',
+    teamLimit:
+      'All team seats are in use or reserved by invitations. Ask the owner to update the plan or cancel an unused invitation.',
     invitationTitle: 'Join your team.',
     invitationIntro: 'Accept your invitation to join the company workspace.',
     accept: 'Accept invitation',
@@ -282,6 +284,8 @@ export const customerMessages = {
     invite: 'Teammitglied einladen',
     sendInvitation: 'Einladung senden',
     invitationSent: 'Einladung gesendet.',
+    teamLimit:
+      'Alle Teamplätze sind belegt oder durch Einladungen reserviert. Bitten Sie den Eigentümer, den Tarif anzupassen oder eine offene Einladung zu stornieren.',
     invitationTitle: 'Werden Sie Teil des Teams.',
     invitationIntro: 'Nehmen Sie Ihre Einladung zum Unternehmensbereich an.',
     accept: 'Einladung annehmen',

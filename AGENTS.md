@@ -15,7 +15,9 @@ Taxful is a German-first, bilingual tax-company website and secure document-proc
 
 The initial public pages are Home, Services, About, How it works, FAQ, Contact, Privacy, and Impressum. Payload should manage localized content, navigation, SEO metadata, drafts, and publishing.
 
-Customer accounts support company workspaces through Better Auth organizations. Document conversion now supports extraction, human review and validated XRechnung export; billing and subscriptions remain future work.
+Customer accounts support company workspaces through Better Auth organizations. Document conversion supports extraction, human review and validated exports. Company subscriptions and usage limits now have a Stripe test-mode integration; see `docs/billing.md` for configuration and launch limitations.
+
+Billing now includes custom Stripe Elements checkout, payment-method setup and owner-only subscription management. Keep prices/provider customer IDs server-selected, persist operation intent before provider mutations, verify quote freshness and preserve pending-payment access rules. Gifts are separate from subscription charges and have explicit expiry. Read `docs/billing.md` before changing these flows; run the isolated Stripe test fixtures for payment lifecycle changes. Never exercise payment mutations on a real customer account as a test.
 
 ## Domain boundaries
 
@@ -161,7 +163,7 @@ Navbar items are read from the published Payload global for each request, with G
 - See `docs/document-converter.md` for supported formats, data isolation, quotas, worker/services, Gemini setup and export boundaries. Do not label XRechnung as a tax return or bypass KoSIT validation. Preserve immutable approvals/exports and server-side entitlement enforcement.
 - Document progress is persisted, with conservative local-text/vision routing and at most one visual fallback. File history uses server-side search, status/type/date filters, Berlin date groups and pagination. Keep original/export download authorization and revision checks on the server. Provider response schemas are compact; full strict validation remains local.
 - File preview supports PDF canvases, normalized images, DOCX text and escaped XML. Deletion requires confirmation and current uploader/owner/admin permission; removes all document versions, preserves usage, and uses a durable storage-cleanup queue. Do not permit active workers to recreate deleted artifacts.
-- MFA, billing and direct ELSTER submission are deferred. ZUGFeRD EN16931 export now uses shared canonical invoice data, separate CII mapping, Mustangproject PDF/A generation and independent PDF/XML validation; see `docs/invoice-export-profiles.md`.
+- MFA and direct ELSTER submission are deferred. Billing uses a separate customer-auth schema service and super-admin CMS view; never expose customer password hashes, tokens or reset links. ZUGFeRD EN16931 export uses shared canonical invoice data, separate CII mapping, Mustangproject PDF/A generation and independent PDF/XML validation; see `docs/invoice-export-profiles.md`.
 - See `docs/customer-auth.md` for setup and operational details.
 
 Support light, dark, and system preferences; persist explicit choices and prevent initial theme flashing. Target WCAG 2.2 AA, keyboard navigation, visible focus, meaningful semantics, reduced motion, and responsive layouts from mobile upward.

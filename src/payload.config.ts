@@ -14,6 +14,10 @@ const dirname = path.dirname(filename)
 
 export default buildConfig({
   admin: {
+    components: {
+      afterNavLinks: ['/components/billing-admin/nav'],
+      views: { billing: { Component: '/components/billing-admin/view', path: '/billing' } },
+    },
     livePreview: {
       breakpoints: [
         { label: 'Mobile', name: 'mobile', width: 390, height: 844 },

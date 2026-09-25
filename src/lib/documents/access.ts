@@ -2,12 +2,12 @@ import { auth } from '../customer-auth/auth'
 import { customerPool } from '../customer-auth/database'
 import { DocumentError } from './config'
 import type { PoolClient } from 'pg'
+import { hasPermission } from '../customer-auth/permissions'
 export type DocumentContext = { userId: string; organizationId: string; role: string }
-export const canApprove = (role: string) =>
-  role.split(',').some((role) => ['owner', 'admin', 'reviewer'].includes(role))
+export const canApprove = (role: string) => hasPermission(role, 'approve')
 export const canDeleteDocument = (context: DocumentContext, uploadedBy: string | null) =>
-  context.userId === uploadedBy ||
-  context.role.split(',').some((role) => ['owner', 'admin'].includes(role))
+  hasPermission(context.role, 'files') &&
+  (context.userId === uploadedBy || hasPermission(context.role, 'settings'))
 export async function documentContext(headers: Headers): Promise<DocumentContext> {
   const session = await auth.api.getSession({ headers })
   if (!session) throw new DocumentError('unauthorized', 401)
@@ -20,7 +20,8 @@ export async function documentContext(headers: Headers): Promise<DocumentContext
     [session.user.id],
   )
   const membership = memberships.rows.find((row) => row.organizationId === selected)
-  if (!membership) throw new DocumentError('companyRequired', 403)
+  if (!membership || !hasPermission(membership.role, 'files'))
+    throw new DocumentError('companyRequired', 403)
   return {
     userId: session.user.id,
     organizationId: membership.organizationId,
@@ -36,7 +37,11 @@ export async function lockMembership(
     'SELECT role FROM customer_auth.organization_memberships WHERE "organizationId"=$1 AND "userId"=$2 FOR SHARE',
     [context.organizationId, context.userId],
   )
-  if (!result.rows[0] || (approve && !canApprove(result.rows[0].role)))
+  if (
+    !result.rows[0] ||
+    !hasPermission(result.rows[0].role, 'files') ||
+    (approve && !canApprove(result.rows[0].role))
+  )
     throw new DocumentError('forbidden', 403)
   return result.rows[0].role as string
 }

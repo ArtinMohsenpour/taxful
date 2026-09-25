@@ -10,13 +10,16 @@ export function PortalSidebar({
   organizations,
   activeId,
   name,
+  billingOwner = false,
 }: {
   organizations: { id: string; name: string }[]
   activeId?: string
   name: string
+  billingOwner?: boolean
 }) {
   const t = useTranslations('Auth')
   const invoices = useTranslations('Invoices')
+  const billing = useTranslations('Billing')
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const links: {
@@ -91,6 +94,17 @@ export function PortalSidebar({
                 )}
               </Link>
             ))}
+            {billingOwner && (
+              <Link
+                href="/portal/billing"
+                onClick={() => setOpen(false)}
+                aria-current={pathname.startsWith('/portal/billing') ? 'page' : undefined}
+                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium ${pathname.startsWith('/portal/billing') ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent'}`}
+              >
+                <Icon name="billing" />
+                {billing('title')}
+              </Link>
+            )}
           </nav>
           <div
             className={`mt-6 border-t border-border pt-4 transition-[visibility,opacity] duration-250 motion-reduce:transition-none lg:visible lg:opacity-100 ${open ? 'visible opacity-100' : 'invisible opacity-0'}`}

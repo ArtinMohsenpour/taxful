@@ -47,6 +47,10 @@ test(
           'INSERT INTO customer_auth.organizations(id,name,slug,"createdAt") VALUES($1,$2,$1,now())',
           [id, 'Synthetic Document Test'],
         )
+      await pool.query(
+        "INSERT INTO customer_auth.billing_plan_grants(organization_id,plan_id,expires_at,reason,staff_id) VALUES($1,'starter',now()+interval '1 day','Synthetic fixture','test')",
+        [organizationId],
+      )
       for (const [uid, org, role] of [
         [userId, organizationId, 'owner'],
         [memberId, organizationId, 'member'],
@@ -57,7 +61,7 @@ test(
           [randomUUID(), org, uid, role],
         )
       await pool.query(
-        'INSERT INTO customer_auth.document_entitlements(organization_id,daily_limit,batch_limit) VALUES($1,2,1)',
+        "INSERT INTO customer_auth.billing_usage_ledger(organization_id,operation_key,kind,quantity) VALUES($1,'fixture-daily','upload',23)",
         [organizationId],
       )
       const png = await sharp({
@@ -70,7 +74,7 @@ test(
       const [id] = await uploadDocuments(owner, [file], key)
       cleanupDocs.push(id)
       assert.deepEqual(await uploadDocuments(owner, [file], key), [id])
-      assert.equal((await entitlements(owner)).used, 1)
+      assert.equal((await entitlements(owner)).used, 24)
       const { documentFilters } = await import('../../src/lib/documents/listing')
       assert.equal(
         (
@@ -160,7 +164,7 @@ test(
       assert.equal(concurrent.filter((result) => result.status === 'fulfilled').length, 1)
       for (const result of concurrent)
         if (result.status === 'fulfilled') cleanupDocs.push(...result.value)
-      assert.equal((await entitlements(owner)).used, 2)
+      assert.equal((await entitlements(owner)).used, 25)
       const cleanupId = randomUUID()
       const obstacle = storagePath(cleanupId)
       await mkdir(obstacle)
@@ -244,7 +248,7 @@ test(
         ).rowCount,
         0,
       )
-      assert.equal((await entitlements(owner)).used, 2)
+      assert.equal((await entitlements(owner)).used, 25)
     } finally {
       // Exact random test IDs only; no customer records or files are touched.
       const exports = await pool.query(

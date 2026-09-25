@@ -1,4 +1,4 @@
-import { createAuthMiddleware } from 'better-auth/api'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { customerPool } from './database'
 import { sessionActivitySeconds, sessionIdleSeconds } from './session-timeout'
 
@@ -7,6 +7,24 @@ import { sessionActivitySeconds, sessionIdleSeconds } from './session-timeout'
 // session without requests for longer than the idle limit is deleted before it can be used, and
 // activity is written at most once per interval.
 export const trackSessionActivity = createAuthMiddleware(async (ctx) => {
+  // Team mutations have one audited, transactional entry point: /api/team.
+  // Keep the provider's equivalent endpoints from bypassing its hierarchy or seat checks.
+  if (
+    ctx.path?.startsWith('/organization/') &&
+    ![
+      '/organization/create',
+      '/organization/set-active',
+      '/organization/list',
+      '/organization/get-full-organization',
+      '/organization/get-organization',
+      '/organization/list-members',
+      '/organization/get-active-member',
+      '/organization/get-active-member-role',
+      '/organization/check-slug',
+      '/organization/has-permission',
+    ].includes(ctx.path)
+  )
+    throw new APIError('FORBIDDEN', { message: 'Use the workspace team controls.' })
   const token = await ctx.getSignedCookie(
     ctx.context.authCookies.sessionToken.name,
     ctx.context.secret,
@@ -14,7 +32,7 @@ export const trackSessionActivity = createAuthMiddleware(async (ctx) => {
   if (!token) return
   await customerPool.query(
     `WITH target AS (
-      SELECT id, "updatedAt" < now() - $2::int * interval '1 second' AS idle
+      SELECT id, ("updatedAt" < now() - $2::int * interval '1 second' OR EXISTS(SELECT 1 FROM customer_auth.customer_users u WHERE u.id="userId" AND u.suspended)) AS idle
       FROM customer_auth.customer_sessions WHERE token = $1
     ), removed AS (
       DELETE FROM customer_auth.customer_sessions s USING target

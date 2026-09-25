@@ -57,6 +57,10 @@ test(
           'INSERT INTO customer_auth.organizations(id,name,slug,"createdAt") VALUES($1,$2,$1,now())',
           [id, 'Synthetic Company'],
         )
+      await pool.query(
+        "INSERT INTO customer_auth.billing_plan_grants(organization_id,plan_id,expires_at,reason,staff_id) VALUES($1,'starter',now()+interval '1 day','Synthetic fixture','test')",
+        [org],
+      )
       for (const [userId, role] of [
         [owner, 'owner'],
         [member, 'member'],

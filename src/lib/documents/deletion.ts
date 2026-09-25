@@ -2,6 +2,7 @@ import { customerPool } from '../customer-auth/database'
 import { canDeleteDocument, lockMembership, type DocumentContext } from './access'
 import { DocumentError } from './config'
 import { removePrivate } from './storage'
+import { billingLock } from '../billing/usage'
 
 type Artifact = { id: string; kind: 'source' | 'preview' | 'export' }
 
@@ -49,6 +50,7 @@ export async function deleteDocument(context: DocumentContext, id: string) {
   try {
     await client.query('BEGIN')
     const role = await lockMembership(client, context)
+    await billingLock(client, context.organizationId)
     const result = await client.query(
       `SELECT uploaded_by,status,export_state,invoice_state,
       export_started_at>now()-interval '120 seconds' AS export_busy FROM customer_auth.documents
