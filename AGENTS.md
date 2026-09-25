@@ -67,9 +67,7 @@ next-themes 0.4.6 has a tracked pnpm patch for its React client-remount script w
 - `src/app/(payload)/admin/importMap.js` is generated. Use `pnpm generate:importmap` when required; do not hand-edit it.
 - `.env` contains local secrets and is ignored by Git. Never print, commit, or copy its values into documentation, fixtures, or logs.
 - `.env.example` and the generated `README.md` still contain MongoDB-oriented template text and must be corrected when the local environment is formalized.
-- The generated `docker-compose.yml` is still the template’s MongoDB setup and is not the Taxful database definition. Replace it with an explicit PostgreSQL setup before using Compose as the project workflow.
-
-The agreed local Docker container is `taxful-postgres` using `postgres:18-alpine`, with host port 5436 mapped to container port 5432 because host port 5432 was occupied. Verify the live mapping before infrastructure changes. Preserve its database and volume; do not recreate it when changing frontend configuration. The generated Compose file is not yet the source of truth.
+- `docker-compose.yml` is the source of truth for local infrastructure: `taxful-postgres` (`postgres:18-alpine`, host port 5436 → 5432, volume `taxful_pgdata`) plus the Mailpit inbox from `docker-compose.email.yml`. Credentials come from `POSTGRES_*` in `.env` and must match `DATABASE_URL`. The app runs on the host with `pnpm dev`. Preserve the `taxful_pgdata` volume; never run `docker compose down -v` without explicit approval.
 
 ## Target architecture
 
