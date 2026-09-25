@@ -5,6 +5,55 @@ import { useRouter } from 'next/navigation'
 import { customerAuth } from '@/lib/customer-auth/client'
 import { buttonClass } from './auth-form'
 import { teamRequest } from './team-request'
+import { announceSignOut } from '@/lib/customer-auth/session-timeout'
+
+export function InvitationAccountSwitch({
+  next,
+  maskedEmail,
+  accountExists,
+}: {
+  next: string
+  maskedEmail: string
+  accountExists: boolean
+}) {
+  const t = useTranslations('Team'),
+    locale = useLocale(),
+    router = useRouter()
+  const [pending, setPending] = useState(false),
+    [error, setError] = useState(false)
+  return (
+    <div className="space-y-5">
+      <p className="rounded-xl bg-primary/10 p-4">{t('wrongAccount', { email: maskedEmail })}</p>
+      {error && (
+        <p role="alert" className="text-sm text-error">
+          {t('genericError')}
+        </p>
+      )}
+      <button
+        className={buttonClass}
+        disabled={pending}
+        onClick={async () => {
+          setPending(true)
+          setError(false)
+          try {
+            const result = await customerAuth.signOut()
+            if (result.error) throw new Error()
+            announceSignOut('manual')
+            router.replace(
+              `/${locale}/${accountExists ? 'login' : 'signup'}?next=${encodeURIComponent(next)}`,
+            )
+            router.refresh()
+          } catch {
+            setError(true)
+            setPending(false)
+          }
+        }}
+      >
+        {t(pending ? 'working' : accountExists ? 'signInInvitedAccount' : 'createInvitedAccount')}
+      </button>
+    </div>
+  )
+}
 
 export function AcceptInvitation({ invitationId }: { invitationId: string }) {
   const t = useTranslations('Team'),

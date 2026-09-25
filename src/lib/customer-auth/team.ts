@@ -44,7 +44,7 @@ export const teamActionSchema = z.discriminatedUnion('action', [
     .strict(),
   z
     .object({
-      action: z.enum(['cancel', 'resend']),
+      action: z.enum(['cancel', 'resend', 'delete']),
       organizationId: id,
       invitationId: id,
       locale: z.enum(['de', 'en']),
@@ -113,7 +113,7 @@ export async function teamSnapshot(context: DocumentContext, before?: string) {
     const invitations = manage
       ? await client.query<Invitation & { delivery_status: string; expired: boolean }>(
           `SELECT id,"organizationId",email,role,status,"expiresAt",delivery_status,last_sent_at,("expiresAt"<=now()) AS expired FROM customer_auth.organization_invitations
-      WHERE "organizationId"=$1 AND status='pending' ORDER BY "createdAt" DESC,id LIMIT 100`,
+      WHERE "organizationId"=$1 AND status IN ('pending','canceled','rejected','accepted') ORDER BY "createdAt" DESC,id LIMIT 100`,
           [context.organizationId],
         )
       : { rows: [] }
@@ -150,6 +150,36 @@ export async function teamSnapshot(context: DocumentContext, before?: string) {
   }
 }
 export type TeamSnapshot = Awaited<ReturnType<typeof teamSnapshot>>
+
+export async function invitationPreview(invitationId: string) {
+  if (!invitationId || invitationId.length > 200) return null
+  const result = await customerPool.query<{
+    name: string
+    role: TeamRole
+    expiresAt: Date
+    status: string
+    email: string
+    account_exists: boolean
+  }>(
+    `SELECT o.name,i.role,i."expiresAt",i.status,i.email,
+      EXISTS(SELECT 1 FROM customer_auth.customer_users u WHERE lower(u.email)=lower(i.email)) AS account_exists
+     FROM customer_auth.organization_invitations i
+    JOIN customer_auth.organizations o ON o.id=i."organizationId" WHERE i.id=$1`,
+    [invitationId],
+  )
+  const invitation = result.rows[0]
+  if (!invitation || !['admin', 'reviewer', 'member'].includes(invitation.role)) return null
+  const [local, domain = ''] = invitation.email.split('@')
+  return {
+    name: invitation.name,
+    role: invitation.role,
+    expiresAt: invitation.expiresAt,
+    status: invitation.status,
+    valid: invitation.status === 'pending' && invitation.expiresAt.getTime() > Date.now(),
+    maskedEmail: `${Array.from(local).slice(0, 2).join('')}***@${domain}`,
+    accountExists: invitation.account_exists,
+  }
+}
 
 export async function invitationDetails(userId: string, invitationId: string) {
   if (!invitationId || invitationId.length > 200) return null
@@ -276,9 +306,19 @@ export async function manageTeam(
           [input.invitationId, context.organizationId],
         )
       ).rows[0]
-      if (!invite || invite.status !== 'pending') throw new DocumentError('invitationInvalid', 409)
+      if (!invite) throw new DocumentError('invitationInvalid', 409)
       if (!canManageTeamRole(role, invite.role)) throw new DocumentError('forbidden', 403)
-      if (input.action === 'cancel') {
+      if (input.action === 'delete') {
+        await client.query(
+          'DELETE FROM customer_auth.organization_invitations WHERE id=$1 AND "organizationId"=$2',
+          [invite.id, context.organizationId],
+        )
+        await audit(client, context.organizationId, context.userId, 'deleted', invite.email, {
+          status: invite.status,
+        })
+      } else if (invite.status !== 'pending') {
+        throw new DocumentError('invitationInvalid', 409)
+      } else if (input.action === 'cancel') {
         await client.query(
           "UPDATE customer_auth.organization_invitations SET status='canceled' WHERE id=$1",
           [invite.id],

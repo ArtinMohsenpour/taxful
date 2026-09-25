@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { customerPool } from '../customer-auth/database'
 import { lockMembership, type DocumentContext } from '../documents/access'
-import { canManageCompany } from '../documents/company-profile'
 import { DocumentError } from '../documents/config'
 import { consumeDocuments } from '../billing/usage'
 import { emptyRecord, recordSchema } from '../documents/schema'
@@ -61,7 +60,7 @@ export async function saveDirectory(context: DocumentContext, kind: DirectoryKin
     throw new DocumentError('invalidRequest')
   const value = parsed.data
   return invoiceTransaction(context, async (client, role) => {
-    if (!hasPermission(role,'directory')) throw new DocumentError('forbidden', 403)
+    if (!hasPermission(role, 'directory')) throw new DocumentError('forbidden', 403)
     if (value.id) {
       const result = await client.query(
         `UPDATE customer_auth.${tables[kind]}
@@ -239,8 +238,7 @@ export async function updateInvoiceWorkflow(context: DocumentContext, id: string
   if (!parsed.success || parsed.data.organizationId !== context.organizationId)
     throw new DocumentError('invalidRequest')
   return invoiceTransaction(context, async (client, role) => {
-    if (!hasPermission(role,'approve'))
-      throw new DocumentError('forbidden', 403)
+    if (!hasPermission(role, 'approve')) throw new DocumentError('forbidden', 403)
     const result = await client.query(
       'SELECT * FROM customer_auth.documents WHERE id=$1 AND organization_id=$2 FOR UPDATE',
       [id, context.organizationId],

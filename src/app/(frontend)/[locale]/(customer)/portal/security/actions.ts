@@ -31,3 +31,18 @@ export async function revokeDevice(form: FormData) {
     await auth.api.revokeSession({ headers: requestHeaders, body: { token: target.token } })
   revalidatePath(`/${locale}/portal/security`)
 }
+
+export async function revokeOtherDevices(form: FormData) {
+  const requested = form.get('locale')
+  const locale =
+    typeof requested === 'string' && hasLocale(routing.locales, requested)
+      ? requested
+      : routing.defaultLocale
+  await requireCustomer(locale)
+  try {
+    await auth.api.revokeOtherSessions({ headers: await headers() })
+  } catch (error) {
+    if (!isSessionNotFresh(error)) throw error
+  }
+  revalidatePath(`/${locale}/portal/security`)
+}

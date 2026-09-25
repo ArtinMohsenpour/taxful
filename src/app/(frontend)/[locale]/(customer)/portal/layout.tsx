@@ -13,7 +13,10 @@ export default async function PortalLayout({ children }: { children: ReactNode }
         organizations={organizations.map(({ id, name }) => ({ id, name }))}
         activeId={organization?.id}
         name={session.user.name}
-        billingOwner={hasPermission(organization?.members.find((member) => member.userId === session.user.id)?.role || '', 'billing')}
+        billingOwner={hasPermission(
+          organization?.members.find((member) => member.userId === session.user.id)?.role || '',
+          'billing',
+        )}
       />
       <div className="min-w-0">{children}</div>
       <SessionTimeout />

@@ -208,14 +208,29 @@ test('confirms the password on Account security and ends sessions idle on the se
   // Another device can be signed out from the list. Its session is inserted directly so the suite
   // stays within Better Auth's limit of five sign-ins per minute.
   await pool.query(
-    `INSERT INTO customer_auth.customer_sessions(id,"expiresAt",token,"createdAt","updatedAt","userAgent","userId")
-    VALUES($1, now() + interval '1 day', $2, now(), now(), 'Synthetic other device', $3)`,
+    `INSERT INTO customer_auth.customer_sessions(id,"expiresAt",token,"createdAt","updatedAt","userAgent","ipAddress","userId")
+    VALUES($1, now() + interval '1 day', $2, now(), now(),
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/140.0 Safari/537.36',
+      '198.51.100.42',$3)`,
     [randomUUID(), randomUUID(), user],
   )
   await page.reload()
-  await expect(page.getByText('Synthetic other device', { exact: true })).toBeVisible()
+  await expect(page.getByText('Chrome · macOS', { exact: true })).toBeVisible()
+  await expect(page.getByText('198.51.100.…', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Sign out device' }).click()
-  await expect(page.getByText('Synthetic other device', { exact: true })).toBeHidden()
+  await expect(page.getByText('Chrome · macOS', { exact: true })).toBeHidden()
+  expect(await sessions()).toEqual([{ activeOrganizationId: otherWorkspace, recent: true }])
+
+  await pool.query(
+    `INSERT INTO customer_auth.customer_sessions(id,"expiresAt",token,"createdAt","updatedAt","userAgent","userId")
+    VALUES($1, now() + interval '1 day', $2, now(), now(),
+      'Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0',$3)`,
+    [randomUUID(), randomUUID(), user],
+  )
+  await page.reload()
+  await expect(page.getByText('Firefox · Linux', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Sign out all other devices', exact: true }).click()
+  await expect(page.getByText('Firefox · Linux', { exact: true })).toBeHidden()
   expect(await sessions()).toEqual([{ activeOrganizationId: otherWorkspace, recent: true }])
 
   await pool.query(

@@ -60,6 +60,7 @@ try {
     const context = await browser.newContext({
       baseURL: origin,
       viewport: { width: 1440, height: 1050 },
+      extraHTTPHeaders: { 'x-forwarded-for': `192.0.2.${contexts.length + 10}` },
     })
     contexts.push(context)
     assert.equal(
@@ -209,6 +210,17 @@ try {
   await expect(page.getByRole('status')).toHaveText('Team updated.')
   await expect(page.getByText('Email sent', { exact: true })).toBeVisible()
   const invitation = (await (await owner.request.get('/api/team')).json()).invitations[0]
+  const wrongAccountPage = await member.newPage()
+  await wrongAccountPage.goto('/en/accept-invitation?id=' + encodeURIComponent(invitation.id))
+  await expect(
+    wrongAccountPage.getByText(
+      /This invitation was sent to .* You are signed in with another account\./,
+    ),
+  ).toBeVisible()
+  await expect(
+    wrongAccountPage.getByRole('button', { name: 'Sign in to join', exact: true }),
+  ).toBeVisible()
+  await wrongAccountPage.close()
   const joinPage = await invitee.newPage()
   joinPage.on('pageerror', (e) => errors.push(e.message))
   await joinPage.goto('/en/accept-invitation?id=' + encodeURIComponent(invitation.id))
@@ -216,7 +228,11 @@ try {
   await joinPage.getByRole('button', { name: 'Accept invitation', exact: true }).click()
   await joinPage.waitForURL('**/en/portal')
   await page.getByRole('button', { name: 'Refresh', exact: true }).click()
-  const invitedRow = page.locator('section').filter({has:page.getByRole('heading',{name:/^Members /})}).locator('li').filter({ hasText: users[4] + '@example.test' })
+  const invitedRow = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { name: /^Members / }) })
+    .locator('li')
+    .filter({ hasText: users[4] + '@example.test' })
   await invitedRow.getByRole('button', { name: 'Change role', exact: true }).click()
   const confirmation = page.getByRole('alertdialog')
   await confirmation
@@ -238,6 +254,44 @@ try {
     (await post(invitee, '/api/team', { action: 'accept', invitationId: invitation.id })).status(),
     409,
   )
+  const spareEmail = randomUUID() + '@example.test'
+  assert.equal(
+    (
+      await post(owner, '/api/team', {
+        action: 'invite',
+        organizationId: org,
+        email: spareEmail,
+        role: 'member',
+        locale: 'en',
+      })
+    ).status(),
+    200,
+  )
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click()
+  const spareInvitation = (await (await owner.request.get('/api/team')).json()).invitations.find(
+    (entry: { email: string }) => entry.email === spareEmail,
+  )
+  const newInvitee = await browser.newContext({ baseURL: origin })
+  const newInviteePage = await newInvitee.newPage()
+  await newInviteePage.goto('/en/accept-invitation?id=' + encodeURIComponent(spareInvitation.id))
+  await expect(
+    newInviteePage.getByRole('link', { name: 'Create account to join', exact: true }),
+  ).toBeVisible()
+  await newInvitee.close()
+  const invitationsSection = page.locator('section').filter({
+    has: page.getByRole('heading', { name: 'Invite a colleague', exact: true }),
+  })
+  const spareRow = invitationsSection.locator('li').filter({ hasText: spareEmail })
+  await spareRow.getByRole('button', { name: 'Revoke invitation', exact: true }).click()
+  const revokeConfirmation = page.getByRole('alertdialog')
+  await revokeConfirmation.getByRole('button', { name: 'Confirm change', exact: true }).click()
+  await expect(revokeConfirmation).toHaveCount(0)
+  await expect(spareRow).toContainText('Revoked')
+  await spareRow.getByRole('button', { name: 'Delete invitation', exact: true }).click()
+  const deleteConfirmation = page.getByRole('alertdialog')
+  await deleteConfirmation.getByRole('button', { name: 'Confirm change', exact: true }).click()
+  await expect(deleteConfirmation).toHaveCount(0)
+  await expect(spareRow).toHaveCount(0)
   await mkdir('.private/team-check', { recursive: true })
   await page.screenshot({ path: '.private/team-check/team-desktop.png', fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
@@ -246,7 +300,7 @@ try {
   await page.getByText('Wer darf was?', { exact: true }).click()
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
   await page.screenshot({ path: '.private/team-check/team-mobile-de.png', fullPage: true })
-  await page.evaluate(() => localStorage.setItem('theme', 'dark'))
+  await page.evaluate(() => localStorage.setItem('taxful-theme', 'dark'))
   await page.reload()
   await expect(page.locator('html')).toHaveClass(/dark/)
   await page.screenshot({ path: '.private/team-check/team-dark-mobile.png', fullPage: true })

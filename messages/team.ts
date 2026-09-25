@@ -14,6 +14,7 @@ export const teamMessages = {
     send: 'Send invitation',
     resend: 'Resend',
     revoke: 'Revoke invitation',
+    delete: 'Delete invitation',
     remove: 'Remove member',
     change: 'Change role',
     confirm: 'Confirm change',
@@ -42,6 +43,8 @@ export const teamMessages = {
       'Remove {name} from this company? Their access will end immediately. Company files and invoices stay in the workspace.',
     confirmRole: 'Change the role for {name}? Their new permissions apply immediately.',
     confirmRevoke: 'Revoke the invitation for {name}? This link will no longer allow them to join.',
+    confirmDelete:
+      'Permanently delete the invitation for {name}? Its link will stop working. The security audit entry will remain.',
     matrix: 'Who can do what',
     matrixIntro:
       'Permissions apply to this company only. Personal profile and security settings are available to each account holder.',
@@ -66,6 +69,7 @@ export const teamMessages = {
     invited: 'Invitation created',
     resent: 'Invitation resent',
     revoked: 'Invitation revoked',
+    deleted: 'Invitation deleted',
     joined: 'Joined the team',
     declined: 'Invitation declined',
     removed: 'Member removed',
@@ -95,6 +99,15 @@ export const teamMessages = {
     reject: 'Decline invitation',
     declinedNotice: 'Invitation declined.',
     invitationIntro: 'Accept to join this company with the role assigned by its administrator.',
+    pendingStatus: 'Pending',
+    revokedStatus: 'Revoked',
+    acceptedStatus: 'Accepted',
+    rejectedStatus: 'Declined',
+    wrongAccount: 'This invitation was sent to {email}. You are signed in with another account.',
+    existingAccountIntro: 'Sign in to the existing Taxful account for {email} to join this team.',
+    newAccountIntro: 'Create a Taxful account for {email}, verify it, and return here to join.',
+    signInInvitedAccount: 'Sign in to join',
+    createInvitedAccount: 'Create account to join',
   },
   de: {
     title: 'Teamverwaltung',
@@ -111,6 +124,7 @@ export const teamMessages = {
     send: 'Einladung senden',
     resend: 'Erneut senden',
     revoke: 'Einladung widerrufen',
+    delete: 'Einladung löschen',
     remove: 'Mitglied entfernen',
     change: 'Rolle ändern',
     confirm: 'Änderung bestätigen',
@@ -141,6 +155,8 @@ export const teamMessages = {
     confirmRole: 'Rolle von {name} ändern? Die neuen Berechtigungen gelten sofort.',
     confirmRevoke:
       'Einladung für {name} widerrufen? Dieser Link ermöglicht danach keinen Beitritt mehr.',
+    confirmDelete:
+      'Einladung für {name} endgültig löschen? Der Link funktioniert danach nicht mehr. Der Sicherheitseintrag bleibt erhalten.',
     matrix: 'Wer darf was?',
     matrixIntro:
       'Berechtigungen gelten nur für dieses Unternehmen. Persönliches Profil und Sicherheitseinstellungen stehen jedem Kontoinhaber zur Verfügung.',
@@ -165,6 +181,7 @@ export const teamMessages = {
     invited: 'Einladung erstellt',
     resent: 'Einladung erneut gesendet',
     revoked: 'Einladung widerrufen',
+    deleted: 'Einladung gelöscht',
     joined: 'Dem Team beigetreten',
     declined: 'Einladung abgelehnt',
     removed: 'Mitglied entfernt',
@@ -198,5 +215,17 @@ export const teamMessages = {
     declinedNotice: 'Einladung abgelehnt.',
     invitationIntro:
       'Nehmen Sie die Einladung an, um diesem Unternehmen mit der zugewiesenen Rolle beizutreten.',
+    pendingStatus: 'Offen',
+    revokedStatus: 'Widerrufen',
+    acceptedStatus: 'Angenommen',
+    rejectedStatus: 'Abgelehnt',
+    wrongAccount:
+      'Diese Einladung wurde an {email} gesendet. Sie sind mit einem anderen Konto angemeldet.',
+    existingAccountIntro:
+      'Melden Sie sich mit dem bestehenden Taxful-Konto für {email} an, um dem Team beizutreten.',
+    newAccountIntro:
+      'Erstellen Sie ein Taxful-Konto für {email}, bestätigen Sie es und kehren Sie hierher zurück.',
+    signInInvitedAccount: 'Anmelden und beitreten',
+    createInvitedAccount: 'Konto erstellen und beitreten',
   },
 }

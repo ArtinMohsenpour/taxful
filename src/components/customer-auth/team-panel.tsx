@@ -19,7 +19,7 @@ const card = 'rounded-3xl border border-border bg-surface p-5 sm:p-7'
 const secondary =
   'rounded-full border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent disabled:opacity-50'
 type Confirmation = {
-  action: 'role' | 'remove' | 'cancel'
+  action: 'role' | 'remove' | 'cancel' | 'delete'
   id: string
   name: string
   expectedRole?: Exclude<TeamRole, 'owner'>
@@ -174,7 +174,9 @@ export function TeamPanel({
                 ? 'confirmRemove'
                 : confirm.action === 'role'
                   ? 'confirmRole'
-                  : 'confirmRevoke',
+                  : confirm.action === 'delete'
+                    ? 'confirmDelete'
+                    : 'confirmRevoke',
               { name: confirm.name },
             )}
           </h2>
@@ -195,8 +197,8 @@ export function TeamPanel({
               disabled={pending}
               onClick={() =>
                 void act(
-                  confirm.action === 'cancel'
-                    ? { action: 'cancel', invitationId: confirm.id, locale }
+                  confirm.action === 'cancel' || confirm.action === 'delete'
+                    ? { action: confirm.action, invitationId: confirm.id, locale }
                     : {
                         action: confirm.action,
                         memberId: confirm.id,
@@ -332,41 +334,66 @@ export function TeamPanel({
                   <p className="font-medium wrap-anywhere">{invite.email}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {t(invite.role as TeamRole)} ·{' '}
+                    {t(
+                      invite.status === 'pending'
+                        ? 'pendingStatus'
+                        : invite.status === 'canceled'
+                          ? 'revokedStatus'
+                          : invite.status === 'accepted'
+                            ? 'acceptedStatus'
+                            : 'rejectedStatus',
+                    )}{' '}
+                    ·{' '}
                     {invite.expired ? t('expired') : t('expires', { date: date(invite.expiresAt) })}
                   </p>
-                  <p
-                    className={`mt-1 text-xs ${invite.delivery_status === 'failed' ? 'text-error' : 'text-muted-foreground'}`}
-                  >
-                    {t(
-                      invite.delivery_status === 'sent'
-                        ? 'deliverySent'
-                        : invite.delivery_status === 'failed'
-                          ? 'deliveryFailed'
-                          : invite.delivery_status === 'sending'
-                            ? 'deliverySending'
-                            : 'deliveryUnknown',
-                    )}
-                  </p>
+                  {invite.status === 'pending' && (
+                    <p
+                      className={`mt-1 text-xs ${invite.delivery_status === 'failed' ? 'text-error' : 'text-muted-foreground'}`}
+                    >
+                      {t(
+                        invite.delivery_status === 'sent'
+                          ? 'deliverySent'
+                          : invite.delivery_status === 'failed'
+                            ? 'deliveryFailed'
+                            : invite.delivery_status === 'sending'
+                              ? 'deliverySending'
+                              : 'deliveryUnknown',
+                      )}
+                    </p>
+                  )}
                 </div>
                 {canManageTeamRole(data.role, invite.role) && (
                   <div className="flex flex-wrap gap-2">
+                    {invite.status === 'pending' && (
+                      <>
+                        <button
+                          className={secondary}
+                          disabled={pending}
+                          onClick={() =>
+                            void act({ action: 'resend', invitationId: invite.id, locale })
+                          }
+                        >
+                          {t('resend')}
+                        </button>
+                        <button
+                          className={secondary}
+                          disabled={pending}
+                          onClick={() =>
+                            setConfirm({ action: 'cancel', id: invite.id, name: invite.email })
+                          }
+                        >
+                          {t('revoke')}
+                        </button>
+                      </>
+                    )}
                     <button
-                      className={secondary}
+                      className={`${secondary} text-error`}
                       disabled={pending}
                       onClick={() =>
-                        void act({ action: 'resend', invitationId: invite.id, locale })
+                        setConfirm({ action: 'delete', id: invite.id, name: invite.email })
                       }
                     >
-                      {t('resend')}
-                    </button>
-                    <button
-                      className={secondary}
-                      disabled={pending}
-                      onClick={() =>
-                        setConfirm({ action: 'cancel', id: invite.id, name: invite.email })
-                      }
-                    >
-                      {t('revoke')}
+                      {t('delete')}
                     </button>
                   </div>
                 )}

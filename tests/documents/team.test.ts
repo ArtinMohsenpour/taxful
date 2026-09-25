@@ -212,6 +212,20 @@ test(
         respondToInvitation(accepting, pending.id, 'accept'),
         /invitationInvalid/,
       )
+      assert.equal(
+        (await teamSnapshot(ctx(owner))).invitations.find((item) => item.id === pending.id)?.status,
+        'canceled',
+      )
+      await manageTeam(ctx(owner), {
+        action: 'delete',
+        organizationId: org,
+        invitationId: pending.id,
+        locale: 'en',
+      })
+      assert.equal(
+        (await teamSnapshot(ctx(owner))).invitations.some((item) => item.id === pending.id),
+        false,
+      )
       const client = await pool.connect()
       try {
         await client.query('BEGIN')
