@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { Suspense, useState, type FormEvent } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Link } from '@/i18n/navigation'
 import { customerAuth } from '@/lib/customer-auth/client'
 import { customerReturnPath } from '@/lib/customer-auth/navigation'
 import { idleWarningSeconds } from '@/lib/customer-auth/session-timeout'
+import { SecondFactor } from './second-factor'
 
 export type AuthMode = 'login' | 'signup' | 'forgot' | 'reset' | 'verify'
 export const inputClass =
@@ -15,7 +16,16 @@ export const buttonClass =
   'inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground transition hover:bg-primary/85 disabled:cursor-wait disabled:opacity-60'
 
 export function AuthForm({ mode }: { mode: AuthMode }) {
+  return (
+    <Suspense>
+      <AuthFormContent mode={mode} />
+    </Suspense>
+  )
+}
+
+function AuthFormContent({ mode }: { mode: AuthMode }) {
   const t = useTranslations('Auth')
+  const security = useTranslations('Security')
   const locale = useLocale()
   const router = useRouter()
   const query = useSearchParams()
@@ -26,26 +36,30 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const [success, setSuccess] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [verificationFailed, setVerificationFailed] = useState(false)
+  const [challenge, setChallenge] = useState(mode === 'login' && query.get('factor') === '1')
   const options = { headers: { 'x-taxful-locale': locale } }
 
   function report(code?: string, status?: number) {
     setError(
       status === 429
         ? t('rateLimited')
-        : code === 'EMAIL_NOT_VERIFIED'
-          ? t('unverified')
-          : mode === 'login'
-            ? t('invalidCredentials')
-            : mode === 'reset'
-              ? t('invalidReset')
-              : mode === 'verify'
-                ? t('invalidVerify')
-                : t('genericError'),
+        : status && status >= 500
+          ? t('genericError')
+          : code === 'EMAIL_NOT_VERIFIED'
+            ? t('unverified')
+            : mode === 'login'
+              ? t('invalidCredentials')
+              : mode === 'reset'
+                ? t('invalidReset')
+                : mode === 'verify'
+                  ? t('invalidVerify')
+                  : t('genericError'),
     )
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const form = event.currentTarget
     setPending(true)
     setError('')
     setSuccess('')
@@ -64,7 +78,14 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
           options,
         )
         if (result.error) report(result.error.code, result.error.status)
-        else {
+        else if (
+          result.data &&
+          'twoFactorRedirect' in result.data &&
+          result.data.twoFactorRedirect
+        ) {
+          form.reset()
+          setChallenge(true)
+        } else {
           router.replace(next)
           router.refresh()
         }
@@ -193,8 +214,53 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             {t('invalidReset')}
           </p>
         )}
-        {!done && !badReset && (
-          <form onSubmit={submit} className="space-y-5">
+        {challenge && (
+          <>
+            <SecondFactor
+              onVerified={() => {
+                router.replace(next)
+                router.refresh()
+              }}
+            />
+            <button
+              type="button"
+              className="my-4 text-sm text-brand-ink underline"
+              onClick={() => {
+                setChallenge(false)
+                setError('')
+              }}
+            >
+              {security('login')}
+            </button>
+          </>
+        )}
+        {mode === 'login' && (
+          <button
+            type="button"
+            disabled={pending}
+            className={`${buttonClass} mb-5 w-full`}
+            onClick={async () => {
+              setPending(true)
+              setError('')
+              try {
+                const result = await customerAuth.signIn.passkey()
+                if (result.error) setError(security('error'))
+                else {
+                  router.replace(next)
+                  router.refresh()
+                }
+              } catch {
+                setError(security('unsupported'))
+              } finally {
+                setPending(false)
+              }
+            }}
+          >
+            {security('passkeyLogin')}
+          </button>
+        )}
+        {!done && !badReset && !challenge && (
+          <form method="post" onSubmit={submit} className="space-y-5">
             {mode === 'signup' && (
               <div className="grid gap-4 sm:grid-cols-2">
                 {(['firstName', 'lastName'] as const).map((field) => (

@@ -68,6 +68,6 @@ Synthetic tests cover tenant/role isolation, quota races, idempotency, seat limi
 
 Stripe's current React package exposes a TaxIdElement that the loaded Checkout Elements SDK did not support in browser verification. The custom page instead uses regular optional business-name/EU-VAT inputs and Checkout's `updateTaxIdInfo` action. Do not restore the unsupported widget based solely on TypeScript declarations.
 
-MFA remains deferred. This is not a security certification. Production readiness additionally requires TLS, managed secrets, least-privilege DB access, encrypted private storage/backups, monitoring, recovery tests and independent security review.
+Optional customer MFA and passkeys are available; see `docs/customer-auth.md`. Company-wide enforcement and Payload staff MFA remain separate work. This is not a security certification. Production readiness additionally requires TLS, managed secrets, least-privilege DB access, encrypted private storage/backups, monitoring, recovery tests and independent security review.
 
 References: [Stripe webhooks](https://docs.stripe.com/webhooks), [subscription webhooks](https://docs.stripe.com/billing/subscriptions/webhooks), [customer portal](https://docs.stripe.com/customer-management).

@@ -21,6 +21,11 @@ const copy = {
       'Sie wurden zu einem Unternehmensbereich bei Taxful eingeladen. Melden Sie sich mit dieser E-Mail-Adresse an, um beizutreten.',
       'Einladung ansehen',
     ],
+    security: [
+      'Sicherheitsänderung an Ihrem Konto',
+      'Eine Authentifizierungsmethode oder Wiederherstellungscodes wurden geändert oder verwendet. Prüfen Sie Ihre Sicherheitsaktivitäten. Falls Sie dies nicht waren, sichern Sie Ihr Konto sofort und wenden Sie sich an den Support.',
+      'Sicherheit prüfen',
+    ],
     ignore: 'Falls Sie diese E-Mail nicht erwartet haben, können Sie sie ignorieren.',
   },
   en: {
@@ -39,6 +44,11 @@ const copy = {
       'You have been invited to a company workspace on Taxful. Sign in with this email address to join.',
       'View invitation',
     ],
+    security: [
+      'Account security change',
+      'An authentication method or recovery codes were changed or used. Review your security activity. If this was not you, secure your account immediately and contact support.',
+      'Review security',
+    ],
     ignore: 'If you were not expecting this email, you can safely ignore it.',
   },
 } as const
@@ -52,7 +62,7 @@ const escapeHTML = (value: string) =>
 export async function sendCustomerEmail(
   to: string,
   url: string,
-  kind: 'verify' | 'reset' | 'invite',
+  kind: 'verify' | 'reset' | 'invite' | 'security',
   locale: 'de' | 'en',
 ) {
   const host = process.env.CUSTOMER_SMTP_HOST
@@ -70,11 +80,12 @@ export async function sendCustomerEmail(
     socketTimeout: 15000,
   })
   const [subject, intro, action] = copy[locale][kind]
+  const footer = kind === 'security' ? '' : copy[locale].ignore
   await transport.sendMail({
     from,
     to,
     subject: `${subject} · Taxful`,
-    text: `${intro}\n\n${url}\n\n${copy[locale].ignore}`,
-    html: `<html lang="${locale}"><body><h1>Taxful</h1><p>${intro}</p><p><a href="${escapeHTML(url)}">${action}</a></p><p>${copy[locale].ignore}</p></body></html>`,
+    text: `${intro}\n\n${url}\n\n${footer}`,
+    html: `<html lang="${locale}"><body><h1>Taxful</h1><p>${intro}</p><p><a href="${escapeHTML(url)}">${action}</a></p><p>${footer}</p></body></html>`,
   })
 }

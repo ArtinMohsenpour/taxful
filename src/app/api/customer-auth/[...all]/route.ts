@@ -1,5 +1,6 @@
 import { toNextJsHandler } from 'better-auth/next-js'
 import { auth } from '@/lib/customer-auth/auth'
+import { boundedBody } from '@/lib/documents/http'
 import {
   clearLoginFailures,
   lockedResponse,
@@ -21,6 +22,20 @@ export async function GET(request: Request) {
   return privateResponse(await handlers.GET(request))
 }
 export async function POST(request: Request) {
+  if (/\/api\/customer-auth\/(two-factor|passkey)\//.test(new URL(request.url).pathname)) {
+    try {
+      const bytes = await boundedBody(request, 64 * 1024)
+      request = new Request(request.url, {
+        method: 'POST',
+        headers: request.headers,
+        body: new Uint8Array(bytes),
+      })
+    } catch {
+      return privateResponse(
+        Response.json({ code: 'INVALID_REQUEST', message: 'Invalid request.' }, { status: 413 }),
+      )
+    }
+  }
   const isPasswordLogin = new URL(request.url).pathname.endsWith('/sign-in/email')
   if (!isPasswordLogin) return privateResponse(await handlers.POST(request))
   const input = await request

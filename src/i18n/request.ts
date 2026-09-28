@@ -8,6 +8,7 @@ import { documentMessages } from '../../messages/documents'
 import { invoiceMessages } from '../../messages/invoices'
 import { billingMessages } from '../../messages/billing'
 import { teamMessages } from '../../messages/team'
+import { securityMessages } from '../../messages/security'
 
 const messages = {
   de: () => import('../../messages/de.json').then((module) => module.default),
@@ -27,6 +28,7 @@ export default getRequestConfig(async ({ locale }) => {
       Invoices: invoiceMessages[requestedLocale],
       Billing: billingMessages[requestedLocale],
       Team: teamMessages[requestedLocale],
+      Security: securityMessages[requestedLocale],
     },
     timeZone: 'Europe/Berlin',
   }

@@ -1,12 +1,14 @@
 import { betterAuth } from 'better-auth'
-import { APIError } from 'better-auth/api'
-import { organization } from 'better-auth/plugins'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
+import { organization, twoFactor } from 'better-auth/plugins'
+import { passkey } from '@better-auth/passkey'
 import { ownerAc, adminAc, memberAc } from 'better-auth/plugins/organization/access'
 import { after } from 'next/server'
 import { customerPool } from './database'
 import { emailLocale, sendCustomerEmail } from './email'
 import { customerReturnPath } from './navigation'
 import { trackSessionActivity } from './session-activity'
+import { beforeMfa, afterMfa, requireUserVerification } from './mfa-security'
 
 const baseURL = process.env.BETTER_AUTH_URL
 function customerName(input: object) {
@@ -42,10 +44,10 @@ export const auth = betterAuth({
       create: {
         before: async (session) => {
           const result = await customerPool.query(
-            'SELECT suspended FROM customer_auth.customer_users WHERE id=$1',
+            'SELECT suspended,"emailVerified" FROM customer_auth.customer_users WHERE id=$1',
             [session.userId],
           )
-          if (!result.rows[0] || result.rows[0].suspended)
+          if (!result.rows[0] || result.rows[0].suspended || !result.rows[0].emailVerified)
             throw new APIError('FORBIDDEN', { message: 'Account unavailable.' })
           return { data: session }
         },
@@ -72,8 +74,17 @@ export const auth = betterAuth({
     updateAge: 60 * 30,
     freshAge: 60 * 30,
     cookieCache: { enabled: false },
+    additionalFields: {
+      securityVerifiedAt: { type: 'date', required: false, input: false },
+    },
   },
-  hooks: { before: trackSessionActivity },
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      await trackSessionActivity(ctx)
+      await beforeMfa(ctx)
+    }),
+    after: afterMfa,
+  },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 15,
@@ -81,6 +92,12 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     autoSignIn: false,
     revokeSessionsOnPasswordReset: true,
+    onPasswordReset: async ({ user }) => {
+      await customerPool.query(
+        "DELETE FROM customer_auth.customer_verifications WHERE value=$1 AND (identifier LIKE '2fa-%' OR identifier LIKE 'trust-device-%')",
+        [user.id],
+      )
+    },
     resetPasswordTokenExpiresIn: 60 * 30,
     sendResetPassword: async ({ user, url }, request) => {
       await sendCustomerEmail(user.email, url, 'reset', emailLocale(request))
@@ -119,6 +136,8 @@ export const auth = betterAuth({
       '/sign-up/email': { window: 60, max: 5 },
       '/request-password-reset': { window: 60, max: 3 },
       '/send-verification-email': { window: 60, max: 3 },
+      '/two-factor/*': { window: 60, max: 10 },
+      '/passkey/*': { window: 60, max: 20 },
     },
   },
   advanced: {
@@ -137,6 +156,32 @@ export const auth = betterAuth({
     },
   },
   plugins: [
+    twoFactor({
+      issuer: 'Taxful',
+      skipVerificationOnEnable: false,
+      twoFactorCookieMaxAge: 300,
+      backupCodeOptions: { amount: 10, length: 20, storeBackupCodes: 'encrypted' },
+      accountLockout: { enabled: true, maxFailedAttempts: 10, durationSeconds: 900 },
+      schema: { twoFactor: { modelName: 'customer_two_factors' } },
+    }),
+    passkey({
+      rpID: new URL(baseURL).hostname,
+      rpName: 'Taxful',
+      origin: new URL(baseURL).origin,
+      authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
+      registration: {
+        requireSession: true,
+        afterVerification: async ({ verification }) => {
+          requireUserVerification(verification.registrationInfo?.userVerified)
+        },
+      },
+      authentication: {
+        afterVerification: async ({ verification }) => {
+          requireUserVerification(verification.authenticationInfo.userVerified)
+        },
+      },
+      schema: { passkey: { modelName: 'customer_passkeys' } },
+    }),
     organization({
       allowUserToCreateOrganization: (user) => user.emailVerified,
       organizationLimit: 10,

@@ -36,6 +36,18 @@ export function FreshSessionGuard({
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
+  async function complete() {
+    if (activeOrganizationId)
+      await customerAuth.organization
+        .setActive({ organizationId: activeOrganizationId })
+        .catch(() => undefined)
+    const form = new FormData()
+    form.set('locale', locale)
+    form.set('sessionId', sessionId)
+    await revokeSession(form).catch(() => undefined)
+    router.refresh()
+  }
+
   useEffect(() => {
     if (stale || remainingMs === null) return
     // Compare wall-clock time so a device that slept still reaches the deadline.
@@ -69,17 +81,12 @@ export function FreshSessionGuard({
         setPending(false)
         return
       }
-      // A new session starts without a workspace, so keep the one the user had selected.
-      if (activeOrganizationId)
-        await customerAuth.organization
-          .setActive({ organizationId: activeOrganizationId })
-          .catch(() => undefined)
-      // The new sign-in replaces this session, so remove the old one from the device list.
-      const form = new FormData()
-      form.set('locale', locale)
-      form.set('sessionId', sessionId)
-      await revokeSession(form).catch(() => undefined)
-      router.refresh()
+      if (result.data && 'twoFactorRedirect' in result.data && result.data.twoFactorRedirect) {
+        // The portal's session watcher must not interrupt the pending MFA challenge.
+        window.location.replace(
+          `/${locale}/login?factor=1&next=${encodeURIComponent(`/${locale}/portal/security`)}`,
+        )
+      } else await complete()
     } catch {
       setError(t('genericError'))
       setPending(false)

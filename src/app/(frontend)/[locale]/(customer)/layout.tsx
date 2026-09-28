@@ -20,6 +20,7 @@ export default async function CustomerLayout({ children }: { children: ReactNode
         Invoices: messages.Invoices,
         Billing: messages.Billing,
         Team: messages.Team,
+        Security: messages.Security,
       }}
     >
       <div className="min-h-dvh pt-3 sm:pt-6">

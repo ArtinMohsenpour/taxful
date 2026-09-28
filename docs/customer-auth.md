@@ -57,4 +57,31 @@ Passwords accept 15–128 characters. Sessions last 24 hours and refresh after 3
 
 For production, configure the HTTPS application origin, a strong independent secret, real SMTP credentials and sender, and preferably a database role restricted to the customer schema. Do not use the local Mailpit transport for production. Provision the schema with an appropriate migration role. Schedule maintenance for expired authentication records as part of deployment operations.
 
-MFA and social login remain future work. No deployment or production readiness certification is implied.
+## MFA and passkeys
+
+Optional customer MFA is available in **Account security** in both languages. Apply customer migrations `0020` and `0021` before starting the updated application (`pnpm customer:migrate`). Existing accounts keep password sign-in until they explicitly enable MFA. Payload Admin authentication is unchanged; company-wide enforcement, staff MFA, social login and assisted account recovery are not included.
+
+1. Sign in recently, confirm the password, scan the locally generated QR code with an authenticator app, and save the ten recovery codes in a secure place.
+2. Enter a current authenticator code to activate protection. Previously issued sessions are revoked. Subsequent password sign-in yields only a five-minute challenge until an authenticator or unused recovery code is verified.
+3. Register up to ten named passkeys after activation. Passkeys require device PIN/biometric verification; this is enforced on the server's verified WebAuthn result as well as requested from the browser. A verified passkey signs in directly. The authenticator prerequisite protects the remaining password fallback.
+
+Security-method changes require proof within five minutes (a recent password session for initial enrollment; authenticator/recovery verification or passkey sign-in afterwards). Recovery-code regeneration and disabling MFA also require the password. Remove all passkeys before disabling MFA. Removing a passkey revokes all sessions, including the current one. Disabling MFA revokes earlier sessions and the UI signs out the replacement session. Password reset does not remove MFA; it invalidates existing sessions and pending MFA challenges. Without a remaining passkey, authenticator or recovery code, there is no self-service MFA bypass.
+
+TOTP secrets and recovery codes are encrypted by Better Auth using the authentication secret. Keep that secret securely backed up; changing it without a supported key-rotation plan can make enrolled factors unusable. Recovery codes are single-use, including concurrent requests. TOTP replay reservations and per-account throttling are stored in PostgreSQL. Email OTP and trusted-device bypasses are disabled. Security activity records MFA changes, passkey enrollment/removal and recovery-code use/regeneration, without storing authentication material. Security email notifications use the existing SMTP configuration and are best-effort (delivery failures are logged generically, not retried by an outbox).
+
+No external passkey service, paid account or additional API key is required. `BETTER_AUTH_URL` must be the exact trusted application origin; the passkey relying-party ID is its hostname. Production requires HTTPS. Localhost is suitable for development; credentials enrolled on localhost will not work on a production hostname. Do not derive these settings from request headers or change the production hostname casually. Keep local/staging/production credentials and databases separate.
+
+Dependencies: Better Auth and `@better-auth/passkey` are pinned together at 1.7.6; the official plugin handles WebAuthn verification. `qrcode` 1.5.4 generates enrollment images locally without disclosing secrets to a remote QR service. These packages are MIT licensed. Configuration was checked against the installed source and the [official passkey documentation](https://better-auth.com/docs/plugins/passkey).
+
+Verification (synthetic accounts only; local PostgreSQL and Mailpit required):
+
+```sh
+DOCUMENT_INTEGRATION=true pnpm exec tsx --test tests/documents/mfa.test.ts
+# Run against the local dev origin; requires installed Google Chrome.
+BETTER_AUTH_URL=http://localhost:3000 pnpm exec tsx tests/documents/mfa.smoke.ts
+pnpm exec tsc --noEmit
+pnpm lint
+TAXFUL_BUILD_DIR=.next-mfa pnpm build
+```
+
+The browser test uses an isolated profile and virtual WebAuthn authenticator. It covers password login, enrollment, passkey login, rejection of a signed assertion without user verification, recovery login, both languages, and dark mobile layout. It does not replace testing on real devices before launch. No deployment or production readiness certification is implied.

@@ -6,11 +6,32 @@ import { ChangePasswordForm } from '@/components/customer-auth/profile-form'
 import { FreshSessionGuard } from '@/components/customer-auth/fresh-session-guard'
 import { revokeDevice, revokeOtherDevices } from './actions'
 import { isSessionNotFresh, sessionFreshness } from './freshness'
+import { SecurityMethods } from '@/components/customer-auth/security-methods'
+import { customerPool } from '@/lib/customer-auth/database'
 
 export default async function SecurityPage() {
   const locale = await getLocale()
   const t = await getTranslations('Auth')
   const current = await requireCustomer(locale)
+  const security = await getTranslations('Security')
+  const keys = await customerPool.query<{ id: string; name: string | null; createdAt: Date }>(
+    'SELECT id,name,"createdAt" FROM customer_auth.customer_passkeys WHERE "userId"=$1 ORDER BY "createdAt"',
+    [current.user.id],
+  )
+  const events = await customerPool.query<{
+    id: string
+    event:
+      | 'mfaEnabled'
+      | 'mfaDisabled'
+      | 'passkeyAdded'
+      | 'passkeyRemoved'
+      | 'recoveryUsed'
+      | 'recoveryRegenerated'
+    created_at: Date
+  }>(
+    'SELECT id::text,event,created_at FROM customer_auth.security_events WHERE user_id=$1 ORDER BY id DESC LIMIT 20',
+    [current.user.id],
+  )
   const freshness = await sessionFreshness(current.session.createdAt)
   let remainingMs = freshness.remainingMs
   let sessions: Awaited<ReturnType<typeof auth.api.listSessions>> = []
@@ -60,6 +81,22 @@ export default async function SecurityPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="mb-8 text-3xl font-medium tracking-tight">{t('security')}</h1>
+      <SecurityMethods
+        enabled={Boolean(current.user.twoFactorEnabled)}
+        passkeys={keys.rows.map((key) => ({ ...key, createdAt: key.createdAt.toISOString() }))}
+      />
+      <section className="mb-6 rounded-3xl border border-border bg-surface p-6">
+        <h2 className="text-xl font-semibold">{security('history')}</h2>
+        {!events.rows.length && <p className="mt-3 text-sm">{security('noHistory')}</p>}
+        <ul className="mt-3 divide-y divide-border">
+          {events.rows.map((event) => (
+            <li key={event.id} className="flex justify-between gap-4 py-3 text-sm">
+              <span>{security.has(event.event) ? security(event.event) : security('success')}</span>
+              <time dateTime={event.created_at.toISOString()}>{date(event.created_at)}</time>
+            </li>
+          ))}
+        </ul>
+      </section>
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <section className="rounded-3xl border border-border bg-surface p-6">
           <h2 className="mb-6 text-xl font-semibold">{t('changePassword')}</h2>
