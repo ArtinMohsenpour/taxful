@@ -53,6 +53,7 @@ export function DocumentList({
   workflow?: 'all' | 'incoming' | 'outgoing' | 'unclassified'
 }) {
   const invoices = useTranslations('Invoices')
+  const email = useTranslations('InvoiceEmail')
   const t = useTranslations('Documents'),
     locale = useLocale()
   const [listing, setListing] = useState<Listing | null>(null),
@@ -449,6 +450,31 @@ export function DocumentList({
                         </p>
                       ) : null}
                       <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4 text-xs font-medium">
+                        {item.workflow === 'outgoing' &&
+                          item.invoice_state === 'draft' &&
+                          ['needs_review', 'approved'].includes(item.status) && (
+                            <Link
+                              href={
+                                '/portal/files/' +
+                                item.id +
+                                (item.status === 'approved' ? '#invoice-create' : '')
+                              }
+                              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink"
+                            >
+                              {email(item.status === 'approved' ? 'stepCreate' : 'stepReview')}
+                            </Link>
+                          )}
+                        {item.workflow === 'outgoing' &&
+                          item.invoice_state !== 'draft' &&
+                          item.status === 'approved' &&
+                          (item.export_available || item.zugferd_available) && (
+                            <Link
+                              href={'/portal/files/' + item.id + '/send'}
+                              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink"
+                            >
+                              {email('sendAction')}
+                            </Link>
+                          )}
                         <DocumentActions
                           id={item.id}
                           reviewHref={'/portal/files/' + item.id}

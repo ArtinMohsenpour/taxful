@@ -183,9 +183,12 @@ try {
     ).length,
     1,
   )
+  await page.getByRole('button', { name: 'Create invoice and continue', exact: true }).click()
+  await page.waitForURL('**/send?format=zugferd', { timeout: 120000 })
   const pdf = page.waitForEvent('download', { timeout: 120000 })
-  await page.getByRole('button', { name: 'Validate and download ZUGFeRD', exact: true }).click()
+  await page.locator('a[download][href$="/zugferd"]').click()
   assert.ok((await pdf).suggestedFilename().endsWith('.pdf'))
+  await page.getByRole('link', { name: 'View invoice details', exact: true }).click()
   await page.getByText('This validated invoice is locked.', { exact: false }).waitFor()
   assert.equal(await page.locator('[id="field-lines.0.unitPrice"]').isDisabled(), true)
   await page
@@ -193,9 +196,12 @@ try {
     .last()
     .click()
   await page.getByRole('option', { name: 'XRechnung · XML', exact: true }).click()
+  await page.getByRole('button', { name: 'Create invoice and continue', exact: true }).click()
+  await page.waitForURL('**/send?format=xrechnung', { timeout: 120000 })
   const xml = page.waitForEvent('download', { timeout: 120000 })
-  await page.getByRole('button', { name: 'Validate and download XRechnung', exact: true }).click()
+  await page.locator('a[download][href$="/export"]').click()
   assert.ok((await xml).suggestedFilename().endsWith('.xml'))
+  await page.getByRole('link', { name: 'View invoice details', exact: true }).click()
   await page.getByRole('button', { name: 'Record as sent', exact: true }).click()
   await page.getByRole('heading', { name: 'Sent', exact: true }).waitFor()
   await page.getByRole('button', { name: 'Record as paid', exact: true }).click()
@@ -220,9 +226,12 @@ try {
   await page
     .getByText('Review approved. You can now generate the selected export.', { exact: true })
     .waitFor()
+  await page.getByRole('button', { name: 'Create invoice and continue', exact: true }).click()
+  await page.waitForURL('**/send?format=zugferd', { timeout: 120000 })
   const creditPdf = page.waitForEvent('download', { timeout: 120000 })
-  await page.getByRole('button', { name: 'Validate and download ZUGFeRD', exact: true }).click()
+  await page.locator('a[download][href$="/zugferd"]').click()
   assert.ok((await creditPdf).suggestedFilename().endsWith('.pdf'))
+  await page.getByRole('link', { name: 'View invoice details', exact: true }).click()
   await page.getByText('This validated invoice is locked.', { exact: false }).waitFor()
   await page.goto('/en/portal/invoices/outgoing')
   await page

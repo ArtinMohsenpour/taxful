@@ -5,6 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "invoices:email-worker": "tsx scripts/invoice-email-worker.ts",
     "documents:worker": "tsx scripts/document-worker.ts",
     "documents:services": "docker compose -f docker-compose.documents.yml up -d --build",
     "test:documents": "tsx --test tests/documents/*.test.ts",

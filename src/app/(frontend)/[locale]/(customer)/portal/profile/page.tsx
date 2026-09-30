@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { getCustomerWorkspace } from '@/lib/customer-auth/session'
 import { ProfileForm } from '@/components/customer-auth/profile-form'
 import { CompanyProfileForm } from '@/components/customer-auth/company-profile-form'
+import { InvoiceEmailSettings } from '@/components/invoices/email'
 
 export default async function ProfilePage() {
   const { session, organization } = await getCustomerWorkspace(await getLocale())
@@ -17,7 +18,13 @@ export default async function ProfilePage() {
           email={session.user.email}
         />
       </section>
-      <CompanyProfileForm key={organization?.id || 'none'} />
+      <CompanyProfileForm key={`company-profile:${organization?.id || 'none'}`} />
+      {organization && (
+        <InvoiceEmailSettings
+          key={`invoice-email:${organization.id}`}
+          organizationId={organization.id}
+        />
+      )}
     </div>
   )
 }

@@ -16,6 +16,7 @@
 /.next/
 /.next-check/
 /.next-mfa/
+/.next-email/
 /out/
 
 # production

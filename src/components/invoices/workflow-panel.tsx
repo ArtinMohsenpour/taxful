@@ -1,6 +1,6 @@
 'use client'
 import { useRef, useState } from 'react'
-import { useRouter } from '@/i18n/navigation'
+import { Link, useRouter } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { buttonClass } from '@/components/customer-auth/auth-form'
 import type { DocumentRecord } from '@/lib/documents/schema'
@@ -31,6 +31,7 @@ export function InvoiceWorkflowPanel({
   const t = useTranslations('Invoices'),
     d = useTranslations('Documents')
   const router = useRouter()
+  const email = useTranslations('InvoiceEmail')
   const creationKeys = useRef<Record<string, string>>({})
   async function createRelated(invoiceKind: 'credit_note' | 'correction' | 'final') {
     setPending(true)
@@ -289,6 +290,10 @@ export function InvoiceWorkflowPanel({
         <>
           <h2 className="font-semibold">{t(state as 'issued' | 'sent' | 'paid')}</h2>
           <p className="text-sm">{t('issuedHint')}</p>
+          <p className="text-sm">{email('deliveryReady')}</p>
+          <Link href={'/portal/files/' + id + '/send'} className={buttonClass}>
+            {email('sendAction')}
+          </Link>
           {data?.invoiceKind !== 'credit_note' && (
             <div className="space-y-3 border-t border-border pt-4">
               <p className="text-xs text-muted-foreground">{t('relatedHelp')}</p>

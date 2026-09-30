@@ -34,6 +34,7 @@ import { applyReviewDefaults } from '@/lib/documents/review-defaults'
 import { invoiceRequirements } from '@/lib/documents/invoice-requirements'
 import type { documentMessages } from '../../../messages/documents'
 import { InvoiceWorkflowPanel } from '@/components/invoices/workflow-panel'
+import { InvoiceDeliverySteps } from '@/components/invoices/delivery-steps'
 import {
   InvoiceCoverageFields,
   LineCoverageFields,
@@ -85,6 +86,7 @@ export function DocumentReview({ id }: { id: string }) {
   const router = useRouter()
   const t = useTranslations('Documents')
   const invoices = useTranslations('Invoices')
+  const email = useTranslations('InvoiceEmail')
   const [doc, setDoc] = useState<Detail | null>(null),
     [data, setData] = useState<DocumentRecord | null>(null)
   const [canApprove, setCanApprove] = useState(false),
@@ -231,13 +233,10 @@ export function DocumentReview({ id }: { id: string }) {
         throw new Error(body.error)
       }
       if (kind === 'export' || kind === 'zugferd') {
-        const download = document.createElement('a')
-        download.href = '/api/documents/' + id + '/' + kind
-        download.download = kind === 'zugferd' ? 'zugferd.pdf' : 'xrechnung.xml'
-        document.body.appendChild(download)
-        download.click()
-        download.remove()
         await load()
+        router.push(
+          '/portal/files/' + id + '/send?format=' + (kind === 'zugferd' ? 'zugferd' : 'xrechnung'),
+        )
         return
       }
       await load()
@@ -246,6 +245,12 @@ export function DocumentReview({ id }: { id: string }) {
       setApprovalAttempted(false)
       setSaveCustomer(false)
       setMessage(kind === 'review' ? (approve ? 'reviewApproved' : 'saved') : '')
+      if (approve) {
+        const section = document.getElementById('invoice-create')
+        if (section instanceof HTMLDetailsElement) section.open = true
+        document.getElementById('invoice-create')?.scrollIntoView({ block: 'start' })
+        document.getElementById('invoice-create-heading')?.focus()
+      }
     } catch (error) {
       setError(
         error instanceof Error && error.name === 'TimeoutError'
@@ -505,6 +510,25 @@ export function DocumentReview({ id }: { id: string }) {
             <p className="mb-3 text-xs font-semibold text-brand-ink">{t(doc.status)}</p>
             <h1 className="text-2xl font-medium break-words">{doc.name}</h1>
           </header>
+          {doc.workflow === 'outgoing' && (
+            <InvoiceDeliverySteps
+              step={doc.invoiceState !== 'draft' ? 3 : doc.status === 'approved' && !dirty ? 2 : 1}
+            />
+          )}
+          {doc.workflow === 'outgoing' &&
+            doc.status === 'approved' &&
+            !dirty &&
+            doc.invoiceState === 'draft' && (
+              <div className="space-y-3 rounded-2xl border border-primary/30 bg-primary/10 p-4">
+                <p>{email('approvedNext')}</p>
+                <a
+                  href="#invoice-create"
+                  className="text-sm font-semibold text-brand-ink underline"
+                >
+                  {email('continueCreate')}
+                </a>
+              </div>
+            )}
           <section className="relative rounded-3xl border border-border bg-surface p-5 sm:p-6">
             <div className="pr-10">
               <DocumentProgress
@@ -1439,20 +1463,27 @@ export function DocumentReview({ id }: { id: string }) {
                   </details>
                 </fieldset>
                 <details
+                  id="invoice-create"
                   open
-                  className="space-y-4 rounded-3xl border border-primary/20 bg-primary/10 p-6 [&[open]>summary>.section-chevron]:rotate-180"
+                  className="scroll-mt-32 space-y-4 rounded-3xl border border-primary/20 bg-primary/10 p-6 [&[open]>summary>.section-chevron]:rotate-180"
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-ink [&::-webkit-details-marker]:hidden">
-                    <h3 className="flex items-center gap-3 font-semibold">
+                    <h3
+                      id="invoice-create-heading"
+                      tabIndex={-1}
+                      className="flex items-center gap-3 font-semibold"
+                    >
                       <Icon name="converter" />
-                      {t('exportTitle')}
+                      {email('stepCreate')}
                     </h3>
                     <Icon
                       name="chevron"
                       className="section-chevron transition-transform duration-200 motion-reduce:transition-none"
                     />
                   </summary>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{t('exportHint')}</p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {email('createHint')}
+                  </p>
                   {doc.invoiceState === 'draft' && (
                     <p className="rounded-xl border border-primary/30 bg-surface/50 p-3 text-sm text-brand-ink">
                       {invoices('issueNotice')}
@@ -1494,7 +1525,7 @@ export function DocumentReview({ id }: { id: string }) {
                     aria-busy={pending}
                     className={`${buttonClass.replace('disabled:cursor-wait', pending ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed')} ${pending ? 'cursor-wait' : 'cursor-pointer'}`}
                   >
-                    {t(exporting ? 'working' : format === 'zugferd' ? 'exportZugferd' : 'export')}
+                    {exporting ? t('working') : email('createContinue')}
                   </button>
                   {(dirty || doc.status !== 'approved') && (
                     <p className="text-xs">{t('exportPending')}</p>

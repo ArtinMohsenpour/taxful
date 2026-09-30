@@ -5,6 +5,7 @@ import type { invoiceMessages } from '../../messages/invoices'
 import type { billingMessages } from '../../messages/billing'
 import type { teamMessages } from '../../messages/team'
 import type { securityMessages } from '../../messages/security'
+import type { invoiceEmailMessages } from '../../messages/invoice-email'
 import type { routing } from './routing'
 
 declare module 'next-intl' {
@@ -17,6 +18,7 @@ declare module 'next-intl' {
       Billing: typeof billingMessages.en
       Team: typeof teamMessages.en
       Security: typeof securityMessages.en
+      InvoiceEmail: typeof invoiceEmailMessages.en
     }
   }
 }

@@ -7,6 +7,7 @@ config({ path: ['.env.local', '.env'] })
 // Keep the website and its document worker together during local development.
 const env: NodeJS.ProcessEnv = {
   ...process.env,
+  INVOICE_EMAIL_MODE: process.env.INVOICE_EMAIL_MODE || 'mailpit',
   NODE_OPTIONS: [process.env.NODE_OPTIONS, '--no-deprecation'].filter(Boolean).join(' '),
 }
 const children: ChildProcess[] = []
@@ -64,6 +65,7 @@ if (env.STRIPE_SECRET_KEY?.startsWith('sk_test_') && env.STRIPE_LOCAL_WEBHOOKS !
 for (const args of [
   ['node_modules/next/dist/bin/next', 'dev', ...process.argv.slice(2)],
   ['--import', 'tsx', 'scripts/document-worker.ts'],
+  ['--import', 'tsx', 'scripts/invoice-email-worker.ts'],
 ]) {
   if (stopping) break
   const child = spawn(process.execPath, args, {

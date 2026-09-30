@@ -11,8 +11,8 @@ Files has separate Outgoing, Incoming and Unassigned upload views, selected thro
 3. A draft copies company/customer/product values into its own canonical record. Later directory changes never modify existing invoices. Draft creation consumes one document from the daily allowance.
 4. An atomic company/year sequence reserves `TF-YYYY-000001`. Numbers survive draft deletion and are never reused. Reservation does not mean issued. Imported outgoing drafts retain their source number, checked for company-level uniqueness on approval.
 5. Save partial drafts; complete required fields and confirmations to approve. Review edits invalidate approval until the first validated export.
-6. Generate ZUGFeRD PDF/A with CII or XRechnung UBL through the existing independent validators. The first successful export locks the invoice as issued. Further formats use the same approved snapshot and must meet that format's additional requirements. Issued invoices cannot be edited or deleted through the portal.
-7. Record sent or paid manually. These actions do not send messages, initiate payments or submit anything to a tax office.
+6. Choose **Create invoice and continue** to generate ZUGFeRD PDF/A with CII or XRechnung UBL through the existing independent validators. The first successful export locks the invoice as issued and opens the dedicated Send or download page. Downloads are explicit choices, not automatic. Further formats use the same approved snapshot and must meet that format's additional requirements. Issued invoices cannot be edited or deleted through the portal.
+7. Record sent or paid manually. These tracking actions do not send messages, initiate payments or submit anything to a tax office. A separate invoice email panel sends validated exports to local Mailpit; see `docs/invoice-email.md`. Production email is not enabled yet.
 
 Import an existing draft uses the existing security/extraction pipeline. Users must be authorized to issue the imported invoice.
 
@@ -24,7 +24,7 @@ XRechnung XML is checked by KoSIT; ZUGFeRD imports use Mustang PDF/XML validatio
 
 Existing uploads remain `unclassified`. A current owner/admin/reviewer explicitly chooses the workflow. Previously generated artifacts remain available as historical downloads; their existence does not prove the supplier issued them.
 
-Structured imports support types 380, 381, 384, 326 and 386 where permitted by the source profile, UTF-8 XML up to 1 MB, XRechnung UBL/CII and supported ZUGFeRD/Factur-X CII profiles. PDFs may contain exactly one recognized invoice XML attachment. Unsupported, malformed or ambiguous structured files never fall back to AI. The displayed canonical summary is bounded to 200 lines and does not reproduce every optional XML field; the complete original remains available. Recurring invoices, email delivery, payment collection and ELSTER submission remain future work.
+Structured imports support types 380, 381, 384, 326 and 386 where permitted by the source profile, UTF-8 XML up to 1 MB, XRechnung UBL/CII and supported ZUGFeRD/Factur-X CII profiles. PDFs may contain exactly one recognized invoice XML attachment. Unsupported, malformed or ambiguous structured files never fall back to AI. The displayed canonical summary is bounded to 200 lines and does not reproduce every optional XML field; the complete original remains available. Recurring invoices, production email delivery, payment collection and ELSTER submission remain future work.
 
 The outgoing review form can select a saved customer. Owners/admins can explicitly opt to save entered customer details when approving. Approval and customer saving share one transaction; an identical active customer is reused, and existing directory entries are never overwritten. Selecting or editing a customer does not automatically save it.
 

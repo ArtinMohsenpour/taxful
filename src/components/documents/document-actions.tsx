@@ -85,6 +85,7 @@ export function DocumentActions({
   busy,
   onDeleted,
   reviewHref,
+  wrap = false,
 }: {
   id: string
   name: string
@@ -95,6 +96,7 @@ export function DocumentActions({
   busy: boolean
   onDeleted: (pending: boolean) => void
   reviewHref?: string
+  wrap?: boolean
 }) {
   const t = useTranslations('Documents')
   const [mode, setMode] = useState<'preview' | 'delete' | null>(null)
@@ -129,7 +131,9 @@ export function DocumentActions({
   }
   return (
     <div className="w-full min-w-0">
-      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto pb-2">
+      <div
+        className={`flex items-center gap-2 pb-2 ${wrap ? 'flex-wrap' : 'flex-nowrap overflow-x-auto'}`}
+      >
         {reviewHref && (
           <Link
             href={reviewHref}

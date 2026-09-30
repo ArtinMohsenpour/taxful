@@ -165,7 +165,7 @@ try {
     false,
   )
   const blockedExport = page.getByRole('button', {
-    name: 'Validate and download ZUGFeRD',
+    name: 'Create invoice and continue',
     exact: true,
   })
   assert.equal(
@@ -174,9 +174,9 @@ try {
   )
   assert.equal(
     await page
-      .getByRole('button', { name: 'Validate and download ZUGFeRD', exact: true })
+      .getByRole('button', { name: 'Create invoice and continue', exact: true })
       .textContent(),
-    'Validate and download ZUGFeRD',
+    'Create invoice and continue',
   )
   for (const name of [
     'I checked names, addresses and tax identifiers.',
@@ -196,16 +196,21 @@ try {
       .count(),
     0,
   )
+  await page.getByRole('button', { name: 'Create invoice and continue', exact: true }).click()
+  await page.waitForURL('**/send?format=zugferd', { timeout: 120000 })
   const pdfDownloading = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Validate and download ZUGFeRD', exact: true }).click()
+  await page.locator('a[download][href$="/zugferd"]').click()
   assert.ok((await pdfDownloading).suggestedFilename().endsWith('.pdf'))
+  await page.getByRole('link', { name: 'View invoice details', exact: true }).click()
   await page
     .getByRole('button', { name: 'Export format ZUGFeRD · PDF + XML', exact: true })
     .last()
     .click()
   await page.getByRole('option', { name: 'XRechnung · XML', exact: true }).click()
+  await page.getByRole('button', { name: 'Create invoice and continue', exact: true }).click()
+  await page.waitForURL('**/send?format=xrechnung', { timeout: 120000 })
   const downloading = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Validate and download XRechnung', exact: true }).click()
+  await page.locator('a[download][href$="/export"]').click()
   const download = await downloading
   assert.ok(download.suggestedFilename().endsWith('.xml'))
   await page.goto('/en/portal/files')
