@@ -22,6 +22,8 @@ export type InvoiceMessage = {
   recipient: string
   subject: string
   body: string
+  html?: string
+  logo?: Buffer
   bytes: Buffer
   pdf: boolean
 }
@@ -53,12 +55,24 @@ export const mailpitProvider: InvoiceEmailProvider = {
         envelope: { from: message.sender, to: [message.recipient] },
         subject: message.subject,
         text: message.body,
+        html: message.html || undefined,
         attachments: [
           {
             filename: message.pdf ? 'invoice.pdf' : 'invoice.xml',
             content: message.bytes,
             contentType: message.pdf ? 'application/pdf' : 'application/xml',
           },
+          ...(message.logo && message.html?.includes('cid:company-logo')
+            ? [
+                {
+                  filename: 'logo.png',
+                  content: message.logo,
+                  contentType: 'image/png',
+                  cid: 'company-logo',
+                  contentDisposition: 'inline' as const,
+                },
+              ]
+            : []),
         ],
       })
       if (result.accepted.length !== 1) throw new Error('Not accepted')

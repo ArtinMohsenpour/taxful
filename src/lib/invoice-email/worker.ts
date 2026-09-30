@@ -1,6 +1,7 @@
 import { customerPool } from '../customer-auth/database'
 import { readPrivate, sha256 } from '../documents/storage'
 import { mailpitProvider, requireLocalEmail, type InvoiceEmailProvider } from './provider'
+import { contentHash } from './content'
 
 export async function processInvoiceEmail(
   provider: InvoiceEmailProvider = mailpitProvider,
@@ -16,8 +17,10 @@ export async function processInvoiceEmail(
     [organizationId],
   )
   const claimed = await customerPool.query(
-    `UPDATE customer_auth.invoice_deliveries SET status='sending',updated_at=now()
-    WHERE id=(SELECT id FROM customer_auth.invoice_deliveries WHERE status='queued' AND mode='mailpit' AND ($1::text IS NULL OR organization_id=$1) ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *`,
+    `WITH claimed AS (UPDATE customer_auth.invoice_deliveries SET status='sending',updated_at=now()
+    WHERE id=(SELECT id FROM customer_auth.invoice_deliveries WHERE status='queued' AND mode='mailpit' AND ($1::text IS NULL OR organization_id=$1) ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *),
+    evidence AS (INSERT INTO customer_auth.invoice_delivery_events(delivery_id,status) SELECT id,'sending' FROM claimed)
+    SELECT * FROM claimed`,
     [organizationId],
   )
   const delivery = claimed.rows[0]
@@ -65,10 +68,21 @@ export async function processInvoiceEmail(
       sha256(bytes) !== delivery.attachment_sha256
     )
       throw new Error('attachmentChanged')
-    await client.query(
-      "INSERT INTO customer_auth.invoice_delivery_events(delivery_id,status) VALUES($1,'sending')",
-      [delivery.id],
+    const logo = delivery.logo_id ? await readPrivate(delivery.logo_id) : undefined
+    if (logo && sha256(logo) !== delivery.logo_sha256) throw new Error('logoChanged')
+    if (
+      delivery.message_sha256 &&
+      contentHash(
+        {
+          subject: delivery.subject,
+          body: delivery.body,
+          html: delivery.html,
+          logoId: delivery.logo_id,
+        },
+        delivery.logo_sha256,
+      ) !== delivery.message_sha256
     )
+      throw new Error('messageChanged')
     attempted = true
     const result = await provider.send({
       id: delivery.id,
@@ -77,6 +91,8 @@ export async function processInvoiceEmail(
       recipient: delivery.recipient,
       subject: delivery.subject,
       body: delivery.body,
+      html: delivery.html,
+      logo,
       bytes,
       pdf: exported.rows[0].format === 'zugferd-en16931',
     })

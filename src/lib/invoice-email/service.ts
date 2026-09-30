@@ -7,6 +7,7 @@ import { readPrivate, sha256 } from '../documents/storage'
 import { invoiceTransaction } from '../invoices/service'
 import { composeInvoiceEmail, deliverySchema, senderSchema } from './schema'
 import { localEmailEnabled, requireLocalEmail } from './provider'
+import { normalizeContent, contentHash } from './content'
 
 export async function emailSettings(context: DocumentContext) {
   return invoiceTransaction(context, async (client, role) => {
@@ -85,8 +86,8 @@ export async function emailHistory(context: DocumentContext, documentId: string)
     )
     const history = await client.query(
       `SELECT d.id,d.recipient,d.sender,d.sender_name,d.subject,d.body,d.locale,d.status,d.created_at,d.updated_at,
-      d.attachment_sha256,d.revision,d.provider_id,d.error_code,
-      (SELECT json_agg(json_build_object('status',e.status,'at',e.created_at) ORDER BY e.id) FROM customer_auth.invoice_delivery_events e WHERE e.delivery_id=d.id) AS events
+      d.attachment_sha256,d.revision,d.provider_id,d.error_code,d.html,d.logo_id,d.message_sha256,d.confirmations,d.created_by,
+      (SELECT json_agg(json_build_object('status',e.status,'at',e.created_at,'source',e.source,'actorId',e.actor_id) ORDER BY e.id) FROM customer_auth.invoice_delivery_events e WHERE e.delivery_id=d.id) AS events
       FROM customer_auth.invoice_deliveries d WHERE d.organization_id=$1 AND d.document_id=$2 ORDER BY d.created_at DESC,d.id DESC LIMIT 50`,
       [context.organizationId, documentId],
     )
@@ -139,13 +140,24 @@ export async function queueInvoiceEmail(context: DocumentContext, input: unknown
     )
     if (!sender.rowCount) throw new DocumentError('emailSenderRequired', 409)
     const previous = await client.query(
-      'SELECT id,status FROM customer_auth.invoice_deliveries WHERE organization_id=$1 AND document_id=$2 ORDER BY created_at DESC,id DESC LIMIT 1',
+      'SELECT id,status,recipient FROM customer_auth.invoice_deliveries WHERE organization_id=$1 AND document_id=$2 ORDER BY created_at DESC,id DESC LIMIT 1',
       [context.organizationId, value.documentId],
     )
     if ((previous.rows[0]?.id || null) !== value.previousDeliveryId)
       throw new DocumentError('emailDuplicate', 409)
     if (previous.rows[0] && ['queued', 'sending'].includes(previous.rows[0].status))
       throw new DocumentError('emailDuplicate', 409)
+    if (previous.rowCount && !value.acknowledgeResend)
+      throw new DocumentError('emailResendRequired', 409)
+    const data = recordSchema.parse(doc.rows[0].reviewed_data)
+    const recipientChanged = [data.recipient.email, previous.rows[0]?.recipient]
+      .filter((v) => v !== undefined)
+      .some((v) => v.trim().toLowerCase() !== value.recipient.toLowerCase())
+    if (
+      recipientChanged &&
+      value.confirmedRecipientChange.trim().toLowerCase() !== value.recipient.toLowerCase()
+    )
+      throw new DocumentError('emailRecipientChanged', 409)
     const rate = await client.query(
       `SELECT count(*)::int AS day,count(*) FILTER(WHERE created_at>now()-interval '1 hour')::int AS hour
       FROM customer_auth.invoice_deliveries WHERE organization_id=$1 AND created_at>now()-interval '24 hours'`,
@@ -153,18 +165,34 @@ export async function queueInvoiceEmail(context: DocumentContext, input: unknown
     )
     if (rate.rows[0].day >= 100 || rate.rows[0].hour >= 20)
       throw new DocumentError('emailRateLimit', 429)
-    const data = recordSchema.parse(doc.rows[0].reviewed_data)
-    const message = composeInvoiceEmail(
+    const defaultMessage = composeInvoiceEmail(
       value.locale,
       data.documentNumber,
       sender.rows[0].sender_name,
       value.note,
     )
+    const message = normalizeContent(value.content || { ...defaultMessage, html: '', logoId: null })
+    let logoHash: string | null = null
+    if (message.logoId) {
+      const logo = await client.query(
+        'SELECT sha256 FROM customer_auth.invoice_email_logos WHERE id=$1 AND organization_id=$2',
+        [message.logoId, context.organizationId],
+      )
+      if (!logo.rowCount) throw new DocumentError('notFound', 404)
+      logoHash = logo.rows[0].sha256
+      if (sha256(await readPrivate(message.logoId)) !== logoHash)
+        throw new DocumentError('emailAttachmentInvalid', 409)
+    }
+    if (!message.logoId && message.html.includes('cid:company-logo'))
+      throw new DocumentError('emailLogoRequired')
+    const messageHash = contentHash(message, logoHash)
+    if (value.content && value.previewHash !== messageHash)
+      throw new DocumentError('emailPreviewChanged', 409)
     const id = randomUUID()
     await client.query(
       `INSERT INTO customer_auth.invoice_deliveries
-      (id,organization_id,document_id,export_id,revision,attachment_sha256,request_key,fingerprint,sender,sender_name,recipient,subject,body,locale,mode,created_by)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'mailpit',$15)`,
+      (id,organization_id,document_id,export_id,revision,attachment_sha256,request_key,fingerprint,sender,sender_name,recipient,subject,body,locale,mode,created_by,html,logo_id,logo_sha256,message_sha256,confirmations)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'mailpit',$15,$16,$17,$18,$19,$20)`,
       [
         id,
         context.organizationId,
@@ -181,11 +209,22 @@ export async function queueInvoiceEmail(context: DocumentContext, input: unknown
         message.body,
         value.locale,
         context.userId,
+        message.html,
+        message.logoId,
+        logoHash,
+        messageHash,
+        {
+          recipientChecked: true,
+          resend: value.acknowledgeResend,
+          recipientChanged,
+          recipientChangeConfirmed: recipientChanged,
+          previousDeliveryId: value.previousDeliveryId,
+        },
       ],
     )
     await client.query(
-      "INSERT INTO customer_auth.invoice_delivery_events(delivery_id,status) VALUES($1,'queued')",
-      [id],
+      "INSERT INTO customer_auth.invoice_delivery_events(delivery_id,status,actor_id) VALUES($1,'queued',$2)",
+      [id, context.userId],
     )
     return { id }
   })

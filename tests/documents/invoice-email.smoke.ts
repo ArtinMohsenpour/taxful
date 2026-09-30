@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { hashPassword } from 'better-auth/crypto'
 import { mkdir } from 'node:fs/promises'
 import { invoiceFixture } from './fixtures'
+import sharp from 'sharp'
 
 config({ path: ['.env.local', '.env'] })
 process.env.INVOICE_EMAIL_MODE = 'mailpit'
@@ -108,7 +109,67 @@ try {
   await page.getByRole('link', { name: 'Back to outgoing invoices', exact: true }).click()
   await page.getByRole('link', { name: 'Send / delivery history', exact: true }).click()
   await page.waitForURL('**/send')
+  await page.getByLabel('Subject', { exact: true }).fill('Invoice {{invoiceNumber}} — thank you')
+  await page
+    .getByLabel('Your message', { exact: true })
+    .fill(
+      'Hello,\n\nYour invoice from {{companyName}} is attached.\n\nKind regards,\nAccounts team',
+    )
+  await page.getByText('Your signature', { exact: true }).click()
+  await page.getByLabel('Full name', { exact: true }).fill('Synthetic Sender')
+  await page.getByLabel('Job title', { exact: true }).fill('Developer')
+  await page.getByLabel('Pronouns (optional)', { exact: true }).fill('(he/him)')
+  await page.getByLabel('Address', { exact: true }).fill('Example street 15\n50677 Köln')
+  await page.getByLabel('Telephone', { exact: true }).fill('+49 123456')
+  await page.getByText('Logo and layout', { exact: true }).click()
+  const png = await sharp({
+    create: { width: 120, height: 40, channels: 3, background: '#8b9a6e' },
+  })
+    .png()
+    .toBuffer()
+  await page
+    .getByLabel('Upload company logo (PNG/JPEG, up to 500 KB)', { exact: true })
+    .setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png })
+  await page.getByRole('button', { name: 'Remove logo', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Logo at the top', exact: true }).click()
+  await page.frameLocator('iframe[title="Email preview"]').locator('img').waitFor()
+  assert.equal(
+    await page
+      .frameLocator('iframe[title="Email preview"]')
+      .locator('body > div > div')
+      .first()
+      .locator('img')
+      .count(),
+    1,
+  )
+  await page.getByRole('button', { name: 'Logo below my name', exact: true }).click()
+  await page.getByRole('button', { name: 'Move Logo up', exact: true }).click()
+  await page.getByRole('button', { name: 'Move Logo down', exact: true }).click()
+  await page
+    .getByRole('button', { name: 'Save as company template for this language', exact: true })
+    .click()
+  await page
+    .getByText('Template saved. It will be ready for the next invoice in this language.', {
+      exact: true,
+    })
+    .waitFor()
+  await page.reload()
+  await page
+    .getByRole('button', { name: 'Apply saved template for this language', exact: true })
+    .waitFor()
+  await page.getByText('Your signature', { exact: true }).click()
+  assert.equal(await page.getByLabel('Full name', { exact: true }).inputValue(), 'Synthetic Sender')
+  await page.getByLabel('Email language', { exact: true }).selectOption('de')
+  assert.equal(await page.getByLabel('Full name', { exact: true }).inputValue(), '')
+  await page.getByLabel('Email language', { exact: true }).selectOption('en')
+  assert.equal(await page.getByLabel('Full name', { exact: true }).inputValue(), 'Synthetic Sender')
+  assert.ok((await page.getByLabel('Subject', { exact: true }).inputValue()).includes('thank you'))
   await page.getByRole('button', { name: 'Preview email', exact: true }).click()
+  await page
+    .frameLocator('iframe[title="Preview email"]')
+    .getByText('Synthetic Sender', { exact: true })
+    .waitFor()
+  assert.equal(await page.locator('iframe[title="Preview email"]').getAttribute('sandbox'), '')
   assert.equal(
     await page.getByRole('button', { name: 'Queue test email', exact: true }).isEnabled(),
     false,
@@ -119,6 +180,9 @@ try {
   await processInvoiceEmail(undefined, org)
   await page.getByRole('button', { name: 'Refresh', exact: true }).click()
   await page.getByText('Accepted by local Mailpit', { exact: true }).first().waitFor()
+  await page.getByText('Test delivery events locally', { exact: true }).click()
+  await page.getByRole('button', { name: 'Bounced', exact: true }).click()
+  await page.getByText('Simulated test event: Bounced', { exact: true }).waitFor()
   assert.equal(
     (await pool.query('SELECT invoice_state FROM customer_auth.documents WHERE id=$1', [doc]))
       .rows[0].invoice_state,
@@ -131,7 +195,36 @@ try {
     false,
   )
   await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.getByLabel('Recipient email', { exact: true }).fill('changed@example.test')
+  await page.getByRole('button', { name: 'Preview email', exact: true }).click()
+  await page.getByLabel('I checked the recipient address and attachment.', { exact: true }).check()
+  await page
+    .getByLabel(
+      'I understand this sends another copy. An earlier attempt may already have arrived.',
+      { exact: true },
+    )
+    .check()
+  assert.equal(
+    await page.getByRole('button', { name: 'Queue test email', exact: true }).isEnabled(),
+    false,
+  )
+  await page
+    .getByLabel('Type the new recipient address again', { exact: true })
+    .fill('changed@example.test')
+  assert.equal(
+    await page.getByRole('button', { name: 'Queue test email', exact: true }).isEnabled(),
+    true,
+  )
+  await page.getByRole('button', { name: 'Edit', exact: true }).click()
   await mkdir('test-results/invoice-email', { recursive: true })
+  await page
+    .frameLocator('iframe[title="Email preview"]')
+    .getByText('Synthetic Sender', { exact: true })
+    .waitFor()
+  await page.locator('iframe[title="Email preview"]').scrollIntoViewIfNeeded()
+  await page
+    .locator('iframe[title="Email preview"]')
+    .screenshot({ path: 'test-results/invoice-email/en-email-preview.png' })
   await page.evaluate(() => window.scrollTo(0, 0))
   await page.screenshot({
     path: 'test-results/invoice-email/en-desktop.png',
@@ -143,6 +236,14 @@ try {
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.waitForFunction(() => document.documentElement.classList.contains('dark'))
+  await page
+    .frameLocator('iframe[title="E-Mail-Vorschau der Gestaltung"]')
+    .getByText('Guten Tag,', { exact: true })
+    .waitFor()
+  await page.locator('iframe[title="E-Mail-Vorschau der Gestaltung"]').scrollIntoViewIfNeeded()
+  await page
+    .locator('iframe[title="E-Mail-Vorschau der Gestaltung"]')
+    .screenshot({ path: 'test-results/invoice-email/de-email-preview.png' })
   await page.evaluate(() => window.scrollTo(0, 0))
   await page.screenshot({
     path: 'test-results/invoice-email/de-mobile.png',
@@ -155,7 +256,7 @@ try {
   )
   assert.deepEqual(errors, [])
   console.log(
-    'Invoice delivery browser smoke passed: unique Profile keys, approval → validation → delivery, no automatic download, inline sender setup, Files shortcut, send/history/resend, DE/EN and mobile.',
+    'Invoice delivery browser smoke passed: visual signature, scanned logo, placement presets, keyboard reorder, template reload, separate language drafts, live preview, approval → delivery, resend and changed-recipient protection, DE/EN and mobile.',
   )
 } finally {
   await browser.close()

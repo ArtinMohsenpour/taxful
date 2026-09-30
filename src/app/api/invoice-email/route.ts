@@ -2,6 +2,7 @@ import { auth } from '@/lib/customer-auth/auth'
 import { checkOrigin, documentContext } from '@/lib/documents/access'
 import { boundedBody, documentId, failure, json } from '@/lib/documents/http'
 import { DocumentError } from '@/lib/documents/config'
+import { simulateDeliveryEvent } from '@/lib/invoice-email/events'
 import {
   emailHistory,
   emailSettings,
@@ -10,6 +11,21 @@ import {
 } from '@/lib/invoice-email/service'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export async function PATCH(request: Request) {
+  try {
+    checkOrigin(request)
+    const context = await documentContext(request.headers)
+    let input: unknown
+    try {
+      input = JSON.parse((await boundedBody(request, 2000)).toString())
+    } catch {
+      throw new DocumentError('invalidRequest')
+    }
+    return json(await simulateDeliveryEvent(context, input))
+  } catch (error) {
+    return failure(error)
+  }
+}
 export async function GET(request: Request) {
   try {
     const context = await documentContext(request.headers)
@@ -25,7 +41,7 @@ export async function POST(request: Request) {
     const context = await documentContext(request.headers)
     let input: unknown
     try {
-      input = JSON.parse((await boundedBody(request, 12_000)).toString())
+      input = JSON.parse((await boundedBody(request, 100_000)).toString())
     } catch {
       throw new DocumentError('invalidRequest')
     }

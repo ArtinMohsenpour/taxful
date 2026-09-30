@@ -60,6 +60,7 @@ export function InvoiceDeliveryWorkspace({
           onDeleted={() => {}}
         />
         <InvoiceEmailPanel
+          key={`${organizationId}:${id}`}
           documentId={id}
           organizationId={organizationId}
           recipientEmail={recipientEmail}

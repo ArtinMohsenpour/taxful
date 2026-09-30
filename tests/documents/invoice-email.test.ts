@@ -5,6 +5,84 @@ import { config } from 'dotenv'
 import { invoiceFixture } from './fixtures'
 import { mailbox, senderSchema, composeInvoiceEmail } from '../../src/lib/invoice-email/schema'
 import { localEmailEnabled } from '../../src/lib/invoice-email/provider'
+import { cleanEmailHtml, normalizeContent, contentHash } from '../../src/lib/invoice-email/content'
+import {
+  emailDefaults,
+  withVisualDesign,
+  resolveEmailContent,
+  visualEmailSchema,
+} from '../../src/lib/invoice-email/visual'
+
+test('visual signatures preserve order, escape fields and resolve templates without executing content', () => {
+  const initial = emailDefaults('en')
+  assert.ok(initial.design)
+  const signature = {
+    ...initial.design,
+    name: '<script>alert(1)</script>',
+    position: 'Developer',
+    pronouns: '(he/him)',
+    company: 'Example GmbH',
+    address: 'Example street 15\n50677 Köln',
+    phone: '+49 123',
+    mobile: '+49 456',
+  }
+  const content = withVisualDesign({ ...initial, logoId: randomUUID() }, signature)
+  const normalized = normalizeContent({ ...content, html: '<script>bad</script>', body: 'stale' })
+  assert.ok(normalized.html.includes('&lt;script&gt;'))
+  assert.ok(!normalized.html.includes('<script>'))
+  assert.ok(normalized.body.includes('Developer'))
+  assert.ok(normalized.html.indexOf('Developer') < normalized.html.indexOf('cid:company-logo'))
+  const atTop = withVisualDesign(content, {
+    ...signature,
+    order: ['logo', ...signature.order.filter((v) => v !== 'logo')],
+  })
+  assert.ok(atTop.html.indexOf('cid:company-logo') < atTop.html.indexOf('Developer'))
+  const resolved = resolveEmailContent(content, 'TF-123', 'A & B <company>')
+  assert.ok(resolved.body.includes('TF-123'))
+  assert.ok(resolved.html.includes('A &amp; B &lt;company&gt;'))
+  assert.equal(resolved.design, undefined)
+  assert.equal(
+    visualEmailSchema.safeParse({ ...signature, order: Array(7).fill('logo') }).success,
+    false,
+  )
+})
+
+test('email HTML and CSS allowlist blocks active content, URLs and remote tracking', () => {
+  const clean = cleanEmailHtml(
+    '<script>alert(1)</script><style>@import "https://evil.test";</style><iframe src="https://evil.test"></iframe><p onclick="alert(1)" style="color:#123456;background-image:url(https://evil.test);position:fixed">Hello <b>World</b></p><img src="https://evil.test/pixel"><img src="cid:company-logo" onerror="alert(1)"><a href="javascript:alert(1)">bad</a><a href="//evil.test">relative</a><a href="https://example.test">good</a>',
+  )
+  assert.ok(clean.includes('color:#123456'))
+  assert.ok(clean.includes('cid:company-logo'))
+  assert.equal(
+    (cleanEmailHtml('<img src="cid:company-logo">'.repeat(100)).match(/<img/g) || []).length,
+    1,
+  )
+  for (const unsafe of [
+    'script',
+    'iframe',
+    'onclick',
+    'onerror',
+    'javascript:',
+    'evil.test',
+    'position:',
+    'background-image',
+  ])
+    assert.ok(!clean.includes(unsafe), unsafe)
+  const normalized = normalizeContent({
+    subject: 'Invoice',
+    body: 'Hello',
+    html: clean,
+    logoId: null,
+  })
+  assert.equal(normalized.html, clean)
+  assert.notEqual(
+    contentHash(normalized, null),
+    contentHash({ ...normalized, body: 'Changed' }, null),
+  )
+  assert.throws(() =>
+    normalizeContent({ ...normalized, subject: 'Invoice\r\nBcc: other@example.test' }),
+  )
+})
 
 test('mail input rejects headers, multiple recipients, and remote local-mode configurations', () => {
   for (const address of [
@@ -55,6 +133,9 @@ test(
     const { saveEmailSettings, queueInvoiceEmail, emailHistory } =
       await import('../../src/lib/invoice-email/service')
     const { processInvoiceEmail } = await import('../../src/lib/invoice-email/worker')
+    const { saveEmailTemplate, emailTemplates, previewEmailContent, uploadEmailLogo, logoBytes } =
+      await import('../../src/lib/invoice-email/templates')
+    const { simulateDeliveryEvent } = await import('../../src/lib/invoice-email/events')
     const { exportDocument } = await import('../../src/lib/documents/service')
     const { readPrivate, removePrivate, sha256 } = await import('../../src/lib/documents/storage')
     const org = randomUUID(),
@@ -96,6 +177,8 @@ test(
         note: 'Synthetic test only',
         senderRevision: 1,
         acknowledgeRecipient: true as const,
+        acknowledgeResend: true,
+        confirmedRecipientChange: owner + '@example.test',
         previousDeliveryId: null as string | null,
       }
     }
@@ -149,6 +232,67 @@ test(
         session,
       ])
       assert.equal((await saveEmailSettings(context, settings, session)).revision, 1)
+      const content = {
+        subject: 'Invoice {{invoiceNumber}}',
+        body: 'Hello {{companyName}}',
+        html: '<p style="color:#123456">Hello</p>',
+        logoId: null,
+      }
+      const template = { organizationId: org, locale: 'en', revision: 0, content }
+      await assert.rejects(saveEmailTemplate({ ...context, userId: member }, template), {
+        message: 'forbidden',
+      })
+      assert.equal((await saveEmailTemplate(context, template)).revision, 1)
+      await assert.rejects(saveEmailTemplate(context, template), { message: 'conflict' })
+      assert.equal((await saveEmailTemplate(context, { ...template, locale: 'de' })).revision, 1)
+      assert.equal((await emailTemplates(context)).templates.length, 2)
+      const visual = emailDefaults('en')
+      assert.ok(visual.design)
+      const signature = withVisualDesign(visual, {
+        ...visual.design,
+        name: 'Synthetic Sender',
+        position: 'Developer',
+      })
+      await saveEmailTemplate(context, { ...template, revision: 1, content: signature })
+      const savedVisual = (await emailTemplates(context)).templates.find((t) => t.locale === 'en')
+      assert.equal(savedVisual.design.name, 'Synthetic Sender')
+      assert.equal(savedVisual.design.order[2], 'logo')
+      assert.ok(savedVisual.body.includes('Developer'))
+      await assert.rejects(
+        saveEmailTemplate(context, {
+          ...template,
+          revision: 2,
+          content: { ...signature, design: { ...signature.design, order: ['script'] } },
+        }),
+        { message: 'invalidRequest' },
+      )
+      const sharp = (await import('sharp')).default
+      const png = await sharp({
+        create: { width: 20, height: 20, channels: 3, background: '#123456' },
+      })
+        .png()
+        .toBuffer()
+      const logo = await uploadEmailLogo(context, png)
+      const boundedPreview = await previewEmailContent(context, {
+        ...content,
+        logoId: logo.id,
+        html:
+          '<p>src="cid:company-logo" ' +
+          'cid:company-logo '.repeat(1000) +
+          '</p><img src="cid:company-logo"><img src="cid:company-logo">',
+      })
+      assert.equal((boundedPreview.previewHtml.match(/data:image\/png;base64/g) || []).length, 1)
+      assert.ok(boundedPreview.previewHtml.includes('cid:company-logo cid:company-logo'))
+      assert.ok(boundedPreview.previewHtml.includes('<p>src="cid:company-logo"'))
+      await assert.rejects(uploadEmailLogo({ ...context, userId: member }, png), {
+        message: 'forbidden',
+      })
+      await assert.rejects(uploadEmailLogo(context, Buffer.from('<svg/>')), {
+        message: 'emailLogoInvalid',
+      })
+      await assert.rejects(logoBytes({ ...context, organizationId: other }, logo.id), {
+        message: 'forbidden',
+      })
       await assert.rejects(saveEmailSettings(context, settings, session), { message: 'conflict' })
       const input = await makeInvoice()
       await assert.rejects(emailHistory({ ...context, organizationId: other }, input.documentId), {
@@ -170,6 +314,22 @@ test(
       await pool.query("UPDATE customer_auth.documents SET invoice_state='issued' WHERE id=$1", [
         input.documentId,
       ])
+      await assert.rejects(queueInvoiceEmail(context, { ...input, confirmedRecipientChange: '' }), {
+        message: 'emailRecipientChanged',
+      })
+      const preview = await previewEmailContent(context, {
+        ...content,
+        logoId: logo.id,
+        html: '<img src="cid:company-logo"><p>Hello</p>',
+      })
+      await assert.rejects(
+        queueInvoiceEmail(context, {
+          ...input,
+          content: preview.content,
+          previewHash: '0'.repeat(64),
+        }),
+        { message: 'emailPreviewChanged' },
+      )
       const [first, retry] = await Promise.all([
         queueInvoiceEmail(context, input),
         queueInvoiceEmail(context, input),
@@ -184,6 +344,34 @@ test(
       await Promise.all([processInvoiceEmail(fake, org), processInvoiceEmail(fake, org)])
       assert.equal(sends, 1)
       assert.equal((await emailHistory(context, input.documentId)).deliveries[0].status, 'accepted')
+      await assert.rejects(
+        queueInvoiceEmail(context, {
+          ...input,
+          requestKey: randomUUID(),
+          previousDeliveryId: first.id,
+          acknowledgeResend: false,
+        }),
+        { message: 'emailResendRequired' },
+      )
+      const simulation = { deliveryId: first.id, eventKey: randomUUID(), status: 'bounced' }
+      await assert.rejects(simulateDeliveryEvent({ ...context, userId: member }, simulation), {
+        message: 'forbidden',
+      })
+      await assert.rejects(
+        simulateDeliveryEvent({ ...context, organizationId: other }, simulation),
+        { message: 'forbidden' },
+      )
+      await simulateDeliveryEvent(context, simulation)
+      await simulateDeliveryEvent(context, simulation)
+      await assert.rejects(simulateDeliveryEvent(context, { ...simulation, status: 'delivered' }), {
+        message: 'conflict',
+      })
+      const evidence = (await emailHistory(context, input.documentId)).deliveries[0]
+      assert.equal(
+        evidence.events.filter((e: { source: string }) => e.source === 'simulation').length,
+        1,
+      )
+      assert.equal(evidence.status, 'accepted')
       assert.equal(
         (
           await pool.query('SELECT invoice_state FROM customer_auth.documents WHERE id=$1', [
@@ -256,7 +444,17 @@ test(
       // Real SMTP handoff, both official formats, using only synthetic companies.
       for (const format of ['xrechnung', 'zugferd'] as const) {
         const invoice = await makeInvoice(format)
-        const queued = await queueInvoiceEmail(context, invoice)
+        const composed = await previewEmailContent(context, {
+          subject: 'Invoice ' + invoice.documentId,
+          body: 'Synthetic test only',
+          html: '<p style="color:#123456">Synthetic test only</p><img src="cid:company-logo">',
+          logoId: logo.id,
+        })
+        const queued = await queueInvoiceEmail(context, {
+          ...invoice,
+          content: composed.content,
+          previewHash: composed.hash,
+        })
         await pool.query("UPDATE customer_auth.documents SET invoice_state='paid' WHERE id=$1", [
           invoice.documentId,
         ])
@@ -286,12 +484,17 @@ test(
           To: { Address: string }[]
           Attachments: { PartID: string }[]
           Text: string
+          HTML: string
           MessageID: string
         }
         assert.equal(mail.From.Address, settings.sender)
         assert.equal(mail.To[0].Address, invoice.recipient)
         assert.equal(mail.Attachments.length, 1)
         assert.ok(mail.Text.includes('Synthetic test only'))
+        assert.ok(mail.HTML.includes('Synthetic test only'))
+        assert.ok(mail.HTML.includes('cid:company-logo'))
+        assert.equal(mail.HTML.trim(), composed.content.html)
+        assert.equal(delivery.message_sha256, composed.hash)
         assert.ok(mail.MessageID.includes(queued.id))
         const attachment = Buffer.from(
           await (
@@ -302,6 +505,27 @@ test(
         )
         assert.equal(sha256(attachment), delivery.attachment_sha256)
       }
+      const tamperInput = await makeInvoice()
+      const tamperPreview = await previewEmailContent(context, {
+        subject: 'Test',
+        body: 'Immutable text',
+        html: '<p>Immutable text</p>',
+        logoId: null,
+      })
+      const tamperDelivery = await queueInvoiceEmail(context, {
+        ...tamperInput,
+        content: tamperPreview.content,
+        previewHash: tamperPreview.hash,
+      })
+      await pool.query("UPDATE customer_auth.invoice_deliveries SET body='tampered' WHERE id=$1", [
+        tamperDelivery.id,
+      ])
+      await processInvoiceEmail(fake, org)
+      assert.equal(sends, 1)
+      assert.equal(
+        (await emailHistory(context, tamperInput.documentId)).deliveries[0].status,
+        'failed',
+      )
       const latest = (await emailHistory(context, input.documentId)).deliveries[0]
       const settingsChanged = await queueInvoiceEmail(context, {
         ...input,

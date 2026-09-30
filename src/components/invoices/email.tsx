@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { buttonClass, inputClass } from '@/components/customer-auth/auth-form'
-import { composeInvoiceEmail } from '@/lib/invoice-email/schema'
+import type { EmailContent } from '@/lib/invoice-email/schema'
+import { EmailEditor, EmailHtmlPreview, emailDefaults, resolveEmailContent } from './email-editor'
 import type { invoiceEmailMessages } from '../../../messages/invoice-email'
 
 type Key = keyof typeof invoiceEmailMessages.en
@@ -23,7 +24,12 @@ type Delivery = {
   revision: number
   attachment_sha256: string
   error_code: string | null
-  events: { status: string; at: string }[]
+  html: string
+  message_sha256: string | null
+  provider_id: string | null
+  created_by: string | null
+  confirmations: { resend?: boolean; recipientChanged?: boolean }
+  events: { status: string; at: string; source: string; actorId: string | null }[]
 }
 type History = { exports: { id: string; format: string; sha256: string }[]; deliveries: Delivery[] }
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -178,14 +184,22 @@ export function InvoiceEmailPanel({
   const [settings, setSettings] = useState<Settings | null>(null),
     [history, setHistory] = useState<History | null>(null)
   const [recipient, setRecipient] = useState(recipientEmail),
-    [format, setFormat] = useState(''),
-    [note, setNote] = useState('')
+    [format, setFormat] = useState('')
   const [language, setLanguage] = useState<'de' | 'en'>(locale)
+  const [drafts, setDrafts] = useState({ de: emailDefaults('de'), en: emailDefaults('en') })
+  const [rendered, setRendered] = useState<{
+    content: EmailContent
+    hash: string
+    previewHtml: string
+  } | null>(null)
+  const [confirmedAddress, setConfirmedAddress] = useState('')
+  const [reviewPrevious, setReviewPrevious] = useState<string | null>(null)
   const [preview, setPreview] = useState(false),
     [checked, setChecked] = useState(false),
     [resend, setResend] = useState(false)
   const [pending, setPending] = useState(false),
     [success, setSuccess] = useState(false)
+  const [editorBusy, setEditorBusy] = useState(false)
   const { error, setError } = useEmailError()
   const key = useRef<{ payload: string; id: string } | null>(null)
   const notified = useRef<string | null>(null)
@@ -242,7 +256,10 @@ export function InvoiceEmailPanel({
     return () => clearTimeout(timer)
   }, [history, documentId, setError])
   const sender = settings?.settings
-  const message = composeInvoiceEmail(language, number, sender?.sender_name || '', note.trim())
+  const message = rendered?.content
+  const recipientChanged = [recipientEmail, history?.deliveries[0]?.recipient]
+    .filter((v) => v !== undefined)
+    .some((v) => v?.trim().toLowerCase() !== recipient.trim().toLowerCase())
   const busy = history?.deliveries.some((d) => ['queued', 'sending'].includes(d.status))
   return (
     <section className="mt-5 space-y-4 border-t border-border pt-5">
@@ -268,10 +285,34 @@ export function InvoiceEmailPanel({
         <form
           onSubmit={async (e) => {
             e.preventDefault()
+            if (editorBusy) return
             setError('')
             setSuccess(false)
             if (!preview) {
-              setPreview(true)
+              setPending(true)
+              try {
+                const result = await request<{
+                  content: EmailContent
+                  hash: string
+                  previewHtml: string
+                }>('/api/invoice-email/composer?action=preview', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(
+                    resolveEmailContent(drafts[language], number, sender.sender_name),
+                  ),
+                })
+                setRendered(result)
+                setReviewPrevious(history.deliveries[0]?.id || null)
+                setChecked(false)
+                setResend(false)
+                setConfirmedAddress('')
+                setPreview(true)
+              } catch (error) {
+                setError(error instanceof Error ? error.message : 'genericError')
+              } finally {
+                setPending(false)
+              }
               return
             }
             setPending(true)
@@ -281,10 +322,14 @@ export function InvoiceEmailPanel({
               exportId: format,
               recipient,
               locale: language,
-              note,
+              note: '',
+              content: rendered?.content,
+              previewHash: rendered?.hash,
+              acknowledgeResend: resend,
+              confirmedRecipientChange: confirmedAddress,
               senderRevision: sender.revision,
               acknowledgeRecipient: checked,
-              previousDeliveryId: history.deliveries[0]?.id || null,
+              previousDeliveryId: reviewPrevious,
             }
             const serialized = JSON.stringify(payload)
             if (key.current?.payload !== serialized)
@@ -308,8 +353,8 @@ export function InvoiceEmailPanel({
           }}
           className="space-y-4"
         >
-          {!preview ? (
-            <fieldset className="space-y-4" disabled={pending || busy}>
+          <div hidden={preview}>
+            <fieldset className="space-y-4" disabled={pending || busy || editorBusy}>
               <label className="block text-sm">
                 {t('recipient')}
                 <input
@@ -324,6 +369,7 @@ export function InvoiceEmailPanel({
               <label className="block text-sm">
                 {t('format')}
                 <select
+                  aria-label={t('format')}
                   className={inputClass}
                   value={format}
                   onChange={(e) => setFormat(e.target.value)}
@@ -338,6 +384,7 @@ export function InvoiceEmailPanel({
               <label className="block text-sm">
                 {t('language')}
                 <select
+                  aria-label={t('language')}
                   className={inputClass}
                   value={language}
                   onChange={(e) => setLanguage(e.target.value as 'de' | 'en')}
@@ -346,21 +393,24 @@ export function InvoiceEmailPanel({
                   <option value="en">English</option>
                 </select>
               </label>
-              <label className="block text-sm">
-                {t('note')}
-                <textarea
-                  className={inputClass}
-                  maxLength={2000}
-                  rows={3}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                />
-              </label>
+              <EmailEditor
+                number={number}
+                company={sender.sender_name}
+                onBusy={setEditorBusy}
+                active={!preview}
+                organizationId={organizationId}
+                language={language}
+                value={drafts[language]}
+                onChange={(v) => setDrafts((current) => ({ ...current, [language]: v }))}
+                onError={setError}
+                disabled={pending || !!busy}
+              />
               <button className={buttonClass} type="submit">
                 {t('preview')}
               </button>
             </fieldset>
-          ) : (
+          </div>
+          {preview && message && (
             <div className="space-y-4 rounded-2xl border border-border bg-surface p-4">
               <p className="text-sm break-words">
                 {t('from')}: {sender.sender_name} &lt;{sender.sender}&gt;
@@ -369,12 +419,30 @@ export function InvoiceEmailPanel({
                 {t('to')}: {recipient}
               </p>
               <p className="font-medium break-words">{message.subject}</p>
-              <p className="text-sm break-words whitespace-pre-wrap">{message.body}</p>
+              {rendered?.previewHtml && (
+                <EmailHtmlPreview html={rendered.previewHtml} title={t('preview')} />
+              )}
+              <details>
+                <summary className="cursor-pointer text-sm">{t('plainText')}</summary>
+                <p className="mt-2 text-sm break-words whitespace-pre-wrap">{message.body}</p>
+              </details>
               <p className="text-sm">
                 {t('format')}: {history.exports.find((e) => e.id === format)?.format}
               </p>
-              {recipient.trim().toLowerCase() !== recipientEmail.trim().toLowerCase() && (
-                <p className="text-sm font-medium">{t('mismatch')}</p>
+              {recipientChanged && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">{t('mismatch')}</p>
+                  <label className="block text-sm">
+                    {t('confirmAddress')}
+                    <input
+                      type="email"
+                      className={inputClass}
+                      value={confirmedAddress}
+                      onChange={(e) => setConfirmedAddress(e.target.value)}
+                      disabled={pending}
+                    />
+                  </label>
+                </div>
               )}
               <label className="flex items-start gap-3 text-sm">
                 <input
@@ -399,7 +467,14 @@ export function InvoiceEmailPanel({
               <div className="flex flex-wrap gap-3">
                 <button
                   className={buttonClass}
-                  disabled={pending || busy || !checked || (!!history.deliveries.length && !resend)}
+                  disabled={
+                    pending ||
+                    busy ||
+                    !checked ||
+                    (!!history.deliveries.length && !resend) ||
+                    (recipientChanged &&
+                      confirmedAddress.trim().toLowerCase() !== recipient.trim().toLowerCase())
+                  }
                   type="submit"
                 >
                   {t('confirm')}
@@ -457,6 +532,20 @@ export function InvoiceEmailPanel({
           {d.error_code && (
             <p>{t(t.has(d.error_code as Key) ? (d.error_code as Key) : 'genericError')}</p>
           )}
+          <ol className="space-y-2 border-l border-border pl-4" aria-label={t('timeline')}>
+            {d.events?.map((e, i) => (
+              <li key={i}>
+                <span className="font-medium">
+                  {e.source === 'simulation' ? `${t('simulation')}: ` : ''}
+                  {t(e.status as Key)}
+                </span>{' '}
+                ·{' '}
+                <time dateTime={e.at}>
+                  {new Date(e.at).toLocaleString(locale, { timeZone: 'Europe/Berlin' })}
+                </time>
+              </li>
+            ))}
+          </ol>
           <details>
             <summary className="cursor-pointer">{t('evidence')}</summary>
             <div className="mt-3 space-y-2 break-words">
@@ -467,20 +556,74 @@ export function InvoiceEmailPanel({
                 {t('subject')}: {d.subject}
               </p>
               <p className="whitespace-pre-wrap">{d.body}</p>
+              {d.html && (
+                <details>
+                  <summary>{t('htmlCode')}</summary>
+                  <pre className="max-h-64 overflow-auto text-xs whitespace-pre-wrap">{d.html}</pre>
+                </details>
+              )}
+              <p>
+                {t('deliveryId')}: {d.id}
+              </p>
+              <p>
+                {t('actor')}: {d.created_by || '—'}
+              </p>
+              <p>
+                {t('providerId')}: {d.provider_id || '—'}
+              </p>
+              {d.message_sha256 && (
+                <p className="break-all">
+                  {t('messageHash')}: {d.message_sha256}
+                </p>
+              )}
+              {d.confirmations.resend && <p>{t('resendRecorded')}</p>}
+              {d.confirmations.recipientChanged && <p>{t('recipientRecorded')}</p>}
               <p>
                 {t('revision')}: {d.revision}
               </p>
               <p className="break-all">
                 {t('hash')}: {d.attachment_sha256}
               </p>
-              {d.events?.map((e, i) => (
-                <p key={i}>
-                  {t(e.status as Key)} ·{' '}
-                  {new Date(e.at).toLocaleString(locale, { timeZone: 'Europe/Berlin' })}
-                </p>
-              ))}
             </div>
           </details>
+          {settings?.enabled && settings.canManage && d.status === 'accepted' && (
+            <details>
+              <summary className="cursor-pointer">{t('testEvents')}</summary>
+              <p className="my-2 text-xs">{t('testEventsHint')}</p>
+              <div className="flex flex-wrap gap-3">
+                {(['delivered', 'bounced', 'complained'] as const).map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    disabled={pending}
+                    className="rounded-full border border-border px-3 py-2 text-xs"
+                    onClick={async () => {
+                      setPending(true)
+                      setError('')
+                      try {
+                        await request('/api/invoice-email', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            deliveryId: d.id,
+                            eventKey: crypto.randomUUID(),
+                            status,
+                          }),
+                        })
+                        await refresh()
+                      } catch (error) {
+                        setError(error instanceof Error ? error.message : 'genericError')
+                      } finally {
+                        setPending(false)
+                      }
+                    }}
+                  >
+                    {t(status)}
+                  </button>
+                ))}
+              </div>
+            </details>
+          )}
         </article>
       ))}
     </section>

@@ -16,7 +16,7 @@ All messages stay in Mailpit, even for real-looking recipient domains. Sender se
 ## Security and behavior
 
 - Current membership on all reads/writes; owner/admin sender management, owner/admin/reviewer sending. The worker rechecks permissions, verified/non-suspended user, sender settings, invoice state, revision and attachment immediately before handoff.
-- Same-origin mutations, bounded bodies, strict input schemas. One mailbox, one checked attachment up to 10 MiB. No CC/BCC, arbitrary uploads, HTML or tracking pixels. Nodemailer file/URL fetching is disabled.
+- Same-origin mutations, bounded bodies, strict input schemas. One mailbox, one checked invoice attachment up to 10 MiB. No CC/BCC or tracking pixels. Nodemailer file/URL fetching is disabled. HTML and an embedded logo are supported with the restrictions below.
 - A send snapshots sender, recipient, subject/body, language, invoice revision, export ID and hash. Reply-To is the company address. No inbox connection, reply ingestion or Outlook/Gmail Sent copy.
 - Queue intent is durable before SMTP handoff. Repeated request keys return the same delivery; changed payloads conflict. Company serialization protects concurrent requests. A resend must identify the latest previous delivery; queued/sending attempts block another send. UI requires explicit resend confirmation and warns about recipient mismatch.
 - Limits: 20 queued messages per rolling hour and 100 per rolling 24 hours per company, including failed attempts. These are safety limits, not new subscription charges.
@@ -46,6 +46,26 @@ Tests use disposable synthetic companies and company-scoped workers. They verify
 
 Implement the SES API adapter in Frankfurt; tenant-bound domain onboarding with DKIM/DMARC and dedicated custom MAIL FROM; exact sender authorization; recent MFA for sender management; verification rechecks/suspension; workload IAM; signed delivery callbacks with replay protection; bounce/complaint suppression; and uncertain-outcome reconciliation. Existing mailbox MX records must remain intact. Local settings must be replaced by verified production identities. Document actual provider data flows, retention and processing agreements before sending customer data.
 
-Reminders, connected Google/Microsoft mailboxes, inbound replies, custom templates, dual approval and delivery pricing remain later product work.
+Reminders, connected Google/Microsoft mailboxes, inbound replies, dual approval and delivery pricing remain later product work.
+
+## Full composer and bilingual company templates
+
+Migration `0024_invoice_email_composer.sql` adds one reusable template per company/language, private logo metadata, immutable message snapshots and richer event evidence. Existing deliveries retain their original evidence; hashes are not retroactively fabricated. Restart `pnpm dev` after applying the migration so the email worker loads the new message format.
+
+The delivery page exposes the full subject, message and signature, with optional HTML editing under Advanced options and a server-cleaned preview. Owners/admins save and apply German and English templates separately. Reviewers may edit individual outgoing messages. `{{invoiceNumber}}` and `{{companyName}}` expand on preview; HTML values are escaped. Applying/resetting a template explicitly replaces the draft. Visual mode generates matching plain-text and HTML alternatives; advanced HTML mode permits independent editing. Both alternatives are available in the final preview.
+
+`sanitize-html` 2.17.7 (MIT, Node >=22.12, maintained in Apostrophe's monorepo) is a direct dependency because parsing untrusted HTML/CSS requires a maintained sanitizer. The server allows email layout tags, HTTPS/mailto links and a small inline-CSS allowlist. It removes scripts, forms, stylesheets, SVG, event handlers, remote images and all CSS URLs. Preview uses a sandboxed iframe with restrictive CSP and no scripts or origin privileges. Only the approved embedded logo can appear as an image; email clients may render CSS differently.
+
+Owners/admins upload PNG/JPEG logos up to 512,000 bytes/four million pixels. Signature checks and ClamAV precede Sharp normalization to a metadata-free PNG of at most 600×300 pixels. Files are private, tenant-owned, hash-checked and embedded via CID, never fetched remotely. Maximum 20 immutable logo versions per company; they remain available for historical sends and are scheduled for durable cleanup when company metadata is deleted. No large image binaries are stored in PostgreSQL.
+
+Queueing requires a hash matching the normalized preview. The worker checks message and logo integrity as well as the existing immutable invoice attachment. Stored evidence includes exact text/HTML, sender/recipient, creator, message ID, message/attachment hashes and explicit resend/recipient-change acknowledgements. Resends require the latest previous delivery ID and a server-validated acknowledgement. An address differing from the invoice or prior send requires typing that address again. Double requests remain idempotent and uncertain outcomes are never retried automatically.
+
+The timeline always shows queue, sending and handoff/failure events. Local owner/admin test controls can append clearly labeled delivered/bounced/complained simulations (idempotent event keys, at most ten per delivery). Simulations never claim real delivery, change invoice status or overwrite Mailpit acceptance. SES-signed production callbacks and suppression are still part of the production milestone; no unauthenticated provider callback endpoint is exposed.
+
+## Visual message and signature editor
+
+Migration `0025_invoice_email_visual.sql` adds optional structured layout metadata to company templates. The default editor has a message field, expandable signature fields (name, role, pronouns, company, address, phone, mobile and custom text), a scanned logo upload, logo size, divider toggle, placement presets and keyboard-accessible up/down controls for section order. Blank fields are omitted. Text and HTML alternatives are rendered together with escaped text; the server regenerates visual layouts from the strictly validated fields and still sanitizes the result.
+
+Company templates automatically load into untouched drafts for their language. Edits remain separate across DE/EN switches. Saving explicitly updates the shared company template with optimistic revision checks. A debounced server-sanitized preview uses resolved invoice/company values and the existing sandbox. Only the final reviewed render is queued; editable layout metadata does not alter issued invoices or past messages. The HTML editor is under Advanced options. Existing HTML templates stay editable without automatic conversion; rebuilding them visually is explicit and replaces their layout. The final confirmation still checks sender, recipient, attachment, resend and changed-address acknowledgements.
 
 References: [SMTP security options](https://nodemailer.com/smtp), [message configuration](https://nodemailer.com/message).
