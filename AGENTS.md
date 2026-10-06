@@ -41,7 +41,7 @@ This repository was generated from the Payload blank template with PostgreSQL.
 
 - Package manager: pnpm with a committed `pnpm-lock.yaml`
 - Runtime installed for local development: Node.js 26.8.2 through fnm
-- Next.js: 16.3.3, App Router
+- Next.js: 16.3.6, App Router
 - React and React DOM: 19.2.6
 - Payload and all `@payloadcms/*` packages: 3.89.0
 - PostgreSQL adapter: `@payloadcms/db-postgres` 3.89.0

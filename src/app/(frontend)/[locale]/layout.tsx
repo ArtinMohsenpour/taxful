@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import { routing } from '@/i18n/routing'
 import { ThemeProvider } from '@/components/theme-provider'
 import '../../globals.css'
@@ -20,6 +21,7 @@ export default async function LocaleLayout({
   const { locale } = await params
   if (!hasLocale(routing.locales, locale)) notFound()
   const messages = await getMessages({ locale })
+  const nonce = (await headers()).get('x-nonce') || undefined
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -29,7 +31,7 @@ export default async function LocaleLayout({
           messages={{ Preferences: messages.Preferences }}
           timeZone="Europe/Berlin"
         >
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider nonce={nonce}>{children}</ThemeProvider>
         </NextIntlClientProvider>
       </body>
     </html>

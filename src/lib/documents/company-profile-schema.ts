@@ -1,24 +1,25 @@
 import { z } from 'zod'
-import type { DocumentRecord } from './schema'
+import { invoiceCountries, type DocumentRecord } from './schema'
+import { safeDocumentText } from '../security/text'
 
-const text = z.string().trim().max(300)
+const text = z.string().trim().max(300).refine(safeDocumentText)
 export const companyProfileSchema = z
   .object({
     companyName: text.min(1),
     address: text,
-    postalCode: z.string().trim().max(30),
+    postalCode: z.string().trim().max(30).refine(safeDocumentText),
     city: text,
     country: z
       .string()
       .trim()
-      .regex(/^$|^[A-Z]{2}$/),
+      .refine((value) => value === '' || invoiceCountries.has(value)),
     vatId: z
       .string()
       .trim()
       .regex(/^$|^[A-Z]{2}[A-Z0-9]{2,14}$/),
     taxNumber: text,
     name: text,
-    email: z.union([z.literal(''), z.email().max(300)]),
+    email: z.union([z.literal(''), z.email().max(300)]).refine(safeDocumentText),
     phone: text,
   })
   .strict()

@@ -22,6 +22,8 @@ export default async function SecurityPage() {
     id: string
     event:
       | 'mfaEnabled'
+      | 'passwordChanged'
+      | 'passwordReset'
       | 'mfaDisabled'
       | 'passkeyAdded'
       | 'passkeyRemoved'

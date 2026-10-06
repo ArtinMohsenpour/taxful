@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { Navbar } from '@/components/navbar'
+import { getCustomerSession } from '@/lib/customer-auth/session'
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 
 export default async function CustomerLayout({ children }: { children: ReactNode }) {
   const messages = await getMessages()
+  const session = await getCustomerSession()
   return (
     <NextIntlClientProvider
       messages={{
@@ -25,7 +27,7 @@ export default async function CustomerLayout({ children }: { children: ReactNode
       }}
     >
       <div className="min-h-dvh pt-3 sm:pt-6">
-        <Navbar />
+        <Navbar initialAuthenticated={!!session?.user} />
         <main
           id="main"
           tabIndex={-1}

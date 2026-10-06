@@ -10,6 +10,7 @@ const { extractClassifiedDocument } = await import('../src/lib/documents/pipelin
 const { classifyDocument } = await import('../src/lib/documents/classify')
 const { documentLog } = await import('../src/lib/documents/diagnostics')
 const { validateImportedInvoice } = await import('../src/lib/documents/import-validation')
+const { compareInvoiceText } = await import('../src/lib/documents/visual-comparison')
 const [id, lease] = process.argv.slice(2)
 let currentStage = 'scanning',
   stageStarted = performance.now()
@@ -54,6 +55,12 @@ try {
       [id, lease, prepared.method],
     )
     const validation = await validateImportedInvoice(prepared.structured, bytes, doc.mime_type)
+    if (prepared.method === 'embedded_xml') {
+      validation.issues = [
+        ...compareInvoiceText(prepared.structured.data, prepared.comparisonText || ''),
+        ...validation.issues,
+      ].slice(0, 40)
+    }
     const client = await customerPool.connect()
     try {
       await client.query('BEGIN')

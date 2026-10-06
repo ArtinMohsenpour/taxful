@@ -1,0 +1,17 @@
+diff --git a/lib/parse.js b/lib/parse.js
+index 3a6988e629f52aee6609dc5ec290a5e9ff47cecb..5b254c0af8820224130a1b0be90db0bd5aa35704 100644
+--- a/lib/parse.js
++++ b/lib/parse.js
+@@ -74,6 +74,12 @@ const parse = (input, options = {}) => {
+   push({ type: 'bos' });
+ 
+   while (index < length) {
++    // Taxful security backport: downstream stringify/compile/expand recurse over
++    // this AST. Bound nesting before constructing an attacker-controlled deep tree.
++    if (stack.length > 100) {
++      throw new SyntaxError('Brace pattern nesting exceeds 100 levels');
++    }
++
+     block = stack[stack.length - 1];
+     value = advance();
+ 

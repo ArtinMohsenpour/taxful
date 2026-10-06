@@ -1,10 +1,11 @@
 import { createHmac } from 'node:crypto'
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { customerPool } from './database'
-import { sendCustomerEmail } from './email'
+import { sendCustomerEmail, notifyPasswordSecurity } from './email'
 
 export const securityFreshSeconds = 5 * 60
 const management = new Set([
+  '/change-password',
   '/two-factor/enable',
   '/two-factor/disable',
   '/two-factor/generate-backup-codes',
@@ -24,7 +25,12 @@ export function requireUserVerification(verified: boolean | undefined) {
 
 export const beforeMfa = createAuthMiddleware(async (ctx) => {
   const path = ctx.path || ''
-  if (!path.startsWith('/two-factor/') && !path.startsWith('/passkey/')) return
+  if (
+    path !== '/change-password' &&
+    !path.startsWith('/two-factor/') &&
+    !path.startsWith('/passkey/')
+  )
+    return
   // Secrets are shown once during enrollment. No alternate OTP or trusted-device bypass.
   if (
     ['/two-factor/get-totp-uri', '/two-factor/send-otp', '/two-factor/verify-otp'].includes(path) ||
@@ -55,8 +61,8 @@ export const beforeMfa = createAuthMiddleware(async (ctx) => {
     if (
       !current ||
       current.suspended ||
-      !proof ||
-      Date.now() - proof.getTime() >= securityFreshSeconds * 1000
+      ((path !== '/change-password' || current.enabled) &&
+        (!proof || Date.now() - proof.getTime() >= securityFreshSeconds * 1000))
     )
       throw new APIError('FORBIDDEN', {
         code: 'SECURITY_VERIFICATION_REQUIRED',
@@ -192,6 +198,8 @@ export const afterMfa = createAuthMiddleware(async (ctx) => {
       [ctx.context.session.user.id],
     )
   const session = ctx.context.newSession || ctx.context.session
+  if (path === '/change-password' && session)
+    await notifyPasswordSecurity(session.user.id, 'passwordChanged')
   const activated =
     path === '/two-factor/verify-totp' &&
     ctx.context.newSession &&

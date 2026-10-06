@@ -5,17 +5,27 @@ import { passkey } from '@better-auth/passkey'
 import { ownerAc, adminAc, memberAc } from 'better-auth/plugins/organization/access'
 import { after } from 'next/server'
 import { customerPool } from './database'
-import { emailLocale, sendCustomerEmail } from './email'
+import { emailLocale, sendCustomerEmail, notifyPasswordSecurity } from './email'
 import { customerReturnPath } from './navigation'
 import { trackSessionActivity } from './session-activity'
 import { beforeMfa, afterMfa, requireUserVerification } from './mfa-security'
+import { customerProxyConfig } from './proxy-config'
+import { safeDocumentText } from '../security/text'
 
 const baseURL = process.env.BETTER_AUTH_URL
 function customerName(input: object) {
   const user = input as { firstName?: unknown; lastName?: unknown }
   const firstName = typeof user.firstName === 'string' ? user.firstName.trim() : ''
   const lastName = typeof user.lastName === 'string' ? user.lastName.trim() : ''
-  if (!firstName || !lastName || firstName.length > 75 || lastName.length > 75)
+  if (
+    !firstName ||
+    !lastName ||
+    firstName.length > 75 ||
+    lastName.length > 75 ||
+    !safeDocumentText(firstName) ||
+    !safeDocumentText(lastName) ||
+    /[\r\n\t]/.test(firstName + lastName)
+  )
     throw new APIError('BAD_REQUEST', {
       message: 'First and last name are required (up to 75 characters each).',
     })
@@ -67,7 +77,12 @@ export const auth = betterAuth({
     },
   },
   account: { modelName: 'customer_accounts', accountLinking: { enabled: false } },
-  verification: { modelName: 'customer_verifications' },
+  verification: {
+    modelName: 'customer_verifications',
+    // Preserve the MFA challenge identifiers used by our revocation queries.
+    // Better Auth retains compatibility with pre-deployment reset links until expiry.
+    storeIdentifier: { default: 'plain', overrides: { 'reset-password:': 'hashed' } },
+  },
   session: {
     modelName: 'customer_sessions',
     expiresIn: 60 * 60 * 24,
@@ -81,6 +96,8 @@ export const auth = betterAuth({
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
       await trackSessionActivity(ctx)
+      // Enforce this on direct API requests too; a client cannot retain stolen sessions.
+      if (ctx.path === '/change-password' && ctx.body) ctx.body.revokeOtherSessions = true
       await beforeMfa(ctx)
     }),
     after: afterMfa,
@@ -91,12 +108,25 @@ export const auth = betterAuth({
     maxPasswordLength: 128,
     requireEmailVerification: true,
     autoSignIn: false,
+    // Match the create hook in generic duplicate responses, so caller-supplied
+    // display names cannot reveal whether this mailbox already has an account.
+    customSyntheticUser: ({ coreFields, additionalFields, id }) => ({
+      ...coreFields,
+      ...additionalFields,
+      ...customerName(additionalFields),
+      id,
+    }),
     revokeSessionsOnPasswordReset: true,
     onPasswordReset: async ({ user }) => {
+      // Revoke before waiting on email delivery; Better Auth also revokes after this hook.
+      await customerPool.query('DELETE FROM customer_auth.customer_sessions WHERE "userId"=$1', [
+        user.id,
+      ])
       await customerPool.query(
         "DELETE FROM customer_auth.customer_verifications WHERE value=$1 AND (identifier LIKE '2fa-%' OR identifier LIKE 'trust-device-%')",
         [user.id],
       )
+      await notifyPasswordSecurity(user.id, 'passwordReset')
     },
     resetPasswordTokenExpiresIn: 60 * 30,
     sendResetPassword: async ({ user, url }, request) => {
@@ -141,6 +171,7 @@ export const auth = betterAuth({
     },
   },
   advanced: {
+    ipAddress: customerProxyConfig(),
     cookiePrefix: 'taxful-customer',
     useSecureCookies: new URL(baseURL).protocol === 'https:',
     defaultCookieAttributes: { httpOnly: true, sameSite: 'lax', path: '/' },

@@ -61,7 +61,11 @@ export function InvoiceWorkflowPanel({
       const response = await fetch('/api/invoices/' + id, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId, action }),
+        body: JSON.stringify({
+          organizationId,
+          action,
+          ...(action === 'received_reviewed' ? { originalChecked: checked } : {}),
+        }),
       })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error)

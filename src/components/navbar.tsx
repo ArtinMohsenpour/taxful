@@ -6,7 +6,13 @@ import { NavbarView } from './navbar-view'
 import { NavbarPreview } from './navbar-preview'
 import { requirePreviewUser } from '@/lib/preview-auth'
 
-export async function Navbar({ preview = false }: { preview?: boolean }) {
+export async function Navbar({
+  preview = false,
+  initialAuthenticated = false,
+}: {
+  preview?: boolean
+  initialAuthenticated?: boolean
+}) {
   const t = await getTranslations('Navigation')
   const locale = await getLocale()
   // Read fresh public navigation per request, including immediately after a CMS save.
@@ -34,6 +40,6 @@ export async function Navbar({ preview = false }: { preview?: boolean }) {
   return preview ? (
     <NavbarPreview navbar={navbar} labels={labels} />
   ) : (
-    <NavbarView navbar={navbar} labels={labels} />
+    <NavbarView navbar={navbar} labels={labels} initialAuthenticated={initialAuthenticated} />
   )
 }

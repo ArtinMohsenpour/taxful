@@ -1,6 +1,7 @@
 import Decimal from 'decimal.js'
-import { type DocumentRecord, validateRecord } from './schema'
+import { type DocumentRecord, validateRecord, invoiceCountries } from './schema'
 import unitCodes from './unit-codes.json'
+import ibanLengths from './iban-lengths.json'
 import { calculateInvoice } from './invoice-calculation'
 import { numericAmount } from './invoice-calculation'
 import type { InvoiceAdjustment } from './invoice-types'
@@ -19,7 +20,7 @@ export function invoiceRequirements(
   for (const side of ['issuer', 'recipient'] as const) {
     for (const field of ['companyName', 'address', 'postalCode', 'city', 'country'] as const)
       if (!data[side][field].trim()) missing.push(side + '.' + field)
-    if (!/^[A-Z]{2}$/.test(data[side].country)) missing.push(side + '.country')
+    if (!invoiceCountries.has(data[side].country)) missing.push(side + '.country')
     if (format === 'xrechnung' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data[side].email))
       missing.push(side + '.email')
   }
@@ -184,8 +185,12 @@ export function invoiceRequirements(
   return [...new Set(missing)]
 }
 export function validIban(value: string) {
+  if (value.length > 100) return false
   const iban = value.replace(/\s/g, '').toUpperCase()
   if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(iban)) return false
+  // Country lengths from the ISO 13616 registry; see docs/security-hardening.md.
+  if ((ibanLengths as Record<string, number>)[iban.slice(0, 2)] !== iban.length) return false
+  if (iban.startsWith('DE') && !/^DE\d{20}$/.test(iban)) return false
   const digits = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, (char) =>
     String(char.charCodeAt(0) - 55),
   )

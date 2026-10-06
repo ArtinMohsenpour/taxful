@@ -13,8 +13,9 @@ const stripe = stripeClient(),
   org = randomUUID(),
   password = randomUUID() + '-Synthetic',
   email = `${user}@example.test`
-const browser = await chromium.launch({ headless: true })
+const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL })
 const errors: string[] = []
+const cspViolations: string[] = []
 let couponId: string | undefined, promotionId: string | undefined
 try {
   await pool.query(
@@ -47,6 +48,22 @@ try {
     200,
   )
   const page = await context.newPage()
+  await page.exposeFunction(
+    'reportCheckoutPolicyViolation',
+    (directive: string, blocked: string) => {
+      cspViolations.push(`${directive}: ${blocked}`)
+    },
+  )
+  await page.addInitScript(() => {
+    if (window !== window.top) return
+    document.addEventListener('securitypolicyviolation', (event) => {
+      void (
+        window as unknown as {
+          reportCheckoutPolicyViolation: (directive: string, blocked: string) => Promise<void>
+        }
+      ).reportCheckoutPolicyViolation(event.effectiveDirective, event.blockedURI)
+    })
+  })
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/en/portal/billing/checkout?plan=starter')
   await expect(page.getByRole('heading', { name: 'Complete your subscription' })).toBeVisible()
@@ -148,6 +165,7 @@ try {
   await expect(page.locator('html')).toHaveClass(/dark/)
   await page.screenshot({ path: '.private/billing-check/payment-dark-mobile.png', fullPage: true })
   assert.deepEqual(errors, [])
+  assert.deepEqual(cspViolations, [])
   console.log(
     'Custom checkout, discount, card setup, billing details, cancellation/resumption, upgrade and German dark/mobile management passed.',
   )

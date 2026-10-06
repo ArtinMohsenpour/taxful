@@ -12,7 +12,15 @@ export type NavbarLabels = Record<
   'home' | 'skip' | 'label' | 'login' | 'loginSoon' | 'menu' | 'closeMenu',
   string
 >
-export function NavbarView({ navbar, labels }: { navbar: Navbar; labels: NavbarLabels }) {
+export function NavbarView({
+  navbar,
+  labels,
+  initialAuthenticated = false,
+}: {
+  navbar: Navbar
+  labels: NavbarLabels
+  initialAuthenticated?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const header = useRef<HTMLElement>(null)
   const toggle = useRef<HTMLButtonElement>(null)
@@ -106,7 +114,10 @@ export function NavbarView({ navbar, labels }: { navbar: Navbar; labels: NavbarL
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 lg:justify-end lg:border-0 lg:pt-0">
             <Preferences />
-            <CustomerAccountLink loginLabel={labels.login} />
+            <CustomerAccountLink
+              loginLabel={labels.login}
+              initialAuthenticated={initialAuthenticated}
+            />
           </div>
         </div>
       </nav>

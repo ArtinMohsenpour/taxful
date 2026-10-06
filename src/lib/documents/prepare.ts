@@ -40,7 +40,13 @@ export async function detectDocument(bytes: Buffer) {
       .trimStart()
       .startsWith('<')
   ) {
-    decodeInvoiceXml(bytes)
+    // Lightweight root sniff only: full parsing still happens after quarantine/scanning.
+    const xml = decodeInvoiceXml(bytes)
+      .replace(/^\s*<\?xml\s[^?]*\?>/, '')
+      .replace(/<!--[^]*?-->/g, '')
+      .trimStart()
+    if (!/^<(?:[A-Za-z_][\w.-]*:)?(?:Invoice|CreditNote|CrossIndustryInvoice)(?=[\s/>])/.test(xml))
+      throw new DocumentError('unsupportedFile')
     return 'application/xml'
   }
   const type = await fileTypeFromBuffer(bytes)
@@ -155,7 +161,6 @@ export async function prepareDocument(bytes: Buffer, mime: string): Promise<Prep
       for (let page = 1; page <= pdf.numPages; page++) {
         const pdfPage = await pdf.getPage(page)
         if (await pdfPage.getJSActions()) throw new DocumentError('activePdf')
-        if (structured) continue
         const content = await pdfPage.getTextContent()
         const items = content.items.filter((item) => 'str' in item)
         // Keep actual line breaks and column gaps; never flatten invoice tables into one sentence.
@@ -176,6 +181,9 @@ export async function prepareDocument(bytes: Buffer, mime: string): Promise<Prep
           lastY = y
           right = x + item.width
         }
+        text += '\n[Page ' + page + ']\n' + pageText.trim()
+        if (text.length > 100_000) throw new DocumentError('tooMuchText')
+        if (structured) continue
         const operators = await pdfPage.getOperatorList()
         const images = operators.fnArray.some((op) =>
           [OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject].includes(
@@ -183,8 +191,6 @@ export async function prepareDocument(bytes: Buffer, mime: string): Promise<Prep
           ),
         )
         if (!readableText(pageText) || columns || images) textSafe = false
-        text += '\n[Page ' + page + ']\n' + pageText.trim()
-        if (text.length > 100_000) throw new DocumentError('tooMuchText')
       }
       const visual: Part[] = [
         { inlineData: { mimeType: 'application/pdf', data: bytes.toString('base64') } },
@@ -195,6 +201,7 @@ export async function prepareDocument(bytes: Buffer, mime: string): Promise<Prep
           pages: pdf.numPages,
           parts: [],
           method: 'embedded_xml',
+          comparisonText: text.replace(/\[Page \d+\]/g, ''),
           structured,
           embedded,
         }
@@ -231,6 +238,7 @@ export type PreparedDocument = {
   method: 'text' | 'vision' | 'text_images' | 'structured_xml' | 'embedded_xml'
   structured?: StructuredInvoice
   embedded?: Buffer
+  comparisonText?: string
 }
 export function readableText(text: string) {
   const value = text.trim()

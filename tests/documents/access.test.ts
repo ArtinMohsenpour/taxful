@@ -213,29 +213,38 @@ test(
       assert.equal(page2.documents.length, 1)
       assert.ok(!page1.documents.some((row) => row.id === page2.documents[0].id))
       const { deleteDocument } = await import('../../src/lib/documents/deletion')
-      await writePrivate(id, png, 'preview')
+      // Issued invoices remain immutable; exercise deletion with the separate unissued upload.
+      await assert.rejects(deleteDocument(owner, id), { message: 'invoiceLocked' })
+      const uploaded = concurrent.find((result) => result.status === 'fulfilled')
+      assert.ok(uploaded?.status === 'fulfilled')
+      const draftId = uploaded.value[0]
+      await writePrivate(draftId, png, 'preview')
       await assert.rejects(
-        deleteDocument(outsider, id),
+        deleteDocument(outsider, draftId),
         (error: unknown) => error instanceof Error && error.message === 'notFound',
       )
       await assert.rejects(
-        deleteDocument(member, id),
+        deleteDocument(member, draftId),
         (error: unknown) => error instanceof Error && error.message === 'forbidden',
       )
-      await pool.query("UPDATE customer_auth.documents SET status='processing' WHERE id=$1", [id])
+      await pool.query("UPDATE customer_auth.documents SET status='processing' WHERE id=$1", [
+        draftId,
+      ])
       await assert.rejects(
-        deleteDocument(owner, id),
+        deleteDocument(owner, draftId),
         (error: unknown) => error instanceof Error && error.message === 'deleteBusy',
       )
-      await pool.query("UPDATE customer_auth.documents SET status='needs_review' WHERE id=$1", [id])
-      assert.equal((await deleteDocument(owner, id)).cleanupPending, false)
-      await assert.rejects(readPrivate(id))
-      await assert.rejects(readPrivate(id, 'preview'))
-      await assert.rejects(readPrivate(exported as string, 'export'))
+      await pool.query("UPDATE customer_auth.documents SET status='needs_review' WHERE id=$1", [
+        draftId,
+      ])
+      assert.equal((await deleteDocument(owner, draftId)).cleanupPending, false)
+      await assert.rejects(readPrivate(draftId))
+      await assert.rejects(readPrivate(draftId, 'preview'))
+      assert.ok((await readPrivate(exported as string, 'export')).length)
       assert.equal(
         (
           await pool.query('SELECT id FROM customer_auth.document_reviews WHERE document_id=$1', [
-            id,
+            draftId,
           ])
         ).rowCount,
         0,
@@ -243,7 +252,7 @@ test(
       assert.equal(
         (
           await pool.query('SELECT id FROM customer_auth.document_exports WHERE document_id=$1', [
-            id,
+            draftId,
           ])
         ).rowCount,
         0,

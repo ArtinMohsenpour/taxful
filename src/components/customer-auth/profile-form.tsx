@@ -74,6 +74,7 @@ export function ProfileForm({
 
 export function ChangePasswordForm() {
   const t = useTranslations('Auth')
+  const security = useTranslations('Security')
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState('')
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -93,7 +94,11 @@ export function ChangePasswordForm() {
         newPassword: String(data.get('newPassword')),
         revokeOtherSessions: true,
       })
-      setMessage(t(result.error ? 'genericError' : 'passwordChanged'))
+      setMessage(
+        result.error?.code === 'SECURITY_VERIFICATION_REQUIRED'
+          ? security('reauthHint')
+          : t(result.error ? 'genericError' : 'passwordChanged'),
+      )
       if (!result.error) form.reset()
     } catch {
       setMessage(t('genericError'))

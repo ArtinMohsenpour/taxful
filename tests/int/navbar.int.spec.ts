@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { getPayload, type Payload } from 'payload'
 import config from '@/payload.config'
@@ -23,13 +24,23 @@ describe('Navbar', () => {
   })
 
   it('persists localized dropdowns and buttons, without committing test data', async () => {
-    const users = await payload.find({ collection: 'users', limit: 1 })
-    expect(users.docs[0]).toBeDefined()
-    const user = { ...users.docs[0], collection: 'users' as const }
     const transactionID = await payload.db.beginTransaction()
     if (!transactionID) throw new Error('A transaction is required for this test')
     const req = { transactionID }
     try {
+      const user = {
+        ...(await payload.create({
+          collection: 'users',
+          req,
+          overrideAccess: true,
+          data: {
+            email: `security-${randomUUID()}@example.invalid`,
+            password: randomUUID(),
+            role: 'super-admin',
+          },
+        })),
+        collection: 'users' as const,
+      }
       const saved = await payload.updateGlobal({
         slug: 'navbar',
         locale: 'de',

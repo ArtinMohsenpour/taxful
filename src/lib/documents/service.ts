@@ -5,6 +5,7 @@ import { detectDocument } from './prepare'
 import { readPrivate, writePrivate, removePrivate, sha256 } from './storage'
 import { lockMembership, canDeleteDocument, type DocumentContext } from './access'
 import { recordSchema, reviewSchema } from './schema'
+import { safeFilename } from '../security/text'
 import { generateXRechnung, validateXRechnung, invoiceRequirements } from './xrechnung'
 import { generateZugferd } from './zugferd'
 import type { PoolClient } from 'pg'
@@ -53,7 +54,7 @@ export async function uploadDocuments(
         bytes,
         mime: await detectDocument(bytes),
         hash: sha256(bytes),
-        name: file.name.replace(/[\x00-\x1f\x7f/\\]/g, '_').slice(0, 180) || 'document',
+        name: safeFilename(file.name),
       }
     }),
   )

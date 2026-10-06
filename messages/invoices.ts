@@ -30,6 +30,18 @@ export const invoiceMessages = {
     inputInvoiceInvalid:
       'This incoming e-invoice failed validation. Check the original and ask the supplier for a corrected invoice before marking it reviewed.',
     inputPdfInvalid: 'The PDF container did not pass PDF/A validation.',
+    pdfTextUnavailable:
+      'The PDF has no readable text for comparison. Compare the visible original with the XML invoice data manually.',
+    pdfNumberMismatch:
+      'The XML invoice number was not found in the PDF text. Resolve this difference before confirming review.',
+    pdfBankMismatch:
+      'The XML bank account was not found in the PDF text. Confirm the bank details with the supplier through a known contact.',
+    pdfVatMismatch:
+      'The supplier VAT ID from the XML was not found in the PDF text. Check the original and supplier identity.',
+    pdfBuyerVatMismatch:
+      'The buyer VAT ID from the XML was not found in the PDF text. Check that the invoice belongs to your company.',
+    pdfTotalMismatch:
+      'The XML gross total was not found in the PDF text. Compare both amounts before confirming review.',
     invalidInvoiceXml:
       'The XML is malformed, unsafe or uses an unsupported encoding. Upload a UTF-8 invoice without DTDs or external entities.',
     ambiguousInvoiceXml:
@@ -112,7 +124,9 @@ export const invoiceMessages = {
       'This is a received invoice. Keep the supplier’s original; this review does not create or validate a new e-invoice.',
     markReviewed: 'Mark as reviewed',
     receivedReviewed: 'Original reviewed',
-    checkOriginal: 'I have checked the original and the extracted information.',
+    checkOriginal:
+      'I have compared the original with the invoice data, including supplier, invoice number, totals and bank details. I have resolved any differences and independently verified unexpected bank-detail changes.',
+    originalReviewRequired: 'Compare the original and invoice data, then confirm your review.',
     unclassified: 'Choose the invoice workflow',
     classifyHint:
       'This older upload has not been assigned. Choose outgoing only if you are authorized to issue it; otherwise keep it as a received document.',
@@ -131,7 +145,8 @@ export const invoiceMessages = {
       'This record changed or the request is no longer available. Refresh before trying again.',
     forbidden: 'You do not have permission for this action.',
     dailyLimit: 'Your daily document allowance has been reached.',
-    monthlyLimit: 'Your company has reached its monthly document allowance. Ask the owner to review the subscription.',
+    monthlyLimit:
+      'Your company has reached its monthly document allowance. Ask the owner to review the subscription.',
     workflowRequired: 'Choose incoming or outgoing before continuing.',
     invoiceLocked: 'An issued invoice cannot be edited.',
     numberLocked: 'The reserved invoice number cannot be changed.',
@@ -168,6 +183,18 @@ export const invoiceMessages = {
     inputInvoiceInvalid:
       'Die E-Rechnung hat die Validierung nicht bestanden. Prüfen Sie das Original und bitten Sie den Lieferanten vor der Freigabe um eine korrigierte Rechnung.',
     inputPdfInvalid: 'Der PDF-Container hat die PDF/A-Validierung nicht bestanden.',
+    pdfTextUnavailable:
+      'Die PDF enthält keinen lesbaren Text für den Vergleich. Vergleichen Sie das sichtbare Original manuell mit den XML-Rechnungsdaten.',
+    pdfNumberMismatch:
+      'Die XML-Rechnungsnummer wurde im PDF-Text nicht gefunden. Klären Sie die Abweichung vor der Prüfbestätigung.',
+    pdfBankMismatch:
+      'Die XML-Bankverbindung wurde im PDF-Text nicht gefunden. Bestätigen Sie die Bankverbindung über einen bekannten Kontakt beim Lieferanten.',
+    pdfVatMismatch:
+      'Die USt-IdNr. des Lieferanten aus der XML wurde im PDF-Text nicht gefunden. Prüfen Sie Original und Lieferantenidentität.',
+    pdfBuyerVatMismatch:
+      'Die USt-IdNr. des Käufers aus der XML wurde im PDF-Text nicht gefunden. Prüfen Sie, ob die Rechnung zu Ihrem Unternehmen gehört.',
+    pdfTotalMismatch:
+      'Der XML-Bruttobetrag wurde im PDF-Text nicht gefunden. Vergleichen Sie beide Beträge vor der Prüfbestätigung.',
     invalidInvoiceXml:
       'Die XML ist fehlerhaft, unsicher oder nicht unterstützend kodiert. Laden Sie eine UTF-8-Rechnung ohne DTDs oder externe Entitäten hoch.',
     ambiguousInvoiceXml:
@@ -252,7 +279,10 @@ export const invoiceMessages = {
       'Dies ist eine empfangene Rechnung. Bewahren Sie das Original des Lieferanten auf. Diese Prüfung erstellt oder validiert keine neue E-Rechnung.',
     markReviewed: 'Als geprüft markieren',
     receivedReviewed: 'Original geprüft',
-    checkOriginal: 'Ich habe das Original und die erkannten Angaben geprüft.',
+    checkOriginal:
+      'Ich habe das Original mit den Rechnungsdaten verglichen, einschließlich Lieferant, Rechnungsnummer, Summen und Bankverbindung. Abweichungen sind geklärt; unerwartete Änderungen der Bankverbindung habe ich unabhängig bestätigt.',
+    originalReviewRequired:
+      'Vergleichen Sie Original und Rechnungsdaten und bestätigen Sie anschließend die Prüfung.',
     unclassified: 'Rechnungsablauf auswählen',
     classifyHint:
       'Dieser ältere Upload ist noch nicht zugeordnet. Wählen Sie Ausgangsrechnung nur, wenn Sie zur Ausstellung berechtigt sind. Andernfalls bewahren Sie ihn als empfangenes Dokument auf.',
@@ -271,7 +301,8 @@ export const invoiceMessages = {
       'Der Eintrag wurde geändert oder die Anfrage ist nicht mehr verfügbar. Laden Sie die Seite neu.',
     forbidden: 'Sie sind für diese Aktion nicht berechtigt.',
     dailyLimit: 'Ihr Tageskontingent ist erreicht.',
-    monthlyLimit: 'Das monatliche Dokumentenkontingent ist erreicht. Bitten Sie den Eigentümer, den Tarif zu prüfen.',
+    monthlyLimit:
+      'Das monatliche Dokumentenkontingent ist erreicht. Bitten Sie den Eigentümer, den Tarif zu prüfen.',
     workflowRequired: 'Wählen Sie zunächst Eingangs- oder Ausgangsrechnung.',
     invoiceLocked: 'Eine ausgestellte Rechnung kann nicht bearbeitet werden.',
     numberLocked: 'Die reservierte Rechnungsnummer kann nicht geändert werden.',

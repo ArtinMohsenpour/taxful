@@ -85,3 +85,11 @@ TAXFUL_BUILD_DIR=.next-mfa pnpm build
 ```
 
 The browser test uses an isolated profile and virtual WebAuthn authenticator. It covers password login, enrollment, passkey login, rejection of a signed assertion without user verification, recovery login, both languages, and dark mobile layout. It does not replace testing on real devices before launch. No deployment or production readiness certification is implied.
+
+## October 2026 security hardening
+
+Apply customer migrations 0026 and 0027 before deployment. Verification/reset emails reserve per-recipient quotas (5/hour, 10/24 hours) using keyed identifiers. Case-insensitive email uniqueness is enforced by PostgreSQL; conflicting legacy accounts require manual review rather than automatic merging. Generic duplicate signup responses mirror new-account display-name derivation and never return an existing user ID.
+
+Customer-auth POST bodies are limited to 64 KiB. New password-reset identifiers are hashed; reset tokens remain single-use and sessions are revoked on reset. Password changes always revoke old sessions, regardless of caller options, and enrolled MFA requires proof within five minutes. Password changes/resets add security events and localized best-effort mail notifications. They do not disable MFA.
+
+Production client-IP attribution requires a known ingress, restricted direct-origin access, an overwritten forwarding header and exact trusted proxy settings. See [the security ledger](security-hardening.md) for configuration, verification and remaining deployment requirements.

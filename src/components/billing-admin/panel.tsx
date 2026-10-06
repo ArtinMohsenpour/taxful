@@ -1,4 +1,5 @@
 'use client'
+import { priceInCents } from '@/lib/billing/money-input'
 import { useEffect, useState, type FormEvent } from 'react'
 import type { adminBillingDetails, adminSnapshot } from '@/lib/billing/admin'
 import { blankCompanyProfile } from '@/lib/documents/company-profile-schema'
@@ -581,6 +582,12 @@ function PlanForm({ plan, save }: { plan: Plan; save: (body: object) => Promise<
       onSubmit={(event) => {
         event.preventDefault()
         const values = new FormData(event.currentTarget)
+        const price = priceInCents(values.get('price'))
+        const priceInput = event.currentTarget.elements.namedItem('price') as HTMLInputElement
+        priceInput.setCustomValidity(
+          price === null ? 'Enter a price from 0 to 10000 with at most two decimal places.' : '',
+        )
+        if (!event.currentTarget.reportValidity() || price === null) return
         void save({
           action: 'plan',
           id: plan.id,
@@ -590,7 +597,7 @@ function PlanForm({ plan, save }: { plan: Plan; save: (body: object) => Promise<
           batch_uploads: Number(values.get('batch_uploads')),
           team_members: Number(values.get('team_members')),
           storage_gb: Number(values.get('storage_gb')),
-          monthly_price_cents: Math.round(Number(values.get('price')) * 100),
+          monthly_price_cents: price,
           published: values.get('published') === 'on',
           reason: values.get('reason'),
         })
@@ -627,6 +634,7 @@ function PlanForm({ plan, save }: { plan: Plan; save: (body: object) => Promise<
           Monthly price (EUR, excl. VAT)
           <input
             name="price"
+            onInput={(event) => event.currentTarget.setCustomValidity('')}
             type="number"
             step="0.01"
             min="0"

@@ -1,6 +1,7 @@
 import { toNextJsHandler } from 'better-auth/next-js'
 import { auth } from '@/lib/customer-auth/auth'
 import { boundedBody } from '@/lib/documents/http'
+import { countsAsPasswordFailure } from '@/lib/customer-auth/proxy-config'
 import {
   clearLoginFailures,
   lockedResponse,
@@ -22,7 +23,8 @@ export async function GET(request: Request) {
   return privateResponse(await handlers.GET(request))
 }
 export async function POST(request: Request) {
-  if (/\/api\/customer-auth\/(two-factor|passkey)\//.test(new URL(request.url).pathname)) {
+  // Bound every auth body before either our JSON parser or Better Auth consumes it.
+  {
     try {
       const bytes = await boundedBody(request, 64 * 1024)
       request = new Request(request.url, {
@@ -53,12 +55,7 @@ export async function POST(request: Request) {
       .clone()
       .json()
       .catch(() => null)
-    if (
-      response.status === 401 ||
-      response.status === 429 ||
-      error?.code === 'INVALID_EMAIL_OR_PASSWORD'
-    )
-      await recordLoginFailure(identity)
+    if (countsAsPasswordFailure(response.status, error?.code)) await recordLoginFailure(identity)
   }
   return privateResponse(response)
 }

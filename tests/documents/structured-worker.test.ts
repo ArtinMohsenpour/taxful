@@ -102,6 +102,7 @@ test(
             updateInvoiceWorkflow(context, id, {
               organizationId: org,
               action: 'received_reviewed',
+              originalChecked: true,
             }),
             { message: 'inputInvoiceInvalid' },
           )
@@ -109,6 +110,7 @@ test(
           await updateInvoiceWorkflow(context, id, {
             organizationId: org,
             action: 'received_reviewed',
+            originalChecked: true,
           })
       }
     } finally {

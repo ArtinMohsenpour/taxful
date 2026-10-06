@@ -232,6 +232,7 @@ export async function updateInvoiceWorkflow(context: DocumentContext, id: string
     .object({
       organizationId: z.string(),
       action: z.enum(['incoming', 'outgoing', 'sent', 'paid', 'received_reviewed']),
+      originalChecked: z.boolean().optional(),
     })
     .strict()
     .safeParse(input)
@@ -266,6 +267,8 @@ export async function updateInvoiceWorkflow(context: DocumentContext, id: string
         )
       }
     } else if (action === 'received_reviewed') {
+      if (parsed.data.originalChecked !== true)
+        throw new DocumentError('originalReviewRequired', 400)
       if (doc.input_validation && !doc.input_validation.valid)
         throw new DocumentError('inputInvoiceInvalid', 409)
       if (
@@ -290,7 +293,15 @@ export async function updateInvoiceWorkflow(context: DocumentContext, id: string
         [id, action],
       )
     }
-    await event(client, context, id, 'invoice_' + action)
+    await event(
+      client,
+      context,
+      id,
+      'invoice_' + action,
+      action === 'received_reviewed'
+        ? { originalChecked: true, sourceSha256: doc.source_sha256 }
+        : undefined,
+    )
     return { ok: true }
   })
 }

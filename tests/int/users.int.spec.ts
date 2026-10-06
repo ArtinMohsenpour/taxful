@@ -13,16 +13,22 @@ afterAll(async () => {
 })
 
 it('enforces manager and self-profile permissions without persisting test accounts', async () => {
-  const { docs } = await payload.find({
-    collection: 'users',
-    where: { role: { equals: 'super-admin' } },
-    limit: 1,
-  })
-  expect(docs[0]).toBeDefined()
-  const manager = { ...docs[0], collection: 'users' as const }
   const transactionID = await payload.db.beginTransaction()
   if (!transactionID) throw new Error('Transaction required')
   try {
+    const manager = {
+      ...(await payload.create({
+        collection: 'users',
+        req: { transactionID },
+        overrideAccess: true,
+        data: {
+          email: `security-${randomUUID()}@example.invalid`,
+          password: randomUUID(),
+          role: 'super-admin',
+        },
+      })),
+      collection: 'users' as const,
+    }
     const editor = {
       ...(await payload.create({
         collection: 'users',
@@ -69,6 +75,7 @@ it('enforces manager and self-profile permissions without persisting test accoun
     await expect(
       payload.create({
         collection: 'users',
+        req: { transactionID },
         user: staffManager,
         overrideAccess: false,
         data: {
@@ -82,6 +89,7 @@ it('enforces manager and self-profile permissions without persisting test accoun
       payload.update({
         collection: 'users',
         id: manager.id,
+        req: { transactionID },
         user: staffManager,
         overrideAccess: false,
         data: { role: 'manager' },
@@ -91,6 +99,7 @@ it('enforces manager and self-profile permissions without persisting test accoun
       payload.delete({
         collection: 'users',
         id: manager.id,
+        req: { transactionID },
         user: staffManager,
         overrideAccess: false,
       }),

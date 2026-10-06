@@ -3,11 +3,21 @@ import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { baselineSecurityHeaders } from './src/lib/security/headers'
 
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
 const nextConfig: NextConfig = {
+  headers: async () => [
+    {
+      source: '/:path*',
+      headers: baselineSecurityHeaders(
+        process.env.NODE_ENV === 'production' &&
+          process.env.BETTER_AUTH_URL?.startsWith('https://') === true,
+      ),
+    },
+  ],
   // Keep verification builds separate from an active development server.
   distDir: process.env.TAXFUL_BUILD_DIR || '.next',
   images: {

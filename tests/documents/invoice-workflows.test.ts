@@ -260,9 +260,24 @@ test(
         [incoming, org, batch, owner, invoiceFixture()],
       )
       await assert.rejects(saveReview(context, incoming, review), { message: 'workflowRequired' })
+      for (const originalChecked of [undefined, false, 'true']) {
+        await assert.rejects(
+          updateInvoiceWorkflow(context, incoming, {
+            organizationId: org,
+            action: 'received_reviewed',
+            originalChecked,
+          }),
+          {
+            message:
+              typeof originalChecked === 'string' ? 'invalidRequest' : 'originalReviewRequired',
+          },
+        )
+        assert.equal((await getDocument(context, incoming)).status, 'needs_review')
+      }
       await updateInvoiceWorkflow(context, incoming, {
         organizationId: org,
         action: 'received_reviewed',
+        originalChecked: true,
       })
       await assert.rejects(exportDocument(context, incoming), { message: 'exportBusy' })
       const list = await documentLibrary(

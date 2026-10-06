@@ -262,10 +262,13 @@ export const documentMessages = {
     required: 'Required value missing',
     date: 'Use a real date in YYYY-MM-DD format',
     amount: 'Use a decimal amount, for example 1234.56',
-    currencyError: 'Use a three-letter currency code',
+    currencyError: 'Use a supported three-letter currency code',
+    countryCode: 'Use a supported country code, for example DE.',
     taxIdError: 'Personal tax ID must contain 11 digits',
     vatIdError: 'Check the VAT ID format',
     totals: 'Net plus tax must equal the gross amount',
+    unsafeText:
+      'This field contains an invisible or unsupported character. Remove it or retype the affected text.',
     lineSum:
       'Line totals differ from the invoice net total. Check discounts, allowances, or missing lines.',
     noTaxIdentifier: 'No sender tax identifier was extracted. Check the source.',
@@ -585,10 +588,13 @@ export const documentMessages = {
     required: 'Pflichtangabe fehlt',
     date: 'Gültiges Datum im Format JJJJ-MM-TT verwenden',
     amount: 'Dezimalbetrag verwenden, zum Beispiel 1234.56',
-    currencyError: 'Dreistelligen Währungscode verwenden',
+    currencyError: 'Unterstützten dreistelligen Währungscode verwenden',
+    countryCode: 'Verwenden Sie einen unterstützten Ländercode, zum Beispiel DE.',
     taxIdError: 'Die persönliche Steuer-ID muss 11 Ziffern enthalten',
     vatIdError: 'Format der Umsatzsteuer-ID prüfen',
     totals: 'Netto plus Steuer muss dem Bruttobetrag entsprechen',
+    unsafeText:
+      'Dieses Feld enthält ein unsichtbares oder nicht unterstütztes Zeichen. Entfernen Sie es oder geben Sie den betroffenen Text neu ein.',
     lineSum:
       'Die Positionssumme weicht vom Nettobetrag ab. Prüfen Sie Rabatte, Zuschläge oder fehlende Positionen.',
     noTaxIdentifier: 'Kein Steuerkennzeichen des Absenders erkannt. Prüfen Sie die Quelle.',

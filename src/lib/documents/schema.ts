@@ -1,11 +1,16 @@
 import { z } from 'zod'
 import Decimal from 'decimal.js'
+import { unsafeTextFields } from '../security/text'
+import invoiceCodes from './invoice-code-lists.json'
 import {
   adjustmentSchema,
   invoiceKindSchema,
   precedingInvoiceSchema,
   taxCategorySchema,
 } from './invoice-types'
+
+export const invoiceCountries = new Set(invoiceCodes.countries)
+const invoiceCurrencies = new Set(invoiceCodes.currencies)
 
 const text = z.string().max(1000)
 const amount = z.string().max(30) // Keep uncertain OCR values editable until approval.
@@ -181,12 +186,23 @@ export const reviewSchema = z
 
 export type ValidationIssue = {
   field: string
-  code: 'required' | 'date' | 'amount' | 'currency' | 'taxId' | 'vatId' | 'totals' | 'lineTotal'
+  code:
+    | 'required'
+    | 'date'
+    | 'amount'
+    | 'currency'
+    | 'taxId'
+    | 'vatId'
+    | 'totals'
+    | 'lineTotal'
+    | 'unsafeText'
+    | 'countryCode'
 }
 const decimalPattern = /^-?\d{1,15}(\.\d{1,6})?$/
 export function validateRecord(data: DocumentRecord): ValidationIssue[] {
   const issues: ValidationIssue[] = []
   const add = (field: string, code: ValidationIssue['code']) => issues.push({ field, code })
+  for (const field of unsafeTextFields(data)) add(field, 'unsafeText')
   if (!data.issuer.name.trim() && !data.issuer.companyName.trim())
     add('issuer.companyName', 'required')
   if (!data.documentDate) add('documentDate', 'required')
@@ -197,6 +213,8 @@ export function validateRecord(data: DocumentRecord): ValidationIssue[] {
   )
     add('documentDate', 'date')
   for (const key of ['issuer', 'recipient'] as const) {
+    if (data[key].country && !invoiceCountries.has(data[key].country))
+      add(key + '.country', 'countryCode')
     if (data[key].taxId && !/^\d{11}$/.test(data[key].taxId)) add(key + '.taxId', 'taxId')
     if (data[key].vatId && !/^[A-Z]{2}[A-Z0-9]{2,14}$/.test(data[key].vatId.replace(/\s/g, '')))
       add(key + '.vatId', 'vatId')
@@ -216,7 +234,7 @@ export function validateRecord(data: DocumentRecord): ValidationIssue[] {
     )
       add('recipient.companyName', 'required')
   }
-  if (amounts.some((field) => data[field]) && !/^[A-Z]{3}$/.test(data.currency))
+  if (amounts.some((field) => data[field]) && !invoiceCurrencies.has(data.currency))
     add('currency', 'currency')
   if (
     amounts.every((field) => decimalPattern.test(data[field])) &&

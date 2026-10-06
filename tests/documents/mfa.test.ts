@@ -121,6 +121,31 @@ test(
         [session.session.id],
       )
       assert.ok(proof.rows[0].securityVerifiedAt)
+      for (const verified of [null, new Date(Date.now() - 6 * 60_000)]) {
+        await pool.query(
+          'UPDATE customer_auth.customer_sessions SET "securityVerifiedAt"=$2 WHERE id=$1',
+          [session.session.id, verified],
+        )
+        const denied = await request(current, '/change-password', {
+          currentPassword: password,
+          newPassword: password + '-changed',
+        })
+        assert.equal(denied.status, 403)
+        assert.equal(denied.body.code, 'SECURITY_VERIFICATION_REQUIRED')
+      }
+      await pool.query(
+        'UPDATE customer_auth.customer_sessions SET "securityVerifiedAt"=now() WHERE id=$1',
+        [session.session.id],
+      )
+      assert.equal(
+        (
+          await request(current, '/change-password', {
+            currentPassword: 'incorrect',
+            newPassword: password + '-changed',
+          })
+        ).status,
+        400,
+      )
       assert.equal(
         (await request(current, '/two-factor/verify-totp', { code })).status,
         401,
