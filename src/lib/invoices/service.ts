@@ -1,3 +1,4 @@
+import { requireDocumentMfa } from '../customer-auth/required-mfa'
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { customerPool } from '../customer-auth/database'
@@ -267,6 +268,7 @@ export async function updateInvoiceWorkflow(context: DocumentContext, id: string
         )
       }
     } else if (action === 'received_reviewed') {
+      await requireDocumentMfa(client, context)
       if (parsed.data.originalChecked !== true)
         throw new DocumentError('originalReviewRequired', 400)
       if (doc.input_validation && !doc.input_validation.valid)

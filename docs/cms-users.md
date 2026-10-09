@@ -15,3 +15,7 @@ The `20260912_191057_super_admin_role` migration was applied to the existing loc
 `20260912_190054_cms_user_profiles` is additive. Its SQL was applied directly to the existing local development database, which still needs migration-history baselining as described in `navbar.md`; do not replay this migration there. Fresh databases should run the full migration sequence.
 
 User versioning remains disabled. Access tests run in rollback-only transactions.
+
+## Required MFA and password screening
+
+All staff roles now require an authenticator or a single-use recovery code after password login. Apply all three 20261007 migrations before rollout and enroll through `/admin/login`. REST, GraphQL, admin and server-side authentication share the gate. Password create/change/reset checks a configured breach source; password changes revoke prior sessions and MFA proofs. Payload reset mail uses the configured SMTP transport and security-change notices use a durable queue. See [security operations](security-operations.md) for setup, recovery boundaries and monitoring.

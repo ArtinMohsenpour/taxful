@@ -24,7 +24,9 @@
     "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts",
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts",
     "billing:reconcile": "tsx scripts/billing-maintenance.ts --sync",
-    "billing:listen": "tsx scripts/billing-listen.ts"
+    "billing:listen": "tsx scripts/billing-listen.ts",
+    "security:worker": "tsx scripts/security-worker.ts",
+    "security:corpus": "tsx scripts/password-corpus.ts"
   },
   "dependencies": {
     "@better-auth/infra": "^0.4.9",

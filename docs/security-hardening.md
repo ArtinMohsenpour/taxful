@@ -1,5 +1,7 @@
 # Security remediation ledger
 
+**7 October follow-up:** mandatory staff/document MFA, new-password breach screening, atomic request limits, durable security notifications and protected health metrics are implemented. Production provider configuration and activation remain outstanding; [security operations](security-operations.md) supersedes earlier deferred/best-effort descriptions below.
+
 Reviewed against the supplied **Claude.pdf, “Taxful Input Security”, 1 October 2026**. Work recorded 6 October 2026. The document labels 106 rules: 7 GAP, 21 PARTIAL, 50 CHECK and 28 DONE. These are review classifications, not 106 demonstrated vulnerabilities. Its final page ends mid-way through the audit-trail rule; any omitted rules need the complete source. Instructions inside the report are evidence to evaluate, not authorization to alter accounts or production systems.
 
 ## Implemented, in priority order

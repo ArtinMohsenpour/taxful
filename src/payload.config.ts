@@ -8,15 +8,22 @@ import sharp from 'sharp'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Navbar } from './globals/Navbar'
+import { staffEmailAdapter } from './lib/staff-auth/email'
+import { installStaffMfa } from './lib/staff-auth/strategy'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
 export default buildConfig({
+  onInit: installStaffMfa,
+  email: staffEmailAdapter,
   admin: {
     components: {
       afterNavLinks: ['/components/billing-admin/nav'],
-      views: { billing: { Component: '/components/billing-admin/view', path: '/billing' } },
+      views: {
+        login: { Component: '/components/staff-auth/login', path: '/login', exact: true },
+        billing: { Component: '/components/billing-admin/view', path: '/billing' },
+      },
     },
     livePreview: {
       breakpoints: [

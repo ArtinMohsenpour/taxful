@@ -1,5 +1,7 @@
 export const invoiceEmailMessages = {
   en: {
+    mfaRequired:
+      'Set up an authenticator in Account security and sign in with your second factor before sending invoices.',
     messageText: 'Your message',
     signatureTitle: 'Your signature',
     signatureHint:
@@ -169,6 +171,8 @@ export const invoiceEmailMessages = {
       'Keep the local email worker running. Acceptance does not mean the recipient read the invoice.',
   },
   de: {
+    mfaRequired:
+      'Richten Sie unter Kontosicherheit einen Authenticator ein und melden Sie sich mit dem zweiten Faktor an, bevor Sie Rechnungen versenden.',
     messageText: 'Ihre Nachricht',
     signatureTitle: 'Ihre Signatur',
     signatureHint:

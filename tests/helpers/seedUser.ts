@@ -1,46 +1,26 @@
+import { randomUUID } from 'node:crypto'
 import { getPayload } from 'payload'
 import config from '../../src/payload.config.js'
-
-export const testUser = {
-  email: 'dev@payloadcms.com',
-  password: 'test',
-}
-
-/**
- * Seeds a test user for e2e admin tests.
- */
+import { staffPool } from '../../src/lib/staff-auth/database'
+import { passwordCorpusFixture } from '../documents/security-fixtures'
+export const testUser = { email: `admin-e2e-${randomUUID()}@example.test`, password: randomUUID() }
+let userId: number | undefined, cleanup: () => Promise<void>
 export async function seedTestUser(): Promise<void> {
+  cleanup = await passwordCorpusFixture()
   const payload = await getPayload({ config })
-
-  // Delete existing test user if any
-  await payload.delete({
-    collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  })
-
-  // Create fresh test user
-  await payload.create({
-    collection: 'users',
-    data: { ...testUser, role: 'content-editor' },
-  })
+  userId = (
+    await payload.create({
+      collection: 'users',
+      overrideAccess: true,
+      data: { ...testUser, role: 'super-admin' },
+    })
+  ).id
 }
-
-/**
- * Cleans up test user after tests
- */
 export async function cleanupTestUser(): Promise<void> {
   const payload = await getPayload({ config })
-
-  await payload.delete({
-    collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  })
+  if (userId) {
+    await staffPool.query('DELETE FROM public.staff_security_events WHERE user_id=$1', [userId])
+    await payload.delete({ collection: 'users', id: userId, overrideAccess: true })
+  }
+  await cleanup?.()
 }

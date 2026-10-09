@@ -1,5 +1,9 @@
 export const customerMessages = {
   en: {
+    passwordBreached:
+      'This password has appeared in a data breach. Please choose a different password.',
+    passwordScreenUnavailable:
+      'Password safety checking is temporarily unavailable. Please try again later.',
     eyebrow: 'Your space for more clarity',
     loginTitle: 'Welcome back.',
     loginIntro: 'Sign in to your Taxful account.',
@@ -154,6 +158,10 @@ export const customerMessages = {
     invitationCancelled: 'Invitation cancelled.',
   },
   de: {
+    passwordBreached:
+      'Dieses Passwort ist aus einem Datenleck bekannt. Bitte wählen Sie ein anderes Passwort.',
+    passwordScreenUnavailable:
+      'Die Passwortprüfung ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.',
     eyebrow: 'Ihr Raum für mehr Klarheit',
     loginTitle: 'Willkommen zurück.',
     loginIntro: 'Melden Sie sich bei Ihrem Taxful-Konto an.',

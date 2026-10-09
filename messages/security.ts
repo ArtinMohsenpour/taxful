@@ -1,5 +1,8 @@
 export const securityMessages = {
   en: {
+    requiredForDocuments:
+      'An authenticator is required before you can approve, export, download exports or send invoices.',
+    setupRequiredMfa: 'Set up account security',
     title: 'Passkeys & two-step verification',
     intro:
       'Protect password sign-ins with an authenticator app. Then add a passkey to sign in with your device’s PIN, fingerprint or face.',
@@ -60,12 +63,16 @@ export const securityMessages = {
     mfaDisabled: 'Authenticator disabled',
     passkeyAdded: 'Passkey registered',
     passkeyRemoved: 'Passkey removed',
+    recoveryCodesChanged: 'Recovery codes changed or used',
     recoveryUsed: 'Recovery code used',
     recoveryRegenerated: 'Recovery codes replaced',
     recoveryHint:
       'Lost your authenticator? Use a saved recovery code or a registered passkey. Resetting your password does not remove two-step verification.',
   },
   de: {
+    requiredForDocuments:
+      'Ein Authenticator ist erforderlich, bevor Sie Rechnungen freigeben, exportieren, Exporte herunterladen oder versenden können.',
+    setupRequiredMfa: 'Kontosicherheit einrichten',
     title: 'Passkeys & Zwei-Schritt-Verifizierung',
     intro:
       'Schützen Sie Passwort-Anmeldungen mit einer Authenticator-App. Fügen Sie anschließend einen Passkey hinzu, um sich per Geräte-PIN, Fingerabdruck oder Gesichtserkennung anzumelden.',
@@ -127,6 +134,7 @@ export const securityMessages = {
     mfaDisabled: 'Authenticator deaktiviert',
     passkeyAdded: 'Passkey registriert',
     passkeyRemoved: 'Passkey entfernt',
+    recoveryCodesChanged: 'Wiederherstellungscodes geändert oder verwendet',
     recoveryUsed: 'Wiederherstellungscode verwendet',
     recoveryRegenerated: 'Wiederherstellungscodes ersetzt',
     recoveryHint:

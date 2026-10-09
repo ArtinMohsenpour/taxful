@@ -34,7 +34,7 @@ export function Preferences() {
         aria-label={t('english')}
         aria-checked={locale === 'en'}
         aria-busy={pending}
-        disabled={pending}
+        disabled={!mounted || pending}
         title={t('switchLanguage')}
         className="preference-toggle w-[5.5rem] grid-cols-2"
         onClick={() =>

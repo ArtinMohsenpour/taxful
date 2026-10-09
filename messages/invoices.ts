@@ -1,6 +1,8 @@
 import { coverageMessages } from './invoice-coverage'
 export const invoiceMessages = {
   en: {
+    mfaRequired:
+      'Set up an authenticator in Account security and sign in with your second factor before approving, exporting or sending documents.',
     ...coverageMessages.en,
     new: 'Create invoice',
     unassigned: 'Unassigned uploads',
@@ -154,6 +156,8 @@ export const invoiceMessages = {
     invalidState: 'This action is not available at the current step.',
   },
   de: {
+    mfaRequired:
+      'Richten Sie unter Kontosicherheit einen Authenticator ein und melden Sie sich mit dem zweiten Faktor an, bevor Sie Dokumente freigeben, exportieren oder versenden.',
     ...coverageMessages.de,
     new: 'Rechnung erstellen',
     unassigned: 'Nicht zugeordnete Uploads',

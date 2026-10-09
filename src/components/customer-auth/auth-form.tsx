@@ -40,6 +40,11 @@ function AuthFormContent({ mode }: { mode: AuthMode }) {
   const options = { headers: { 'x-taxful-locale': locale } }
 
   function report(code?: string, status?: number) {
+    if (code === 'PASSWORD_BREACHED' || code === 'PASSWORD_SCREENING_UNAVAILABLE') {
+      setError(t(code === 'PASSWORD_BREACHED' ? 'passwordBreached' : 'passwordScreenUnavailable'))
+      return
+    }
+
     setError(
       status === 429
         ? t('rateLimited')

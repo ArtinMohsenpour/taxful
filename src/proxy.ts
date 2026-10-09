@@ -1,10 +1,33 @@
 import createMiddleware from 'next-intl/middleware'
 import { routing } from './i18n/routing'
 import { NextResponse, NextRequest } from 'next/server'
+import { enforceSecurityRate } from './lib/security/rate-limit'
+import { DocumentError } from './lib/documents/config'
 import { pageSecurityPolicy } from './lib/security/headers'
 
 const localize = createMiddleware(routing)
-export default function proxy(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname
+  if (path.startsWith('/api/')) {
+    // Signed provider webhooks and authenticated monitoring must stay available
+    // when a shared NAT client exceeds its interactive request budget.
+    if (!['/api/billing/webhook', '/api/security/health'].includes(path)) {
+      try {
+        await enforceSecurityRate(request, 'api', 600, 60)
+        if (/^\/api\/users\/(login|forgot-password|reset-password|first-register)\/?$/.test(path))
+          await enforceSecurityRate(request, 'staff-auth', 10, 60)
+        if (path === '/api/graphql') await enforceSecurityRate(request, 'staff-graphql', 30, 60)
+      } catch (error) {
+        const status = error instanceof DocumentError ? error.status : 503
+        return NextResponse.json(
+          { error: status === 429 ? 'rateLimited' : 'securityUnavailable' },
+          { status, headers: { 'Cache-Control': 'private, no-store', 'Retry-After': '60' } },
+        )
+      }
+    }
+    return NextResponse.next()
+  }
+
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
   // Only the public home preview is embedded by Payload; private pages stay unframeable.
   const preview =
@@ -47,5 +70,5 @@ export default function proxy(request: NextRequest) {
 
 export const config = {
   // Admin gets CSP without localization; APIs retain their own response policies.
-  matcher: ['/((?!api(?:/|$)|my-route(?:/|$)|_next|_vercel|.*\\..*).*)'],
+  matcher: ['/api/:path*', '/((?!api(?:/|$)|my-route(?:/|$)|_next|_vercel|.*\\..*).*)'],
 }

@@ -1,3 +1,4 @@
+import { requireSafePassword } from '../security/password-screening'
 import { betterAuth } from 'better-auth'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
 import { organization, twoFactor } from 'better-auth/plugins'
@@ -5,7 +6,7 @@ import { passkey } from '@better-auth/passkey'
 import { ownerAc, adminAc, memberAc } from 'better-auth/plugins/organization/access'
 import { after } from 'next/server'
 import { customerPool } from './database'
-import { emailLocale, sendCustomerEmail, notifyPasswordSecurity } from './email'
+import { emailLocale, sendCustomerEmail } from './email'
 import { customerReturnPath } from './navigation'
 import { trackSessionActivity } from './session-activity'
 import { beforeMfa, afterMfa, requireUserVerification } from './mfa-security'
@@ -99,6 +100,9 @@ export const auth = betterAuth({
       // Enforce this on direct API requests too; a client cannot retain stolen sessions.
       if (ctx.path === '/change-password' && ctx.body) ctx.body.revokeOtherSessions = true
       await beforeMfa(ctx)
+      if (ctx.path === '/sign-up/email') await requireSafePassword(ctx.body?.password)
+      if (['/reset-password', '/change-password', '/set-password'].includes(ctx.path || ''))
+        await requireSafePassword(ctx.body?.newPassword || ctx.body?.password)
     }),
     after: afterMfa,
   },
@@ -126,7 +130,6 @@ export const auth = betterAuth({
         "DELETE FROM customer_auth.customer_verifications WHERE value=$1 AND (identifier LIKE '2fa-%' OR identifier LIKE 'trust-device-%')",
         [user.id],
       )
-      await notifyPasswordSecurity(user.id, 'passwordReset')
     },
     resetPasswordTokenExpiresIn: 60 * 30,
     sendResetPassword: async ({ user, url }, request) => {

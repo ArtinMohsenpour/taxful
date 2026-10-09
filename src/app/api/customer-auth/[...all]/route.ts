@@ -1,3 +1,5 @@
+import { enforceSecurityRate } from '@/lib/security/rate-limit'
+import { DocumentError } from '@/lib/documents/config'
 import { toNextJsHandler } from 'better-auth/next-js'
 import { auth } from '@/lib/customer-auth/auth'
 import { boundedBody } from '@/lib/documents/http'
@@ -23,6 +25,27 @@ export async function GET(request: Request) {
   return privateResponse(await handlers.GET(request))
 }
 export async function POST(request: Request) {
+  try {
+    const path = new URL(request.url).pathname.replace(/\/+$/, '')
+    const sensitive = [
+      '/sign-in/email',
+      '/sign-up/email',
+      '/request-password-reset',
+      '/reset-password',
+    ].find((value) => path.endsWith(value))
+    await enforceSecurityRate(request, sensitive || 'customer-auth', sensitive ? 10 : 120, 60)
+  } catch (error) {
+    const status = error instanceof DocumentError ? error.status : 503
+    return privateResponse(
+      Response.json(
+        {
+          code: status === 429 ? 'RATE_LIMITED' : 'SECURITY_UNAVAILABLE',
+          message: 'Please try again later.',
+        },
+        { status, headers: { 'Retry-After': '60' } },
+      ),
+    )
+  }
   // Bound every auth body before either our JSON parser or Better Auth consumes it.
   {
     try {
@@ -38,7 +61,9 @@ export async function POST(request: Request) {
       )
     }
   }
-  const isPasswordLogin = new URL(request.url).pathname.endsWith('/sign-in/email')
+  const isPasswordLogin = new URL(request.url).pathname
+    .replace(/\/+$/, '')
+    .endsWith('/sign-in/email')
   if (!isPasswordLogin) return privateResponse(await handlers.POST(request))
   const input = await request
     .clone()

@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { NavbarItems } from './navbar-items'
 import { Link } from '@/i18n/navigation'
 import { Preferences } from './preferences'
 import Image from 'next/image'
 import type { Navbar } from '@/payload-types'
 import { CustomerAccountLink } from './customer-auth/account-link'
+
+const subscribe = () => () => {}
 
 export type NavbarLabels = Record<
   'home' | 'skip' | 'label' | 'login' | 'loginSoon' | 'menu' | 'closeMenu',
@@ -21,6 +23,11 @@ export function NavbarView({
   labels: NavbarLabels
   initialAuthenticated?: boolean
 }) {
+  const mounted = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  )
   const [open, setOpen] = useState(false)
   const header = useRef<HTMLElement>(null)
   const toggle = useRef<HTMLButtonElement>(null)
@@ -90,6 +97,7 @@ export function NavbarView({
           aria-label={open ? labels.closeMenu : labels.menu}
           aria-expanded={open}
           aria-controls="navbar-panel"
+          disabled={!mounted}
           onClick={() => setOpen(!open)}
           className="relative flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-accent/50 text-brand-ink transition-colors hover:bg-accent lg:hidden"
         >

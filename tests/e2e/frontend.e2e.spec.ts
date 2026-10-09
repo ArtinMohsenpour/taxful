@@ -28,6 +28,7 @@ test('defaults to German and switches language while preserving query and hash',
   await expect(page.locator('html')).toHaveAttribute('lang', 'de')
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Willkommen bei Taxful.')
   const language = page.getByRole('switch', { name: 'Englische Sprache' })
+  await expect(language).toBeEnabled()
   await language.focus()
   await page.keyboard.press('Space')
   await expect(page).toHaveURL(`${origin}/en?source=test#intro`)
@@ -91,7 +92,10 @@ test('fits a mobile viewport', async ({ page }) => {
   const menu = page.getByRole('button', { name: 'Menü öffnen' })
   await expect(menu).toHaveAttribute('aria-expanded', 'false')
   await menu.click()
-  await expect(page.getByRole('button', { name: 'Anmelden' })).toBeDisabled()
+  await expect(page.getByRole('link', { name: 'Anmelden', exact: true })).toHaveAttribute(
+    'href',
+    '/de/login',
+  )
   await page.keyboard.press('Escape')
   await expect(menu).toBeFocused()
   await expect(menu).toHaveAttribute('aria-expanded', 'false')

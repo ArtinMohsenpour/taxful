@@ -1,6 +1,5 @@
 import nodemailer from 'nodemailer'
 import { reserveCustomerEmail } from './email-limits'
-import { customerPool } from './database'
 
 export function emailLocale(request?: Request) {
   return request?.headers.get('x-taxful-locale') === 'en' ? 'en' : 'de'
@@ -81,18 +80,10 @@ const escapeHTML = (value: string) =>
     (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!,
   )
 
-export async function sendCustomerEmail(
-  to: string,
-  url: string,
-  kind: 'verify' | 'reset' | 'invite' | 'security' | 'passwordChanged' | 'passwordReset',
-  locale: 'de' | 'en',
-) {
+export function securityMailTransport() {
   const host = process.env.CUSTOMER_SMTP_HOST
-  const from = process.env.CUSTOMER_EMAIL_FROM
-  if (!host || !from) throw new Error('Customer email delivery is not configured')
-  // Return the same outward result for suppressed sends; never reveal account existence.
-  if ((kind === 'verify' || kind === 'reset') && !(await reserveCustomerEmail(to, kind))) return
-  const transport = nodemailer.createTransport({
+  if (!host) throw new Error('Security email delivery is not configured')
+  return nodemailer.createTransport({
     host,
     port: Number(process.env.CUSTOMER_SMTP_PORT || 587),
     secure: process.env.CUSTOMER_SMTP_SECURE === 'true',
@@ -103,6 +94,19 @@ export async function sendCustomerEmail(
     connectionTimeout: 10000,
     socketTimeout: 15000,
   })
+}
+
+export async function sendCustomerEmail(
+  to: string,
+  url: string,
+  kind: 'verify' | 'reset' | 'invite' | 'security' | 'passwordChanged' | 'passwordReset',
+  locale: 'de' | 'en',
+  messageId?: string,
+) {
+  const from = process.env.CUSTOMER_EMAIL_FROM
+  if (!from) throw new Error('Security email sender is not configured')
+  if ((kind === 'verify' || kind === 'reset') && !(await reserveCustomerEmail(to, kind))) return
+  const transport = securityMailTransport()
   const [subject, intro, action] = copy[locale][kind]
   const footer = ['security', 'passwordChanged', 'passwordReset'].includes(kind)
     ? ''
@@ -110,36 +114,9 @@ export async function sendCustomerEmail(
   await transport.sendMail({
     from,
     to,
+    messageId,
     subject: `${subject} · Taxful`,
     text: `${intro}\n\n${url}\n\n${footer}`,
     html: `<html lang="${locale}"><body><h1>Taxful</h1><p>${intro}</p><p><a href="${escapeHTML(url)}">${action}</a></p><p>${footer}</p></body></html>`,
   })
-}
-
-export async function notifyPasswordSecurity(
-  userId: string,
-  event: 'passwordChanged' | 'passwordReset',
-) {
-  // Notification outages must never skip session revocation or report a successful
-  // password change as failed. Neither the message nor audit contains credentials.
-  try {
-    await customerPool.query(
-      'INSERT INTO customer_auth.security_events(user_id,event) VALUES($1,$2)',
-      [userId, event],
-    )
-    const result = await customerPool.query<{ email: string; locale: string }>(
-      'SELECT email,locale FROM customer_auth.customer_users WHERE id=$1',
-      [userId],
-    )
-    if (!result.rows[0]) return
-    const locale = result.rows[0].locale === 'en' ? 'en' : 'de'
-    await sendCustomerEmail(
-      result.rows[0].email,
-      new URL(`/${locale}/forgot-password`, process.env.BETTER_AUTH_URL).href,
-      event,
-      locale,
-    )
-  } catch {
-    console.error('Password security notification failed; check audit and SMTP health.')
-  }
 }

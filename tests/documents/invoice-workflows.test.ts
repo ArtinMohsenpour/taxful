@@ -1,3 +1,4 @@
+import { verifiedCustomerSession } from './security-fixtures'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -50,13 +51,15 @@ test(
       other = randomUUID(),
       owner = randomUUID(),
       member = randomUUID()
-    const context = { organizationId: org, userId: owner, role: 'owner' }
+    const context = { organizationId: org, userId: owner, role: 'owner', sessionId: '' }
     try {
       for (const id of [owner, member])
         await pool.query(
           'INSERT INTO customer_auth.customer_users(id,name,email,"emailVerified") VALUES($1,$2,$3,true)',
           [id, 'Synthetic', id + '@example.test'],
         )
+      context.sessionId = await verifiedCustomerSession(pool, owner)
+      const memberSession = await verifiedCustomerSession(pool, member)
       for (const id of [org, other])
         await pool.query(
           'INSERT INTO customer_auth.organizations(id,name,slug,"createdAt") VALUES($1,$2,$1,now())',
@@ -83,9 +86,16 @@ test(
         revision: 0,
         data: { ...blankCompanyProfile, companyName: 'Synthetic Customer' },
       }
-      await assert.rejects(saveDirectory({ ...context, userId: member }, 'customers', customer), {
-        message: 'forbidden',
-      })
+      await assert.rejects(
+        saveDirectory(
+          { ...context, userId: member, sessionId: memberSession },
+          'customers',
+          customer,
+        ),
+        {
+          message: 'forbidden',
+        },
+      )
       const saved = await saveDirectory(context, 'customers', customer)
       await assert.rejects(
         saveDirectory(context, 'customers', { ...customer, id: saved.id, revision: 0 }),
@@ -161,9 +171,12 @@ test(
         approve: true,
         confirmations: { identity: true, dates: true, amounts: true, completeness: true },
       }
-      await assert.rejects(saveReview({ ...context, userId: member }, first.id, review), {
-        message: 'forbidden',
-      })
+      await assert.rejects(
+        saveReview({ ...context, userId: member, sessionId: memberSession }, first.id, review),
+        {
+          message: 'forbidden',
+        },
+      )
       await assert.rejects(
         saveReview(context, first.id, {
           ...review,
@@ -188,7 +201,7 @@ test(
         [org, member, 'reviewer'],
       )
       await assert.rejects(
-        saveReview({ ...context, userId: member }, first.id, {
+        saveReview({ ...context, userId: member, sessionId: memberSession }, first.id, {
           ...review,
           revision: 1,
           saveCustomer: true,
@@ -311,7 +324,7 @@ test(
       )
       await assert.rejects(
         createInvoiceDraft(
-          { ...context, userId: member },
+          { ...context, userId: member, sessionId: memberSession },
           { organizationId: org, requestKey: randomUUID() },
         ),
         { message: 'forbidden' },

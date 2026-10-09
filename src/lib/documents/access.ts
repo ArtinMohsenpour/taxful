@@ -1,9 +1,15 @@
+import { requireDocumentMfa } from '../customer-auth/required-mfa'
 import { auth } from '../customer-auth/auth'
 import { customerPool } from '../customer-auth/database'
 import { DocumentError } from './config'
 import type { PoolClient } from 'pg'
 import { hasPermission } from '../customer-auth/permissions'
-export type DocumentContext = { userId: string; organizationId: string; role: string }
+export type DocumentContext = {
+  userId: string
+  organizationId: string
+  role: string
+  sessionId?: string
+}
 export const canApprove = (role: string) => hasPermission(role, 'approve')
 export const canDeleteDocument = (context: DocumentContext, uploadedBy: string | null) =>
   hasPermission(context.role, 'files') &&
@@ -24,6 +30,7 @@ export async function documentContext(headers: Headers): Promise<DocumentContext
     throw new DocumentError('companyRequired', 403)
   return {
     userId: session.user.id,
+    sessionId: session.session.id,
     organizationId: membership.organizationId,
     role: membership.role,
   }
@@ -43,6 +50,7 @@ export async function lockMembership(
     (approve && !canApprove(result.rows[0].role))
   )
     throw new DocumentError('forbidden', 403)
+  if (approve) await requireDocumentMfa(client, context)
   return result.rows[0].role as string
 }
 export function checkOrigin(request: Request) {

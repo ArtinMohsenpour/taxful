@@ -1,5 +1,7 @@
 export const documentMessages = {
   en: {
+    mfaRequired:
+      'Set up an authenticator in Account security and sign in with your second factor before approving, exporting or sending documents.',
     calculatedMark: '(Calculated)',
     unitHelp:
       'For a flat-fee service, domain or subscription item, choose Service / unit (C62). Use Hour for hourly billing, or Month only when the quantity counts months. This choice does not change the price.',
@@ -316,6 +318,8 @@ export const documentMessages = {
     validatorUnavailable: 'The official invoice validator is unavailable. No export was released.',
   },
   de: {
+    mfaRequired:
+      'Richten Sie unter Kontosicherheit einen Authenticator ein und melden Sie sich mit dem zweiten Faktor an, bevor Sie Dokumente freigeben, exportieren oder versenden.',
     calculatedMark: '(Berechnet)',
     unitHelp:
       'Für eine pauschale Leistung, Domain oder Abo-Position wählen Sie Leistung / Einheit (C62). Stunde gilt für Stundenabrechnung; Monat nur, wenn die Menge Monate zählt. Die Einheit ändert den Preis nicht.',

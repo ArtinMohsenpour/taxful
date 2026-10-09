@@ -1,3 +1,4 @@
+import { requireDocumentMfa } from '../customer-auth/required-mfa'
 import { randomUUID } from 'node:crypto'
 import { hasPermission } from '../customer-auth/permissions'
 import { type DocumentContext } from '../documents/access'
@@ -104,6 +105,7 @@ export async function queueInvoiceEmail(context: DocumentContext, input: unknown
     fingerprint = sha256(JSON.stringify(value))
   return invoiceTransaction(context, async (client, role) => {
     if (!hasPermission(role, 'approve')) throw new DocumentError('forbidden', 403)
+    await requireDocumentMfa(client, context)
     await client.query("SELECT pg_advisory_xact_lock(hashtext('invoice-email:'||$1))", [
       context.organizationId,
     ])

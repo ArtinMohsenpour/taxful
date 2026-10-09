@@ -1,3 +1,4 @@
+import { passwordCorpusFixture } from './security-fixtures'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -15,6 +16,7 @@ test(
       ['localhost', '127.0.0.1'].includes(process.env.CUSTOMER_SMTP_HOST || ''),
       'Use local Mailpit only',
     )
+    const cleanupCorpus = await passwordCorpusFixture()
     const { customerPool: pool } = await import('../../src/lib/customer-auth/database')
     const { auth } = await import('../../src/lib/customer-auth/auth')
     const user = randomUUID()
@@ -146,24 +148,21 @@ test(
       )
       assert.deepEqual(
         events.rows.map((row) => row.event),
-        ['passwordChanged', 'passwordReset'],
+        ['passwordChanged', 'passwordChanged'],
       )
-      const mail = await fetch(
-        'http://127.0.0.1:8026/api/v1/search?query=' + encodeURIComponent('to:' + email),
+      const queued = await pool.query(
+        'SELECT kind,status FROM customer_auth.security_notifications WHERE user_id=$1',
+        [user],
       )
-      assert.equal(mail.ok, true)
-      const messages = (await mail.json()) as { messages: { ID: string; Subject: string }[] }
-      assert.equal(messages.messages.length, 2)
-      assert.ok(messages.messages.every((message) => message.Subject.includes('Passwort')))
-      await fetch('http://127.0.0.1:8026/api/v1/messages', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ IDs: messages.messages.map((message) => message.ID) }),
-      })
+      assert.equal(queued.rowCount, 2)
+      assert.ok(
+        queued.rows.every((row) => row.kind === 'passwordChanged' && row.status === 'pending'),
+      )
     } finally {
       await pool.query('DELETE FROM customer_auth.customer_verifications WHERE value=$1', [user])
       await pool.query('DELETE FROM customer_auth.customer_users WHERE id=$1', [user])
       await pool.end()
+      await cleanupCorpus()
     }
   },
 )

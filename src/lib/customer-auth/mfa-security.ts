@@ -1,7 +1,6 @@
 import { createHmac } from 'node:crypto'
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { customerPool } from './database'
-import { sendCustomerEmail, notifyPasswordSecurity } from './email'
 
 export const securityFreshSeconds = 5 * 60
 const management = new Set([
@@ -197,39 +196,4 @@ export const afterMfa = createAuthMiddleware(async (ctx) => {
       "INSERT INTO customer_auth.security_events(user_id,event) VALUES($1,'recoveryRegenerated')",
       [ctx.context.session.user.id],
     )
-  const session = ctx.context.newSession || ctx.context.session
-  if (path === '/change-password' && session)
-    await notifyPasswordSecurity(session.user.id, 'passwordChanged')
-  const activated =
-    path === '/two-factor/verify-totp' &&
-    ctx.context.newSession &&
-    ctx.context.session?.user.twoFactorEnabled === false
-  if (
-    session &&
-    (activated ||
-      [
-        '/two-factor/disable',
-        '/two-factor/generate-backup-codes',
-        '/two-factor/verify-backup-code',
-        '/passkey/verify-registration',
-        '/passkey/delete-passkey',
-      ].includes(path))
-  ) {
-    const user = await customerPool.query<{ email: string; locale: string }>(
-      'SELECT email,locale FROM customer_auth.customer_users WHERE id=$1',
-      [session.user.id],
-    )
-    if (user.rows[0]) {
-      const locale = user.rows[0].locale === 'en' ? 'en' : 'de'
-      // Delivery failure must never roll back or misreport a completed security operation.
-      await sendCustomerEmail(
-        user.rows[0].email,
-        new URL(`/${locale}/portal/security`, process.env.BETTER_AUTH_URL).href,
-        'security',
-        locale,
-      ).catch(() => {
-        console.error('Security notification delivery failed.')
-      })
-    }
-  }
 })

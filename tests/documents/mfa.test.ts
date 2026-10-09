@@ -1,3 +1,4 @@
+import { passwordCorpusFixture } from './security-fixtures'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -13,6 +14,7 @@ test(
       ['localhost', '127.0.0.1'].includes(process.env.CUSTOMER_SMTP_HOST || ''),
       'Use local Mailpit only',
     )
+    const cleanupCorpus = await passwordCorpusFixture()
     const { customerPool: pool } = await import('../../src/lib/customer-auth/database')
     const { auth } = await import('../../src/lib/customer-auth/auth')
     const { requireUserVerification } = await import('../../src/lib/customer-auth/mfa-security')
@@ -313,6 +315,7 @@ test(
       ])
       await pool.query('DELETE FROM customer_auth.customer_users WHERE id=ANY($1)', [users])
       await pool.end()
+      await cleanupCorpus()
     }
   },
 )

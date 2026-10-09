@@ -1,3 +1,4 @@
+import { requireDocumentMfa } from '../customer-auth/required-mfa'
 import { randomUUID } from 'node:crypto'
 import { customerPool } from '../customer-auth/database'
 import { documentLimits, DocumentError } from './config'
@@ -458,6 +459,7 @@ export async function downloadDocument(
   if ((doc.source_kind !== 'manual' && !doc.scanned_at) || doc.status === 'rejected')
     throw new DocumentError('invalidState', 409)
   if (kind === 'export' || kind === 'zugferd') {
+    await requireDocumentMfa(customerPool, context)
     if (doc.status !== 'approved') throw new DocumentError('approvalRequired', 409)
     const result = await customerPool.query(
       'SELECT id,sha256 FROM customer_auth.document_exports WHERE document_id=$1 AND revision=$2 AND format=$3',

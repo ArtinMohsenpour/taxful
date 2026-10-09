@@ -1,3 +1,4 @@
+import { verifiedCustomerSession } from './security-fixtures'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -20,12 +21,13 @@ test(
       user = randomUUID(),
       batch = randomUUID(),
       ids: string[] = []
-    const context = { organizationId: org, userId: user, role: 'owner' }
+    const context = { organizationId: org, userId: user, role: 'owner', sessionId: '' }
     try {
       await pool.query(
         'INSERT INTO customer_auth.customer_users(id,name,email,"emailVerified") VALUES($1,$2,$3,true)',
         [user, 'Synthetic Import', user + '@example.test'],
       )
+      context.sessionId = await verifiedCustomerSession(pool, user)
       await pool.query(
         'INSERT INTO customer_auth.organizations(id,name,slug,"createdAt") VALUES($1,$2,$1,now())',
         [org, 'Synthetic Import'],

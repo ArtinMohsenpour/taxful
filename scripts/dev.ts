@@ -66,6 +66,7 @@ for (const args of [
   ['node_modules/next/dist/bin/next', 'dev', ...process.argv.slice(2)],
   ['--import', 'tsx', 'scripts/document-worker.ts'],
   ['--import', 'tsx', 'scripts/invoice-email-worker.ts'],
+  ['--import', 'tsx', 'scripts/security-worker.ts'],
 ]) {
   if (stopping) break
   const child = spawn(process.execPath, args, {

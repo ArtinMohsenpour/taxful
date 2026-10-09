@@ -27,6 +27,7 @@ export default async function SecurityPage() {
       | 'mfaDisabled'
       | 'passkeyAdded'
       | 'passkeyRemoved'
+      | 'recoveryCodesChanged'
       | 'recoveryUsed'
       | 'recoveryRegenerated'
     created_at: Date

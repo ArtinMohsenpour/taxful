@@ -95,9 +95,13 @@ export function ChangePasswordForm() {
         revokeOtherSessions: true,
       })
       setMessage(
-        result.error?.code === 'SECURITY_VERIFICATION_REQUIRED'
-          ? security('reauthHint')
-          : t(result.error ? 'genericError' : 'passwordChanged'),
+        result.error?.code === 'PASSWORD_BREACHED'
+          ? t('passwordBreached')
+          : result.error?.code === 'PASSWORD_SCREENING_UNAVAILABLE'
+            ? t('passwordScreenUnavailable')
+            : result.error?.code === 'SECURITY_VERIFICATION_REQUIRED'
+              ? security('reauthHint')
+              : t(result.error ? 'genericError' : 'passwordChanged'),
       )
       if (!result.error) form.reset()
     } catch {

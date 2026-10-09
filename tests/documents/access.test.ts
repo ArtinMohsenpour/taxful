@@ -1,3 +1,4 @@
+import { verifiedCustomerSession } from './security-fixtures'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -31,7 +32,7 @@ test(
       memberId = randomUUID(),
       organizationId = randomUUID(),
       otherOrg = randomUUID()
-    const owner = { userId, organizationId, role: 'owner' }
+    const owner = { userId, organizationId, role: 'owner', sessionId: '' }
     const member = { userId: memberId, organizationId, role: 'owner' } // forged/stale UI role must not grant approval
     const outsider = { userId, organizationId: otherOrg, role: 'owner' }
     const cleanupDocs: string[] = [],
@@ -42,6 +43,7 @@ test(
           'INSERT INTO customer_auth.customer_users(id,name,email,"emailVerified") VALUES($1,$2,$3,true)',
           [id, 'Synthetic Test', id + '@example.test'],
         )
+      owner.sessionId = await verifiedCustomerSession(pool, userId)
       for (const id of [organizationId, otherOrg])
         await pool.query(
           'INSERT INTO customer_auth.organizations(id,name,slug,"createdAt") VALUES($1,$2,$1,now())',

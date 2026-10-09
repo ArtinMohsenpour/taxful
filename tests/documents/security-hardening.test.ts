@@ -69,7 +69,7 @@ test('international names, combining letters, joiners, supplementary Unicode and
   assert.equal(safeDocumentText(safeFilename('a'.repeat(179) + '😀.pdf')), true)
 })
 
-test('fresh nonces replace forged headers, survive locale routing, and keep private pages unframeable', () => {
+test('fresh nonces replace forged headers, survive locale routing, and keep private pages unframeable', async () => {
   const request = (path: string) =>
     new NextRequest('http://localhost:3000' + path, {
       headers: { 'x-nonce': 'attacker', 'content-security-policy': "script-src 'unsafe-inline'" },
@@ -81,7 +81,7 @@ test('fresh nonces replace forged headers, survive locale routing, and keep priv
     '/en/verify-email?token=synthetic',
     '/admin/login',
   ]) {
-    const response = proxy(request(path))
+    const response = await proxy(request(path))
     const csp = response.headers.get('content-security-policy')!
     assert.match(csp, /frame-ancestors 'none'/)
     assert.doesNotMatch(csp, /attacker|script-src 'unsafe-inline'/)
@@ -91,13 +91,13 @@ test('fresh nonces replace forged headers, survive locale routing, and keep priv
     const nonce = response.headers.get('x-middleware-request-x-nonce')
     assert.ok(nonce)
     assert.ok(csp.includes(`'nonce-${nonce}'`))
-    assert.notEqual(proxy(request(path)).headers.get('x-middleware-request-x-nonce'), nonce)
+    assert.notEqual((await proxy(request(path))).headers.get('x-middleware-request-x-nonce'), nonce)
   }
   assert.match(
-    proxy(request('/de?preview=true')).headers.get('content-security-policy')!,
+    (await proxy(request('/de?preview=true'))).headers.get('content-security-policy')!,
     /frame-ancestors 'self'/,
   )
-  const denied = proxy(request('/de/portal/billing?preview=true'))
+  const denied = await proxy(request('/de/portal/billing?preview=true'))
   assert.equal(denied.status, 307)
   assert.equal(denied.headers.get('x-frame-options'), 'DENY')
   assert.match(denied.headers.get('content-security-policy')!, /frame-ancestors 'none'/)

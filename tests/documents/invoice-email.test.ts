@@ -1,3 +1,4 @@
+import { verifiedCustomerSession } from './security-fixtures'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -143,7 +144,7 @@ test(
       owner = randomUUID(),
       member = randomUUID(),
       session = randomUUID()
-    const context = { userId: owner, organizationId: org, role: 'owner' }
+    const context = { userId: owner, organizationId: org, role: 'owner', sessionId: session }
     const documents: string[] = [],
       exports: string[] = [],
       mailIds: string[] = []
@@ -205,9 +206,10 @@ test(
           'INSERT INTO customer_auth.organization_memberships(id,"organizationId","userId",role,"createdAt") VALUES($1,$2,$3,$4,now())',
           [randomUUID(), org, user, role],
         )
+      await verifiedCustomerSession(pool, owner, session)
       await pool.query(
-        'INSERT INTO customer_auth.customer_sessions(id,token,"userId","expiresAt","updatedAt") VALUES($1,$2,$3,now()+interval \'1 day\',now())',
-        [session, randomUUID(), owner],
+        'UPDATE customer_auth.customer_sessions SET "securityVerifiedAt"=NULL WHERE id=$1',
+        [session],
       )
       const settings = {
         organizationId: org,
@@ -228,9 +230,10 @@ test(
       await assert.rejects(saveEmailSettings(context, settings, session), {
         message: 'emailFreshRequired',
       })
-      await pool.query('UPDATE customer_auth.customer_sessions SET "createdAt"=now() WHERE id=$1', [
-        session,
-      ])
+      await pool.query(
+        'UPDATE customer_auth.customer_sessions SET "createdAt"=now(),"securityVerifiedAt"=now() WHERE id=$1',
+        [session],
+      )
       assert.equal((await saveEmailSettings(context, settings, session)).revision, 1)
       const content = {
         subject: 'Invoice {{invoiceNumber}}',
