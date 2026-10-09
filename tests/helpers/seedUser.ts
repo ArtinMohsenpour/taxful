@@ -19,6 +19,14 @@ export async function seedTestUser(): Promise<void> {
 export async function cleanupTestUser(): Promise<void> {
   const payload = await getPayload({ config })
   if (userId) {
+    // Release only this fixture user's editor locks before removing its identity.
+    await payload.delete({
+      collection: 'payload-locked-documents',
+      overrideAccess: true,
+      where: {
+        and: [{ 'user.relationTo': { equals: 'users' } }, { 'user.value': { equals: userId } }],
+      },
+    })
     await staffPool.query('DELETE FROM public.staff_security_events WHERE user_id=$1', [userId])
     await payload.delete({ collection: 'users', id: userId, overrideAccess: true })
   }

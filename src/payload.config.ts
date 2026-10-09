@@ -8,6 +8,7 @@ import sharp from 'sharp'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Navbar } from './globals/Navbar'
+import { Home } from './globals/Home'
 import { staffEmailAdapter } from './lib/staff-auth/email'
 import { installStaffMfa } from './lib/staff-auth/strategy'
 
@@ -38,7 +39,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Media],
-  globals: [Navbar],
+  globals: [Navbar, Home],
   localization: {
     locales: ['de', 'en'],
     defaultLocale: 'de',

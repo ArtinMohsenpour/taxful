@@ -4,9 +4,32 @@
     "description": "Your digital home for tax documents."
   },
   "Home": {
-    "title": "Welcome to Taxful.",
-    "description": "Our website is taking shape. Soon you will find more about us and our services here.",
-    "eyebrow": "A little more clarity."
+    "title": "Your invoices.",
+    "titleAccent": "One clear workflow.",
+    "description": "Import documents, review the details and create validated e-invoices. From your accounting software to the finished file – all in one place.",
+    "eyebrow": "A little more clarity.",
+    "stepsLabel": "Your invoice workflow",
+    "steps": {
+      "import": "Import",
+      "review": "Review",
+      "validate": "Validate",
+      "export": "Export"
+    },
+    "flow": {
+      "title": "Your path to an e-invoice",
+      "description": "Documents from your accounting software are imported into Taxful as files, reviewed and approved. Validated XRechnung and ZUGFeRD files are prepared for your customers. Direct connections to the illustrated providers and submission to the tax office are not currently available.",
+      "sources": "From your accounting software",
+      "importMethod": "Import a file",
+      "providerNote": "Accounting software examples. File imports, without a direct integration.",
+      "processing": "Review & approve",
+      "customers": "For your customers",
+      "formats": "XRechnung · ZUGFeRD",
+      "taxOffice": "Tax office",
+      "taxSubmission": "Submission via ELSTER",
+      "planned": "Planned",
+      "pause": "Pause animation",
+      "play": "Resume animation"
+    }
   },
   "Navigation": {
     "login": "Log in",

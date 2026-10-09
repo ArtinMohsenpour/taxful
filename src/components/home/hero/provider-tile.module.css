@@ -1,0 +1,59 @@
+.provider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  width: min(100%, 9rem);
+  height: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  box-shadow: var(--toggle-shadow);
+}
+
+.providerLogo {
+  width: 72%;
+  max-height: 50%;
+  object-fit: contain;
+  filter: brightness(0);
+  opacity: 0.67;
+}
+
+:global(.dark) .providerLogo {
+  filter: brightness(0) invert(1);
+  opacity: 0.8;
+}
+
+.provider[data-provider='datev'] .providerLogo {
+  width: 58%;
+  max-height: 50%;
+}
+
+.provider[data-provider='sage'] .providerLogo {
+  width: 58%;
+  max-height: 73%;
+}
+
+.provider[data-provider='wiso'] .providerLogo {
+  width: 88%;
+  max-height: 60%;
+}
+
+.providerSuffix {
+  margin-top: 0.2rem;
+  color: var(--muted-foreground);
+  font-size: clamp(0.5rem, 1vw, 0.65rem);
+  letter-spacing: 0.03em;
+}
+
+@media (max-width: 639px) {
+  .provider {
+    border-radius: 0.8rem;
+  }
+
+  .providerSuffix {
+    font-size: 0.55rem;
+  }
+}

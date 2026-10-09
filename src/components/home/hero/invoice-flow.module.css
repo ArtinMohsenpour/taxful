@@ -1,0 +1,132 @@
+.figure {
+  scroll-margin-top: 8rem;
+}
+
+.sourceHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.importBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  color: var(--brand-ink);
+}
+
+.importBadge svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.scene {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 2;
+}
+
+.halo {
+  position: absolute;
+  z-index: -1;
+  inset: 12% 20% 10%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--primary) 16%, transparent),
+    transparent 68%
+  );
+}
+
+.providers {
+  position: absolute;
+  inset: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(var(--provider-columns), minmax(0, 1fr));
+  height: 14.5455%;
+  gap: 1.3636%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.invoice {
+  position: absolute;
+  top: 67%;
+  left: 35%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--surface);
+  color: var(--brand-ink);
+  box-shadow: var(--toggle-shadow);
+  font-size: 0.6rem;
+}
+
+.invoice svg {
+  width: 1rem;
+  height: 1rem;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.destinations {
+  position: absolute;
+  inset: auto 9% 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20%;
+}
+
+.providerNote {
+  max-width: 75%;
+  margin-top: 1.1rem;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 639px) {
+  .scene {
+    aspect-ratio: 360 / 440;
+    min-height: 460px;
+  }
+
+  .providers {
+    grid-template-columns: repeat(var(--mobile-columns), minmax(0, 1fr));
+    height: calc(var(--mobile-rows) * 12.7273% + (var(--mobile-rows) - 1) * 2.7273%);
+    gap: 3.3333%;
+    row-gap: calc((var(--mobile-rows) - 1) * 9.6774%);
+  }
+
+  .invoice {
+    top: 71%;
+    left: 34%;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.5rem;
+  }
+
+  .destinations {
+    inset-inline: 0;
+    gap: 5%;
+  }
+
+  .providerNote {
+    max-width: 100%;
+    font-size: 0.6875rem;
+  }
+}

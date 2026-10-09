@@ -26,14 +26,16 @@ test('defaults to German and switches language while preserving query and hash',
   await page.goto(`${origin}/?source=test#intro`)
   await expect(page).toHaveURL(`${origin}/de?source=test#intro`)
   await expect(page.locator('html')).toHaveAttribute('lang', 'de')
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Willkommen bei Taxful.')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Ihre Rechnungen.')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Ein klarer Ablauf.')
   const language = page.getByRole('switch', { name: 'Englische Sprache' })
   await expect(language).toBeEnabled()
   await language.focus()
   await page.keyboard.press('Space')
   await expect(page).toHaveURL(`${origin}/en?source=test#intro`)
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Welcome to Taxful.')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Your invoices.')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('One clear workflow.')
   await expect(page).toHaveTitle('Taxful')
   await page.getByRole('switch', { name: 'English language' }).click()
   await expect(page.locator('html')).toHaveAttribute('lang', 'de')
@@ -61,6 +63,7 @@ test('supports system, dark, and light themes with persistence and no hydration 
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(247, 242, 235)')
   await page.reload()
   await expect(theme).toHaveAttribute('data-theme-choice', 'light')
+  await expect(theme).toBeEnabled()
   await theme.focus()
   await page.keyboard.press('Enter')
   await page.reload()
@@ -82,8 +85,12 @@ test('keeps Payload paths unlocalized and rejects unsupported pages', async ({ r
 })
 
 test('requires CMS authentication for draft preview', async ({ request }) => {
-  const response = await request.get(`${origin}/de?preview=true`)
-  expect(response.status()).toBe(404)
+  for (const path of ['/de?preview=true', '/de?preview=true&previewGlobal=home']) {
+    const response = await request.get(`${origin}${path}`)
+    expect(response.status()).toBe(404)
+  }
+  const draft = await request.get(`${origin}/api/globals/home?draft=true`)
+  expect(draft.status()).toBe(403)
 })
 
 test('fits a mobile viewport', async ({ page }) => {
@@ -109,8 +116,45 @@ test('respects reduced motion and provides navigation landmarks', async ({ page 
   await page.goto(`${origin}/en`)
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible()
   await expect(page.locator('.toggle-thumb').first()).toHaveCSS('transition-duration', '0s')
+  await expect(page.locator('#invoice-flow path[pathLength="100"]').first()).toHaveCSS(
+    'animation-name',
+    'none',
+  )
+  await expect(page.getByRole('button', { name: 'Pause animation' })).toBeHidden()
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(page.locator('#main')).toBeFocused()
+})
+
+test('explains the invoice flow and lets visitors pause its animation', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.goto(`${origin}/en`)
+  const flow = page.locator('#invoice-flow')
+  for (const name of ['DATEV', 'Lexware Office', 'sevdesk', 'Sage', 'WISO MeinBüro', 'FastBill']) {
+    await expect(flow.getByRole('img', { name, exact: true })).toBeVisible()
+  }
+  await expect(flow.getByText('Planned', { exact: true })).toBeVisible()
+  await expect(
+    flow.getByText('Accounting software examples. File imports, without a direct integration.'),
+  ).toBeVisible()
+  await expect(page.locator('section[aria-labelledby="hero-title"] a')).toHaveCount(0)
+  const pulse = flow.locator('path[pathLength="100"]').first()
+  const glow = flow.locator('span[style*="animation-duration"]').first()
+  const delays = await flow
+    .locator('svg[viewBox="0 0 880 440"]')
+    .locator('path[pathLength="100"]')
+    .evaluateAll((paths) => paths.slice(0, 6).map((path) => getComputedStyle(path).animationDelay))
+  expect(new Set(delays).size).toBe(6)
+  await expect(glow).toHaveCSS(
+    'animation-delay',
+    await pulse.evaluate((el) => getComputedStyle(el).animationDelay),
+  )
+  await expect(glow).toHaveCSS('animation-duration', '12s')
+  await expect(pulse).toHaveCSS('animation-play-state', 'running')
+  await page.getByRole('button', { name: 'Pause animation' }).click()
+  await expect(pulse).toHaveCSS('animation-play-state', 'paused')
+  await expect(glow).toHaveCSS('animation-play-state', 'paused')
+  await page.getByRole('button', { name: 'Resume animation' }).click()
+  await expect(pulse).toHaveCSS('animation-play-state', 'running')
 })

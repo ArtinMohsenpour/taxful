@@ -4,9 +4,32 @@
     "description": "Ihr digitaler Ort für Steuerunterlagen."
   },
   "Home": {
-    "title": "Willkommen bei Taxful.",
-    "description": "Unsere Website entsteht. Bald erfahren Sie hier mehr über uns und unsere Leistungen.",
-    "eyebrow": "Ein bisschen mehr Klarheit."
+    "title": "Ihre Rechnungen.",
+    "titleAccent": "Ein klarer Ablauf.",
+    "description": "Dokumente importieren, Details prüfen und validierte E-Rechnungen erstellen. Von Ihrer Buchhaltung bis zur fertigen Datei – alles an einem Ort.",
+    "eyebrow": "Ein bisschen mehr Klarheit.",
+    "stepsLabel": "Ihr Rechnungsablauf",
+    "steps": {
+      "import": "Importieren",
+      "review": "Prüfen",
+      "validate": "Validieren",
+      "export": "Exportieren"
+    },
+    "flow": {
+      "title": "Ihr Weg zur E-Rechnung",
+      "description": "Dokumente aus Ihrer Buchhaltungssoftware werden per Datei in Taxful importiert, geprüft und freigegeben. Validierte XRechnung- und ZUGFeRD-Dateien sind für Ihre Kunden bestimmt. Eine direkte Anbindung der gezeigten Anbieter und die Übermittlung an das Finanzamt sind derzeit nicht verfügbar.",
+      "sources": "Aus Ihrer Buchhaltung",
+      "importMethod": "Import per Datei",
+      "providerNote": "Beispiele für Buchhaltungssoftware. Import per Datei, keine direkte Anbindung.",
+      "processing": "Prüfen & freigeben",
+      "customers": "Für Ihre Kunden",
+      "formats": "XRechnung · ZUGFeRD",
+      "taxOffice": "Finanzamt",
+      "taxSubmission": "Übermittlung über ELSTER",
+      "planned": "Geplant",
+      "pause": "Animation pausieren",
+      "play": "Animation fortsetzen"
+    }
   },
   "Navigation": {
     "login": "Anmelden",

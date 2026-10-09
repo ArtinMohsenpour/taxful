@@ -1,0 +1,94 @@
+.connections {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mobile {
+  display: none;
+}
+
+.track {
+  stroke: var(--primary);
+  stroke-width: 1.4;
+  opacity: 0.3;
+}
+
+.plannedTrack {
+  stroke: var(--muted-foreground);
+  stroke-width: 1;
+  stroke-dasharray: 4 7;
+  opacity: 0.3;
+}
+
+.pulse,
+.outgoingPulse {
+  stroke: var(--brand-ink);
+  stroke-width: 2;
+  stroke-dasharray: 7 93;
+  stroke-dashoffset: 100;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pulse {
+    animation: incoming-pulse 12s linear infinite;
+  }
+
+  .outgoingPulse {
+    animation: outgoing-pulse 12s linear infinite;
+  }
+}
+
+[data-motion-paused='true'] .pulse,
+[data-motion-paused='true'] .outgoingPulse {
+  animation-play-state: paused;
+}
+
+@keyframes incoming-pulse {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+  1%,
+  25% {
+    opacity: 0.85;
+  }
+  27%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes outgoing-pulse {
+  0%,
+  30% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+  31%,
+  53% {
+    opacity: 0.85;
+  }
+  55%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .desktop {
+    display: none;
+  }
+
+  .mobile {
+    display: block;
+  }
+}

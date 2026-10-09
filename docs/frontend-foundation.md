@@ -36,6 +36,16 @@ The shared navbar uses a DE/EN switch with a sliding indicator and a compact lig
 
 The frontend provider uses next-themes with a `class` attribute, system default, and the `taxful-theme` localStorage key. Its startup script applies the stored/system preference before hydration. Only the HTML element suppresses the expected attribute hydration difference. Theme controls wait until hydration before displaying the stored choice; the page itself remains server rendered.
 
+## Home-page hero
+
+The public home page delegates its hero to `src/components/home/hero/hero-section.tsx`. Localized copy and company selection come from the published Home global, with translated defaults under `Home` in `messages/de.json` and `messages/en.json`. See `home.md` for editing, live preview and deployment.
+
+The hero folder separates responsive path coordinates, SVG icons, provider tiles, the Taxful hub, destinations and animation controls. CMS loading, provider metadata and content normalization live in `src/lib/home/`. Component styles use colocated CSS modules and shared semantic colour tokens. The reusable Taxful SVG mark lives in `src/components/brand/`; accounting wordmarks and their source notes live in `public/brands/accounting/`.
+
+The public diagram renders on the server. Only the pause/resume control uses client state; moving strokes and the synchronized primary-colour glow use CSS animation. Reduced-motion preferences disable animation and hide the unnecessary control. Desktop supports one to six providers; small screens use at most three columns with separate connection geometry. Explicit diagram dimensions reserve space during loading.
+
+Provider marks illustrate document sources and are labelled as file imports without direct integrations. The Finanzamt/ELSTER destination has a static dashed connection and a localized “Planned” label. Preserve these distinctions until those integrations are implemented.
+
 ## Verification
 
 Run `pnpm lint`, `pnpm exec tsc --noEmit`, and `pnpm build`. The frontend Playwright suite covers German defaults, English navigation, query/hash preservation, theme persistence and system changes, actual computed Tailwind colors, hydration errors, mobile overflow, and Payload route isolation.

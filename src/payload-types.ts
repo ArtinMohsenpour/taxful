@@ -89,9 +89,11 @@ export interface Config {
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('de' | 'en') | ('de' | 'en')[];
   globals: {
     navbar: Navbar;
+    home: Home;
   };
   globalsSelect: {
     navbar: NavbarSelect<false> | NavbarSelect<true>;
+    home: HomeSelect<false> | HomeSelect<true>;
   };
   locale: 'de' | 'en';
   widgets: {
@@ -410,6 +412,51 @@ export interface Navbar {
   createdAt?: string | null;
 }
 /**
+ * Edit the hero and invoice-flow illustration. Translate text with the locale selector. Preview unsaved changes, save drafts, then publish when ready.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home".
+ */
+export interface Home {
+  id: number;
+  eyebrow?: string | null;
+  title?: string | null;
+  titleAccent?: string | null;
+  description?: string | null;
+  /**
+   * Choose one to six companies. Drag rows to reorder them. These illustrate file imports; they do not advertise direct integrations.
+   */
+  providers: {
+    provider: 'datev' | 'lexware' | 'sevdesk' | 'sage' | 'wiso' | 'fastbill' | 'custom';
+    name?: string | null;
+    /**
+     * Use a transparent image. Logos are shown in one colour.
+     */
+    logo?: (number | null) | Media;
+    id?: string | null;
+  }[];
+  diagram: {
+    sources: string;
+    processing: string;
+    customers: string;
+    formats: string;
+    taxOffice: string;
+    /**
+     * This branch always displays “Planned”. Direct tax submission is a future feature.
+     */
+    taxSubmission: string;
+  };
+  steps: {
+    import: string;
+    review: string;
+    validate: string;
+    export: string;
+  };
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "navbar_select".
  */
@@ -445,6 +492,46 @@ export interface NavbarSelect<T extends boolean = true> {
               id?: T;
             };
         id?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home_select".
+ */
+export interface HomeSelect<T extends boolean = true> {
+  eyebrow?: T;
+  title?: T;
+  titleAccent?: T;
+  description?: T;
+  providers?:
+    | T
+    | {
+        provider?: T;
+        name?: T;
+        logo?: T;
+        id?: T;
+      };
+  diagram?:
+    | T
+    | {
+        sources?: T;
+        processing?: T;
+        customers?: T;
+        formats?: T;
+        taxOffice?: T;
+        taxSubmission?: T;
+      };
+  steps?:
+    | T
+    | {
+        import?: T;
+        review?: T;
+        validate?: T;
+        export?: T;
       };
   _status?: T;
   updatedAt?: T;

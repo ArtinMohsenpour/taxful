@@ -1,0 +1,42 @@
+.motion {
+  position: relative;
+}
+
+.motionButton {
+  position: absolute;
+  right: 0;
+  bottom: -0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.motionButton:hover {
+  background: var(--accent);
+  color: var(--brand-ink);
+}
+
+.motionButton svg {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motionButton {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .motionButton {
+    position: static;
+    margin-top: 0.4rem;
+    margin-left: auto;
+  }
+}
