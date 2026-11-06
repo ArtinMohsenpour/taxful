@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { NavbarItems } from './navbar-items'
 import { Link } from '@/i18n/navigation'
 import { Preferences } from './preferences'
@@ -31,6 +31,26 @@ export function NavbarView({
   const [open, setOpen] = useState(false)
   const header = useRef<HTMLElement>(null)
   const toggle = useRef<HTMLButtonElement>(null)
+  useLayoutEffect(() => {
+    const element = header.current
+    const container = element?.parentElement
+    if (!element || !container) return
+
+    // Sticky content below the navbar must also account for custom logo sizes
+    // and navigation wrapping, rather than assuming a fixed header height.
+    const updateOffset = () => {
+      const top = Number.parseFloat(getComputedStyle(element).top) || 0
+      const offset = element.getBoundingClientRect().height + top
+      container.style.setProperty('--navbar-sticky-offset', `${offset}px`)
+    }
+    updateOffset()
+    const observer = new ResizeObserver(updateOffset)
+    observer.observe(element)
+    return () => {
+      observer.disconnect()
+      container.style.removeProperty('--navbar-sticky-offset')
+    }
+  }, [])
   useEffect(() => {
     if (!open) return
     const outside = (event: PointerEvent) => {

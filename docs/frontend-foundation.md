@@ -24,7 +24,7 @@ The stylesheet is imported only by the frontend locale layout, keeping its reset
 
 `src/i18n/request.ts` follows the Next.js 16.3 `next/root-params` integration and loads messages from `messages/de.json` or `messages/en.json`. Message keys and locale values are typed. The frontend has a locale-aware root layout; pages render on request to read the published Navbar global. Only the messages needed by interactive controls are passed to the browser.
 
-Use `src/i18n/navigation.ts` for localized links and router operations. The language selector preserves the path, query string, and hash. Page metadata is translated. Add canonical URLs and sitemaps once the public domain and page structure are defined.
+Use `src/i18n/navigation.ts` for localized links and router operations. The language selector preserves the path, query string, and hash. Public page metadata, canonical URLs, language alternates and the published-page sitemap are managed through the [website builder](website-builder.md). Configure `WEBSITE_URL` for deployment.
 
 Payload content localization is configured for the same locales with German fallback. This prepares the CMS; future content fields must explicitly use `localized: true`. Existing user and media fields are not automatically duplicated or translated.
 

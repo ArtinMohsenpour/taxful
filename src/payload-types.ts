@@ -7,6 +7,67 @@
  */
 
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "WebsiteContentItem".
+ */
+export type WebsiteContentItem =
+  | {
+      type: 'text' | 'image' | 'video' | 'form';
+      text?: {
+        root: {
+          type: string;
+          children: {
+            type: any;
+            version: number;
+            [k: string]: unknown;
+          }[];
+          direction: ('ltr' | 'rtl') | null;
+          format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+          indent: number;
+          version: number;
+        };
+        [k: string]: unknown;
+      } | null;
+      image?: (number | null) | Media;
+      /**
+       * Optional. Uses the media description when left blank.
+       */
+      imageAlt?: string | null;
+      imageFit?: ('natural' | 'landscape' | 'square') | null;
+      /**
+       * Upload MP4 or WebM to Media. Uses native controls without autoplay or external tracking.
+       */
+      video?: (number | null) | Media;
+      videoTitle?: string | null;
+      poster?: (number | null) | Media;
+      /**
+       * Add localized captions for spoken audio. For visual-only videos, provide an equivalent text description below.
+       */
+      captions?: (number | null) | Media;
+      transcript?: {
+        root: {
+          type: string;
+          children: {
+            type: any;
+            version: number;
+            [k: string]: unknown;
+          }[];
+          direction: ('ltr' | 'rtl') | null;
+          format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+          indent: number;
+          version: number;
+        };
+        [k: string]: unknown;
+      } | null;
+      /**
+       * Create and publish forms under Website → Forms. Submissions go to the private CMS inbox.
+       */
+      form?: (number | null) | WebsiteForm;
+      caption?: string | null;
+      id?: string | null;
+    }[]
+  | null;
+/**
  * Supported timezones in IANA format.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -65,10 +126,16 @@ export interface Config {
   auth: {
     users: UserAuthOperations;
   };
-  blocks: {};
+  blocks: {
+    fullWidth: FullWidthSection;
+    twoColumns: TwoColumnSection;
+    threeColumns: ThreeColumnSection;
+  };
   collections: {
     users: User;
     media: Media;
+    'website-forms': WebsiteForm;
+    'form-submissions': FormSubmission;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,6 +145,8 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'website-forms': WebsiteFormsSelect<false> | WebsiteFormsSelect<true>;
+    'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -90,10 +159,26 @@ export interface Config {
   globals: {
     navbar: Navbar;
     home: Home;
+    services: Service;
+    about: About;
+    'how-it-works': HowItWork;
+    faq: Faq;
+    contact: Contact;
+    privacy: Privacy;
+    terms: Term;
+    impressum: Impressum;
   };
   globalsSelect: {
     navbar: NavbarSelect<false> | NavbarSelect<true>;
     home: HomeSelect<false> | HomeSelect<true>;
+    services: ServicesSelect<false> | ServicesSelect<true>;
+    about: AboutSelect<false> | AboutSelect<true>;
+    'how-it-works': HowItWorksSelect<false> | HowItWorksSelect<true>;
+    faq: FaqSelect<false> | FaqSelect<true>;
+    contact: ContactSelect<false> | ContactSelect<true>;
+    privacy: PrivacySelect<false> | PrivacySelect<true>;
+    terms: TermsSelect<false> | TermsSelect<true>;
+    impressum: ImpressumSelect<false> | ImpressumSelect<true>;
   };
   locale: 'de' | 'en';
   widgets: {
@@ -122,6 +207,120 @@ export interface UserAuthOperations {
     email: string;
     password: string;
   };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FullWidthSection".
+ */
+export interface FullWidthSection {
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  tone?: ('plain' | 'surface' | 'accent') | null;
+  alignment?: ('top' | 'center') | null;
+  column1?: {
+    content?: WebsiteContentItem;
+  };
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'fullWidth';
+}
+/**
+ * Public website assets, up to 50 MB per file. Use MP4 or WebM for videos. Never upload private client documents here.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  alt: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * Reusable public forms. Publish and enable a form, then select it in a page section. Messages are stored in the private submissions inbox.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "website-forms".
+ */
+export interface WebsiteForm {
+  id: number;
+  name: string;
+  enabled?: boolean | null;
+  title?: string | null;
+  description?: string | null;
+  submitLabel: string;
+  successMessage: string;
+  fields: {
+    key: string;
+    type: 'text' | 'email' | 'textarea' | 'select' | 'checkbox';
+    label: string;
+    help?: string | null;
+    required?: boolean | null;
+    options?:
+      | {
+          value: string;
+          label: string;
+          id?: string | null;
+        }[]
+      | null;
+    id?: string | null;
+  }[];
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TwoColumnSection".
+ */
+export interface TwoColumnSection {
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  tone?: ('plain' | 'surface' | 'accent') | null;
+  alignment?: ('top' | 'center') | null;
+  column1?: {
+    content?: WebsiteContentItem;
+  };
+  column2?: {
+    content?: WebsiteContentItem;
+  };
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'twoColumns';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ThreeColumnSection".
+ */
+export interface ThreeColumnSection {
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  tone?: ('plain' | 'surface' | 'accent') | null;
+  alignment?: ('top' | 'center') | null;
+  column1?: {
+    content?: WebsiteContentItem;
+  };
+  column2?: {
+    content?: WebsiteContentItem;
+  };
+  column3?: {
+    content?: WebsiteContentItem;
+  };
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'threeColumns';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -170,23 +369,30 @@ export interface User {
   collection: 'users';
 }
 /**
+ * Private website inbox. Read messages here and mark them handled. No email notifications are sent. Delete submissions according to your reviewed retention policy.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
+ * via the `definition` "form-submissions".
  */
-export interface Media {
+export interface FormSubmission {
   id: number;
-  alt: string;
+  reference: string;
+  fingerprint: string;
+  form: number | WebsiteForm;
+  sourcePage: string;
+  locale: 'de' | 'en';
+  answers:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  status: 'new' | 'handled';
   updatedAt: string;
   createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -219,6 +425,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'website-forms';
+        value: number | WebsiteForm;
+      } | null)
+    | ({
+        relationTo: 'form-submissions';
+        value: number | FormSubmission;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -315,6 +529,53 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "website-forms_select".
+ */
+export interface WebsiteFormsSelect<T extends boolean = true> {
+  name?: T;
+  enabled?: T;
+  title?: T;
+  description?: T;
+  submitLabel?: T;
+  successMessage?: T;
+  fields?:
+    | T
+    | {
+        key?: T;
+        type?: T;
+        label?: T;
+        help?: T;
+        required?: T;
+        options?:
+          | T
+          | {
+              value?: T;
+              label?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "form-submissions_select".
+ */
+export interface FormSubmissionsSelect<T extends boolean = true> {
+  reference?: T;
+  fingerprint?: T;
+  form?: T;
+  sourcePage?: T;
+  locale?: T;
+  answers?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -452,6 +713,297 @@ export interface Home {
     validate: string;
     export: string;
   };
+  /**
+   * Add, reorder and reuse layouts. Columns stack in reading order on mobile. Each locale has its own sections.
+   */
+  sections?: (FullWidthSection | TwoColumnSection | ThreeColumnSection)[] | null;
+  seo?: {
+    /**
+     * Optional. Falls back to the page title and Taxful.
+     */
+    title?: string | null;
+    /**
+     * Optional search-result description. Falls back to the subtitle.
+     */
+    description?: string | null;
+    image?: (number | null) | Media;
+    /**
+     * Drafts and previews are always excluded. Canonical and language URLs are generated automatically.
+     */
+    noIndex?: boolean | null;
+  };
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Optional headings, reusable content sections and SEO. Preview unsaved edits, save a draft, then publish. Translate using the locale selector.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "services".
+ */
+export interface Service {
+  id: number;
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  /**
+   * Add, reorder and reuse layouts. Columns stack in reading order on mobile. Each locale has its own sections.
+   */
+  sections?: (FullWidthSection | TwoColumnSection | ThreeColumnSection)[] | null;
+  seo?: {
+    /**
+     * Optional. Falls back to the page title and Taxful.
+     */
+    title?: string | null;
+    /**
+     * Optional search-result description. Falls back to the subtitle.
+     */
+    description?: string | null;
+    image?: (number | null) | Media;
+    /**
+     * Drafts and previews are always excluded. Canonical and language URLs are generated automatically.
+     */
+    noIndex?: boolean | null;
+  };
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Optional headings, reusable content sections and SEO. Preview unsaved edits, save a draft, then publish. Translate using the locale selector.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about".
+ */
+export interface About {
+  id: number;
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  /**
+   * Add, reorder and reuse layouts. Columns stack in reading order on mobile. Each locale has its own sections.
+   */
+  sections?: (FullWidthSection | TwoColumnSection | ThreeColumnSection)[] | null;
+  seo?: {
+    /**
+     * Optional. Falls back to the page title and Taxful.
+     */
+    title?: string | null;
+    /**
+     * Optional search-result description. Falls back to the subtitle.
+     */
+    description?: string | null;
+    image?: (number | null) | Media;
+    /**
+     * Drafts and previews are always excluded. Canonical and language URLs are generated automatically.
+     */
+    noIndex?: boolean | null;
+  };
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Optional headings, reusable content sections and SEO. Preview unsaved edits, save a draft, then publish. Translate using the locale selector.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "how-it-works".
+ */
+export interface HowItWork {
+  id: number;
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  /**
+   * Add, reorder and reuse layouts. Columns stack in reading order on mobile. Each locale has its own sections.
+   */
+  sections?: (FullWidthSection | TwoColumnSection | ThreeColumnSection)[] | null;
+  seo?: {
+    /**
+     * Optional. Falls back to the page title and Taxful.
+     */
+    title?: string | null;
+    /**
+     * Optional search-result description. Falls back to the subtitle.
+     */
+    description?: string | null;
+    image?: (number | null) | Media;
+    /**
+     * Drafts and previews are always excluded. Canonical and language URLs are generated automatically.
+     */
+    noIndex?: boolean | null;
+  };
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Optional headings, reusable content sections and SEO. Preview unsaved edits, save a draft, then publish. Translate using the locale selector.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "faq".
+ */
+export interface Faq {
+  id: number;
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  /**
+   * Add, reorder and reuse layouts. Columns stack in reading order on mobile. Each locale has its own sections.
+   */
+  sections?: (FullWidthSection | TwoColumnSection | ThreeColumnSection)[] | null;
+  seo?: {
+    /**
+     * Optional. Falls back to the page title and Taxful.
+     */
+    title?: string | null;
+    /**
+     * Optional search-result description. Falls back to the subtitle.
+     */
+    description?: string | null;
+    image?: (number | null) | Media;
+    /**
+     * Drafts and previews are always excluded. Canonical and language URLs are generated automatically.
+     */
+    noIndex?: boolean | null;
+  };
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Optional headings, reusable content sections and SEO. Preview unsaved edits, save a draft, then publish. Translate using the locale selector.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contact".
+ */
+export interface Contact {
+  id: number;
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  /**
+   * Add, reorder and reuse layouts. Columns stack in reading order on mobile. Each locale has its own sections.
+   */
+  sections?: (FullWidthSection | TwoColumnSection | ThreeColumnSection)[] | null;
+  seo?: {
+    /**
+     * Optional. Falls back to the page title and Taxful.
+     */
+    title?: string | null;
+    /**
+     * Optional search-result description. Falls back to the subtitle.
+     */
+    description?: string | null;
+    image?: (number | null) | Media;
+    /**
+     * Drafts and previews are always excluded. Canonical and language URLs are generated automatically.
+     */
+    noIndex?: boolean | null;
+  };
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Optional headings, reusable content sections and SEO. Preview unsaved edits, save a draft, then publish. Translate using the locale selector.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "privacy".
+ */
+export interface Privacy {
+  id: number;
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  /**
+   * Add, reorder and reuse layouts. Columns stack in reading order on mobile. Each locale has its own sections.
+   */
+  sections?: (FullWidthSection | TwoColumnSection | ThreeColumnSection)[] | null;
+  seo?: {
+    /**
+     * Optional. Falls back to the page title and Taxful.
+     */
+    title?: string | null;
+    /**
+     * Optional search-result description. Falls back to the subtitle.
+     */
+    description?: string | null;
+    image?: (number | null) | Media;
+    /**
+     * Drafts and previews are always excluded. Canonical and language URLs are generated automatically.
+     */
+    noIndex?: boolean | null;
+  };
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Optional headings, reusable content sections and SEO. Preview unsaved edits, save a draft, then publish. Translate using the locale selector.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "terms".
+ */
+export interface Term {
+  id: number;
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  /**
+   * Add, reorder and reuse layouts. Columns stack in reading order on mobile. Each locale has its own sections.
+   */
+  sections?: (FullWidthSection | TwoColumnSection | ThreeColumnSection)[] | null;
+  seo?: {
+    /**
+     * Optional. Falls back to the page title and Taxful.
+     */
+    title?: string | null;
+    /**
+     * Optional search-result description. Falls back to the subtitle.
+     */
+    description?: string | null;
+    image?: (number | null) | Media;
+    /**
+     * Drafts and previews are always excluded. Canonical and language URLs are generated automatically.
+     */
+    noIndex?: boolean | null;
+  };
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * Optional headings, reusable content sections and SEO. Preview unsaved edits, save a draft, then publish. Translate using the locale selector.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "impressum".
+ */
+export interface Impressum {
+  id: number;
+  eyebrow?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  /**
+   * Add, reorder and reuse layouts. Columns stack in reading order on mobile. Each locale has its own sections.
+   */
+  sections?: (FullWidthSection | TwoColumnSection | ThreeColumnSection)[] | null;
+  seo?: {
+    /**
+     * Optional. Falls back to the page title and Taxful.
+     */
+    title?: string | null;
+    /**
+     * Optional search-result description. Falls back to the subtitle.
+     */
+    description?: string | null;
+    image?: (number | null) | Media;
+    /**
+     * Drafts and previews are always excluded. Canonical and language URLs are generated automatically.
+     */
+    noIndex?: boolean | null;
+  };
   _status?: ('draft' | 'published') | null;
   updatedAt?: string | null;
   createdAt?: string | null;
@@ -532,6 +1084,191 @@ export interface HomeSelect<T extends boolean = true> {
         review?: T;
         validate?: T;
         export?: T;
+      };
+  sections?: T | {};
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "services_select".
+ */
+export interface ServicesSelect<T extends boolean = true> {
+  eyebrow?: T;
+  title?: T;
+  subtitle?: T;
+  sections?: T | {};
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about_select".
+ */
+export interface AboutSelect<T extends boolean = true> {
+  eyebrow?: T;
+  title?: T;
+  subtitle?: T;
+  sections?: T | {};
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "how-it-works_select".
+ */
+export interface HowItWorksSelect<T extends boolean = true> {
+  eyebrow?: T;
+  title?: T;
+  subtitle?: T;
+  sections?: T | {};
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "faq_select".
+ */
+export interface FaqSelect<T extends boolean = true> {
+  eyebrow?: T;
+  title?: T;
+  subtitle?: T;
+  sections?: T | {};
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contact_select".
+ */
+export interface ContactSelect<T extends boolean = true> {
+  eyebrow?: T;
+  title?: T;
+  subtitle?: T;
+  sections?: T | {};
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "privacy_select".
+ */
+export interface PrivacySelect<T extends boolean = true> {
+  eyebrow?: T;
+  title?: T;
+  subtitle?: T;
+  sections?: T | {};
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "terms_select".
+ */
+export interface TermsSelect<T extends boolean = true> {
+  eyebrow?: T;
+  title?: T;
+  subtitle?: T;
+  sections?: T | {};
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "impressum_select".
+ */
+export interface ImpressumSelect<T extends boolean = true> {
+  eyebrow?: T;
+  title?: T;
+  subtitle?: T;
+  sections?: T | {};
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
       };
   _status?: T;
   updatedAt?: T;

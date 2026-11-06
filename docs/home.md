@@ -6,6 +6,8 @@ In Payload, open **Website → Home page** (`/admin/globals/home`). Choose Germa
 - **Accounting companies** controls the top row. Choose one to six companies and drag rows to reorder them. Built-in wordmarks are local SVG assets. For another company, choose the custom option, enter its name and select an image from Media. Company selection/order is shared between locales; custom names are localized.
 - **Diagram & workflow** controls the source label, text under Taxful, destination labels and four workflow steps.
 
+Home also supports reusable content sections and SEO settings. See [Public website builder](website-builder.md) for layout blocks, media, forms and the CMS inbox.
+
 Use **Live Preview** to see unsaved edits beside the form, or **Preview** to open the preview page. **Save Draft** preserves edits without changing the public page; **Publish** makes them public. History keeps at most 25 versions. German is the fallback for missing English diagram/workflow labels and custom company names. Optional hero text stays hidden when empty in the selected language. Keep text short for the mobile diagram.
 
 The home preview uses `/de?preview=true&previewGlobal=home` (or `/en`). It requires an authenticated CMS user. Only the selected global receives live updates: Home preview shows the published Navbar, and Navbar preview shows the published Home. Public reads use published content; anonymous draft and version-history access is denied. Preview population follows Media read access.

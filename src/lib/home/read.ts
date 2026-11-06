@@ -1,6 +1,7 @@
 import type { Payload, PayloadRequest } from 'payload'
 import type { User } from '@/payload-types'
 import type { HomeLocale } from './defaults'
+import { publicMediaSelection } from '@/lib/website/media-settings'
 
 type HomeReadOptions = {
   locale: HomeLocale
@@ -19,7 +20,7 @@ export async function readHome(payload: Payload, { locale, draft, user, req }: H
     req,
     overrideAccess: false,
     depth: 1,
-    populate: { media: { alt: true, url: true, width: true, height: true, mimeType: true } } as const,
+    populate: { media: publicMediaSelection },
   }
   const localized = payload.findGlobal(query)
   if (locale === 'de') return localized

@@ -7,6 +7,7 @@ import * as migration_20261007_100000_staff_mfa from './20261007_100000_staff_mf
 import * as migration_20261007_110000_staff_session_revocation from './20261007_110000_staff_session_revocation'
 import * as migration_20261007_120000_staff_revocation_clock from './20261007_120000_staff_revocation_clock'
 import * as migration_20261009_113849_home_page from './20261009_113849_home_page'
+import * as migration_20261009_183700_website_page_builder from './20261009_183700_website_page_builder'
 
 export const migrations = [
   {
@@ -53,5 +54,10 @@ export const migrations = [
     up: migration_20261009_113849_home_page.up,
     down: migration_20261009_113849_home_page.down,
     name: '20261009_113849_home_page',
+  },
+  {
+    up: migration_20261009_183700_website_page_builder.up,
+    down: migration_20261009_183700_website_page_builder.down,
+    name: '20261009_183700_website_page_builder',
   },
 ]

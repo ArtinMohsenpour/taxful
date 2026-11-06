@@ -49,7 +49,11 @@ export function SecondFactor({
   }
   return (
     <form method="post" onSubmit={submit} className="space-y-4">
-      <h2 className="text-xl font-semibold">{t(stepUp ? 'reauth' : 'challenge')}</h2>
+      {stepUp ? (
+        <h3 className="text-base font-semibold">{t('reauth')}</h3>
+      ) : (
+        <h2 className="text-xl font-semibold">{t('challenge')}</h2>
+      )}
       <p className="text-sm text-muted-foreground">{t(stepUp ? 'reauthHint' : 'challengeHint')}</p>
       <label className="block space-y-2 text-sm font-medium">
         <span>{t(recovery ? 'recoveryCode' : 'code')}</span>
@@ -61,7 +65,8 @@ export function SecondFactor({
           required
           pattern={recovery ? undefined : '[0-9]{6}'}
           maxLength={recovery ? 64 : 6}
-          className={input}
+          disabled={busy}
+          className={`${input} outline-none focus:border-focus focus:ring-2 focus:ring-focus/15`}
         />
       </label>
       {error && (

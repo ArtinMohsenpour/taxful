@@ -307,6 +307,7 @@ export function DocumentList({
             <WorkspaceSelect
               compact
               name="type"
+              align="end"
               label={t('allTypes')}
               value={typeFilter}
               onChange={setTypeFilter}
@@ -400,8 +401,8 @@ export function DocumentList({
                       key={item.id}
                       className="relative rounded-3xl border border-border bg-surface p-5 sm:p-6"
                     >
-                      <div className="mb-5 flex items-start gap-3 pr-10">
-                        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                      <div className="grid grid-cols-[minmax(0,1fr)_7rem] items-start gap-3 pr-10 sm:grid-cols-[2.5rem_minmax(0,1fr)_10rem]">
+                        <span className="hidden size-10 items-center justify-center rounded-xl bg-primary/10 sm:flex">
                           <Icon name="files" className="text-brand-ink" />
                         </span>
                         <div className="min-w-0 flex-1">
@@ -429,15 +430,16 @@ export function DocumentList({
                                 : invoices('unclassified')}
                           </p>
                         </div>
+                        <DocumentProgress
+                          compact
+                          manual={item.source_kind === 'manual'}
+                          incoming={item.workflow === 'incoming'}
+                          status={item.status}
+                          stage={item.processing_stage}
+                          exported={item.export_available || item.zugferd_available}
+                          exportState={item.export_state}
+                        />
                       </div>
-                      <DocumentProgress
-                        manual={item.source_kind === 'manual'}
-                        incoming={item.workflow === 'incoming'}
-                        status={item.status}
-                        stage={item.processing_stage}
-                        exported={item.export_available || item.zugferd_available}
-                        exportState={item.export_state}
-                      />
                       {item.status === 'failed' || item.status === 'rejected' ? (
                         <p className="mt-3 text-xs text-error">
                           {invoices.has(item.error_code as never)
@@ -449,7 +451,7 @@ export function DocumentList({
                               )}
                         </p>
                       ) : null}
-                      <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4 text-xs font-medium">
+                      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3 text-xs font-medium">
                         {item.workflow === 'outgoing' &&
                           item.invoice_state === 'draft' &&
                           ['needs_review', 'approved'].includes(item.status) && (
@@ -464,18 +466,8 @@ export function DocumentList({
                               {email(item.status === 'approved' ? 'stepCreate' : 'stepReview')}
                             </Link>
                           )}
-                        {item.workflow === 'outgoing' &&
-                          item.invoice_state !== 'draft' &&
-                          item.status === 'approved' &&
-                          (item.export_available || item.zugferd_available) && (
-                            <Link
-                              href={'/portal/files/' + item.id + '/send'}
-                              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink"
-                            >
-                              {email('sendAction')}
-                            </Link>
-                          )}
                         <DocumentActions
+                          wrap
                           id={item.id}
                           reviewHref={'/portal/files/' + item.id}
                           name={item.original_name}
@@ -488,6 +480,19 @@ export function DocumentList({
                             setNotice(cleanupPending ? 'deletionPending' : 'deleted')
                             void load()
                           }}
+                          trailingAction={
+                            item.workflow === 'outgoing' &&
+                            item.invoice_state !== 'draft' &&
+                            item.status === 'approved' &&
+                            (item.export_available || item.zugferd_available) && (
+                              <Link
+                                href={'/portal/files/' + item.id + '/send'}
+                                className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-ink"
+                              >
+                                {email('sendAction')}
+                              </Link>
+                            )
+                          }
                         />
                       </div>
                     </li>

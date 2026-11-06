@@ -44,7 +44,7 @@ test.describe('Home editor', () => {
     await page.locator('input[name="eyebrow"]').fill('')
     await page.locator('textarea[name="description"]').fill('')
     await expect(preview.locator('#hero-title')).toHaveCount(0)
-    await expect(preview.locator('section > div')).toHaveCount(1)
+    await expect(preview.locator('#main > section > div')).toHaveCount(1)
     await expect(
       preview.getByRole('region', { name: 'Ihr Weg zur E-Rechnung', exact: true }),
     ).toBeVisible()

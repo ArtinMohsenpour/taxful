@@ -66,9 +66,11 @@ export function WorkspaceForm() {
 export function WorkspaceSwitcher({
   organizations,
   activeId,
+  hideLabel = false,
 }: {
   organizations: { id: string; name: string }[]
   activeId: string
+  hideLabel?: boolean
 }) {
   const t = useTranslations('Auth')
   const router = useRouter()
@@ -78,6 +80,7 @@ export function WorkspaceSwitcher({
     <div>
       <WorkspaceSelect
         label={t('switchWorkspace')}
+        hideLabel={hideLabel}
         value={activeId}
         disabled={pending}
         options={organizations.map((org) => ({ value: org.id, label: org.name }))}

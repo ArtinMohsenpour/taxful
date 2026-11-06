@@ -4,6 +4,7 @@ import createNextIntlPlugin from 'next-intl/plugin'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { baselineSecurityHeaders } from './src/lib/security/headers'
+import { PUBLIC_MEDIA_REQUEST_MAX_BYTES } from './src/lib/website/media-settings'
 
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
@@ -20,6 +21,9 @@ const nextConfig: NextConfig = {
   ],
   // Keep verification builds separate from an active development server.
   distDir: process.env.TAXFUL_BUILD_DIR || '.next',
+  experimental: {
+    proxyClientMaxBodySize: PUBLIC_MEDIA_REQUEST_MAX_BYTES,
+  },
   images: {
     localPatterns: [
       {

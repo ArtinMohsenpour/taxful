@@ -4,6 +4,8 @@ import { NextResponse, NextRequest } from 'next/server'
 import { enforceSecurityRate } from './lib/security/rate-limit'
 import { DocumentError } from './lib/documents/config'
 import { pageSecurityPolicy } from './lib/security/headers'
+import { isWebsitePreviewPath } from './lib/website/catalog'
+import { PUBLIC_MEDIA_REQUEST_MAX_BYTES } from './lib/website/media-settings'
 
 const localize = createMiddleware(routing)
 export default async function proxy(request: NextRequest) {
@@ -25,13 +27,31 @@ export default async function proxy(request: NextRequest) {
         )
       }
     }
+    if (
+      /^\/api\/media(?:\/[^/]+)?\/?$/.test(path) &&
+      ['POST', 'PATCH', 'PUT'].includes(request.method) &&
+      Number(request.headers.get('content-length')) > PUBLIC_MEDIA_REQUEST_MAX_BYTES
+    )
+      return NextResponse.json(
+        {
+          errors: [
+            {
+              message:
+                request.nextUrl.searchParams.get('locale') === 'de'
+                  ? 'Die Datei ist zu groß. Bitte verwende eine Datei mit weniger als 50 MB.'
+                  : 'The file is too large. Please use a file smaller than 50 MB.',
+            },
+          ],
+        },
+        { status: 413, headers: { 'Cache-Control': 'private, no-store' } },
+      )
     return NextResponse.next()
   }
 
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
-  // Only the public home preview is embedded by Payload; private pages stay unframeable.
+  // Only known public page previews can be embedded. Their loaders authenticate CMS users.
   const preview =
-    /^\/(de|en)\/?$/.test(request.nextUrl.pathname) &&
+    isWebsitePreviewPath(request.nextUrl.pathname) &&
     request.nextUrl.searchParams.get('preview') === 'true'
   const policy = pageSecurityPolicy(nonce, preview, process.env.NODE_ENV === 'development')
   const requestHeaders = new Headers(request.headers)

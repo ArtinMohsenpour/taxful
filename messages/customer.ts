@@ -91,6 +91,7 @@ export const customerMessages = {
     viewAll: 'View all',
     noRecentDocuments: 'Create or import an invoice to see activity here.',
     workspace: 'Company workspace',
+    workspaceHeading: 'Workspace',
     createWorkspace: 'Create workspace',
     companyName: 'Company name',
     workspaceIntro:
@@ -259,6 +260,7 @@ export const customerMessages = {
     noRecentDocuments:
       'Erstellen oder importieren Sie eine Rechnung, um hier Aktivitäten zu sehen.',
     workspace: 'Unternehmensbereich',
+    workspaceHeading: 'Arbeitsbereich',
     createWorkspace: 'Unternehmensbereich erstellen',
     companyName: 'Unternehmensname',
     workspaceIntro:

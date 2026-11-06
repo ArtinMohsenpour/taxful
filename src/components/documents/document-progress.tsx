@@ -8,6 +8,7 @@ export function DocumentProgress({
   exportState = 'idle',
   manual = false,
   incoming = false,
+  compact = false,
 }: {
   status: string
   stage?: string
@@ -15,6 +16,7 @@ export function DocumentProgress({
   exportState?: string
   manual?: boolean
   incoming?: boolean
+  compact?: boolean
 }) {
   const t = useTranslations('Documents')
   const invoices = useTranslations('Invoices')
@@ -67,21 +69,40 @@ export function DocumentProgress({
                 : t('needs_review')
   if (status === 'unsupported')
     return (
-      <p role="status" className="rounded-xl bg-primary/10 p-3 text-sm text-brand-ink">
+      <p
+        role="status"
+        title={compact ? t('unsupported') : undefined}
+        className={
+          compact
+            ? 'truncate text-xs text-brand-ink'
+            : 'rounded-xl bg-primary/10 p-3 text-sm text-brand-ink'
+        }
+      >
         {t('unsupported')}
       </p>
     )
   return (
-    <div className="space-y-3">
+    <div className={compact ? 'min-w-0 space-y-1.5' : 'space-y-3'}>
       <p
         role="status"
-        className={`text-xs font-medium ${failed || exportState === 'failed' ? 'text-error' : 'text-brand-ink'}`}
+        title={
+          compact
+            ? incoming && status === 'approved'
+              ? invoices('receivedReviewed')
+              : current
+            : undefined
+        }
+        className={`font-medium ${compact ? 'truncate text-[0.65rem] sm:text-xs' : 'text-xs'} ${failed || exportState === 'failed' ? 'text-error' : 'text-brand-ink'}`}
       >
         {incoming && status === 'approved' ? invoices('receivedReviewed') : current}
       </p>
       <ol
         aria-label={t('workflow')}
-        className={`grid gap-x-2 gap-y-3 ${manual || incoming ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3 sm:grid-cols-6'}`}
+        className={
+          compact
+            ? 'grid auto-cols-fr grid-flow-col gap-1'
+            : `grid gap-x-2 gap-y-3 ${manual || incoming ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3 sm:grid-cols-6'}`
+        }
       >
         {visibleSteps.map(({ step, index }, position) => {
           const done = index < active
@@ -89,12 +110,21 @@ export function DocumentProgress({
           const error = isCurrent && (failed || exportState === 'failed')
           const moving = isCurrent && (status === 'processing' || generating)
           return (
-            <li key={step} aria-current={isCurrent ? 'step' : undefined} className="min-w-0">
+            <li
+              key={step}
+              aria-current={isCurrent ? 'step' : undefined}
+              title={compact ? t(step) : undefined}
+              className="min-w-0"
+            >
               <div
-                className={`mb-2 h-1.5 rounded-full transition-colors duration-500 motion-reduce:transition-none ${error ? 'bg-error' : done ? 'bg-primary' : isCurrent ? 'bg-brand-ink' : 'bg-border'} ${moving ? 'motion-safe:animate-pulse' : ''}`}
+                className={`rounded-full transition-colors duration-500 motion-reduce:transition-none ${compact ? 'h-1' : 'mb-2 h-1.5'} ${error ? 'bg-error' : done ? 'bg-primary' : isCurrent ? 'bg-brand-ink' : 'bg-border'} ${moving ? 'motion-safe:animate-pulse' : ''}`}
               />
               <span
-                className={`text-[0.65rem] leading-tight sm:text-xs ${done || isCurrent ? 'text-foreground' : 'text-muted-foreground'}`}
+                className={
+                  compact
+                    ? 'sr-only'
+                    : `text-[0.65rem] leading-tight sm:text-xs ${done || isCurrent ? 'text-foreground' : 'text-muted-foreground'}`
+                }
               >
                 {step === 'stepSaved' ? '✓ ' : done ? '✓ ' : `${position + 1}. `}
                 {t(step)}

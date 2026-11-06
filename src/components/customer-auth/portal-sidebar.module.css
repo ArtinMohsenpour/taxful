@@ -1,0 +1,18 @@
+.links {
+  display: grid;
+  gap: 0.125rem;
+}
+
+@media (min-width: 64rem) {
+  .sidebar {
+    top: calc(var(--navbar-sticky-offset, 6.5rem) + 0.5rem);
+  }
+
+  .sidebar[data-sticky='true'] {
+    position: sticky;
+  }
+
+  .links > a {
+    padding-block: 0.375rem;
+  }
+}

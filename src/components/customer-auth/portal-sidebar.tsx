@@ -5,6 +5,8 @@ import { Link, usePathname } from '@/i18n/navigation'
 import { WorkspaceSwitcher } from './workspace-form'
 import { LogoutButton } from './profile-form'
 import { Icon, type IconName } from './icon'
+import { useSidebarPosition } from './use-sidebar-position'
+import styles from './portal-sidebar.module.css'
 
 export function PortalSidebar({
   organizations,
@@ -21,6 +23,7 @@ export function PortalSidebar({
   const invoices = useTranslations('Invoices')
   const billing = useTranslations('Billing')
   const pathname = usePathname()
+  const sidebar = useSidebarPosition()
   const [open, setOpen] = useState(false)
   const links: {
     href: string
@@ -30,8 +33,18 @@ export function PortalSidebar({
   }[] = [
     { href: '/portal', label: 'overview', icon: 'overview' },
     { href: '/portal/invoices/new', label: 'converter', icon: 'converter', invoiceLabel: 'new' },
-    { href: '/portal/invoices/outgoing', label: 'files', icon: 'files', invoiceLabel: 'outgoing' },
-    { href: '/portal/invoices/incoming', label: 'files', icon: 'files', invoiceLabel: 'incoming' },
+    {
+      href: '/portal/invoices/outgoing',
+      label: 'files',
+      icon: 'outgoing-invoices',
+      invoiceLabel: 'outgoing',
+    },
+    {
+      href: '/portal/invoices/incoming',
+      label: 'files',
+      icon: 'incoming-invoices',
+      invoiceLabel: 'incoming',
+    },
     { href: '/portal/invoices/customers', label: 'team', icon: 'team', invoiceLabel: 'customers' },
     {
       href: '/portal/invoices/products',
@@ -45,15 +58,12 @@ export function PortalSidebar({
     { href: '/portal/security', label: 'security', icon: 'security' },
   ]
   return (
-    <aside className="self-start rounded-3xl border border-border bg-surface p-4 shadow-nav lg:sticky lg:top-6">
-      <div className="mb-5 flex items-center gap-3 px-2 pt-2">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-brand-ink">
-          <Icon name="company" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground">Taxful</p>
-          <p className="truncate text-sm font-semibold">{t('workspace')}</p>
-        </div>
+    <aside
+      ref={sidebar}
+      className={`${styles.sidebar} self-start rounded-3xl border border-border bg-surface px-4 py-6 shadow-nav`}
+    >
+      <div className="mb-3 flex items-center justify-between gap-3 px-4">
+        <h2 className="text-base font-semibold tracking-tight">{t('workspaceHeading')}</h2>
         <button
           type="button"
           aria-label={t('workspaceMenu')}
@@ -65,7 +75,9 @@ export function PortalSidebar({
           <Icon name="menu" />
         </button>
       </div>
-      {activeId && <WorkspaceSwitcher organizations={organizations} activeId={activeId} />}
+      {activeId && (
+        <WorkspaceSwitcher organizations={organizations} activeId={activeId} hideLabel />
+      )}
       <div
         id="workspace-navigation"
         className={`grid transition-[grid-template-rows] duration-250 motion-reduce:transition-none lg:grid-rows-[1fr] ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
@@ -73,7 +85,7 @@ export function PortalSidebar({
         <div className="overflow-hidden">
           <nav
             aria-label={t('workspaceMenu')}
-            className={`mt-5 space-y-1 transition-[visibility,opacity] duration-250 motion-reduce:transition-none lg:visible lg:opacity-100 ${open ? 'visible opacity-100' : 'invisible opacity-0'}`}
+            className={`${styles.links} mt-2 transition-[visibility,opacity] duration-250 motion-reduce:transition-none lg:visible lg:opacity-100 ${open ? 'visible opacity-100' : 'invisible opacity-0'}`}
           >
             {links.map(({ href, label, icon, invoiceLabel }) => (
               <Link
@@ -85,7 +97,7 @@ export function PortalSidebar({
                     ? 'page'
                     : undefined
                 }
-                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${label === 'profile' ? 'mt-5' : ''} ${pathname === href || (href !== '/portal' && pathname.startsWith(href + '/')) ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                className={`flex items-center gap-3 rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${pathname === href || (href !== '/portal' && pathname.startsWith(href + '/')) ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
               >
                 <Icon name={icon} />
                 {invoiceLabel ? invoices(invoiceLabel) : t(label)}
@@ -99,7 +111,7 @@ export function PortalSidebar({
                 href="/portal/billing"
                 onClick={() => setOpen(false)}
                 aria-current={pathname.startsWith('/portal/billing') ? 'page' : undefined}
-                className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium ${pathname.startsWith('/portal/billing') ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent'}`}
+                className={`flex items-center gap-3 rounded-2xl px-4 py-2 text-sm font-medium ${pathname.startsWith('/portal/billing') ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent'}`}
               >
                 <Icon name="billing" />
                 {billing('title')}
@@ -107,7 +119,7 @@ export function PortalSidebar({
             )}
           </nav>
           <div
-            className={`mt-6 border-t border-border pt-4 transition-[visibility,opacity] duration-250 motion-reduce:transition-none lg:visible lg:opacity-100 ${open ? 'visible opacity-100' : 'invisible opacity-0'}`}
+            className={`mt-4 border-t border-border pt-3 transition-[visibility,opacity] duration-250 motion-reduce:transition-none lg:visible lg:opacity-100 ${open ? 'visible opacity-100' : 'invisible opacity-0'}`}
           >
             <p className="mb-2 truncate px-4 text-xs text-muted-foreground">{name}</p>
             <LogoutButton />

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import { useTranslations } from 'next-intl'
 import { Icon } from '@/components/customer-auth/icon'
@@ -86,6 +86,7 @@ export function DocumentActions({
   onDeleted,
   reviewHref,
   wrap = false,
+  trailingAction,
 }: {
   id: string
   name: string
@@ -97,6 +98,7 @@ export function DocumentActions({
   onDeleted: (pending: boolean) => void
   reviewHref?: string
   wrap?: boolean
+  trailingAction?: ReactNode
 }) {
   const t = useTranslations('Documents')
   const [mode, setMode] = useState<'preview' | 'delete' | null>(null)
@@ -177,6 +179,7 @@ export function DocumentActions({
               </a>
             ),
         )}
+        {trailingAction && <div className="ml-auto shrink-0">{trailingAction}</div>}
       </div>
       {canDelete && (
         <button

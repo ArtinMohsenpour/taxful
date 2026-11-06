@@ -5,6 +5,8 @@ import { homeProviderFields } from '../fields/home/providers'
 import { homeDiagramFields } from '../fields/home/diagram'
 import { protectGlobalDrafts } from '../hooks/protect-global-drafts'
 import { CMS_VERSION_LIMIT, previewURL } from '../lib/cms-settings'
+import { sectionsField } from '../blocks/website/layouts'
+import { seoFields } from '../fields/website/seo'
 
 const homePreviewURL = (locale: string) => `${previewURL(locale)}&previewGlobal=home`
 
@@ -32,6 +34,8 @@ export const Home: GlobalConfig = {
         { label: 'Hero', fields: homeHeroFields },
         { label: 'Accounting companies', fields: homeProviderFields },
         { label: 'Diagram & workflow', fields: homeDiagramFields },
+        { label: 'Content', fields: [sectionsField()] },
+        { label: 'SEO', fields: seoFields },
       ],
     },
   ],

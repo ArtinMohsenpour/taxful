@@ -10,6 +10,7 @@ export function WorkspaceSelect({
   disabled = false,
   name,
   compact = false,
+  align = 'start',
   triggerId,
   invalid = false,
   hideLabel = false,
@@ -21,6 +22,7 @@ export function WorkspaceSelect({
   disabled?: boolean
   name?: string
   compact?: boolean
+  align?: 'start' | 'end'
   triggerId?: string
   invalid?: boolean
   hideLabel?: boolean
@@ -126,7 +128,7 @@ export function WorkspaceSelect({
               ?.focus()
           }
         }}
-        className={`absolute top-full z-40 mt-2 max-h-64 origin-top overflow-y-auto rounded-2xl border border-border bg-surface p-1.5 shadow-nav transition-[opacity,transform,visibility] duration-200 motion-reduce:transition-none ${compact ? 'left-0 w-max max-w-64 min-w-full' : 'inset-x-0'} ${open ? 'visible translate-y-0 scale-100 opacity-100' : 'invisible -translate-y-2 scale-95 opacity-0'}`}
+        className={`absolute top-full z-40 mt-2 max-h-64 origin-top overflow-y-auto rounded-2xl border border-border bg-surface p-1.5 shadow-nav transition-[opacity,transform,visibility] duration-200 motion-reduce:transition-none ${compact ? `${align === 'end' ? 'right-0' : 'left-0'} w-max max-w-64 min-w-full` : 'inset-x-0'} ${open ? 'visible translate-y-0 scale-100 opacity-100' : 'invisible -translate-y-2 scale-95 opacity-0'}`}
       >
         {options.map((option) => (
           <button

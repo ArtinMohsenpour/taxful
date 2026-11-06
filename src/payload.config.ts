@@ -9,6 +9,11 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Navbar } from './globals/Navbar'
 import { Home } from './globals/Home'
+import { WebsiteGlobals } from './globals/website/page'
+import { WebsiteForms } from './collections/WebsiteForms'
+import { FormSubmissions } from './collections/FormSubmissions'
+import { websiteLayouts } from './blocks/website/layouts'
+import { PUBLIC_MEDIA_MAX_BYTES } from './lib/website/media-settings'
 import { staffEmailAdapter } from './lib/staff-auth/email'
 import { installStaffMfa } from './lib/staff-auth/strategy'
 
@@ -38,8 +43,14 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media],
-  globals: [Navbar, Home],
+  collections: [Users, Media, WebsiteForms, FormSubmissions],
+  globals: [Navbar, Home, ...WebsiteGlobals],
+  blocks: websiteLayouts,
+  upload: {
+    limits: { fileSize: PUBLIC_MEDIA_MAX_BYTES },
+    abortOnLimit: true,
+    responseOnLimit: 'The file is too large. Please use a file smaller than 50 MB.',
+  },
   localization: {
     locales: ['de', 'en'],
     defaultLocale: 'de',
@@ -51,6 +62,9 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: postgresAdapter({
+    // Layouts are bounded editorial documents. Keep them in JSONB instead of
+    // duplicating every block/column table across the fixed page globals.
+    blocksAsJSON: true,
     // Preserve existing data/schema; use reviewed migrations rather than automatic drops.
     push: false,
     pool: {
