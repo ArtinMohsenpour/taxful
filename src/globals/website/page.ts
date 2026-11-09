@@ -3,9 +3,17 @@ import { cmsEditor } from '../../access/cms-editor'
 import { sectionsField } from '../../blocks/website/layouts'
 import { pageHeadingFields } from '../../fields/website/heading'
 import { seoFields } from '../../fields/website/seo'
-import { protectGlobalDrafts } from '../../hooks/protect-global-drafts'
-import { CMS_VERSION_LIMIT, previewURL } from '../../lib/cms-settings'
-import { websitePages } from '../../lib/website/catalog'
+import { protectGlobalDrafts } from '../../hooks/protect-drafts'
+import { ADMIN_GROUPS, CMS_VERSION_LIMIT, previewURL } from '../../lib/cms-settings'
+import { websitePages, type WebsitePageSlug } from '../../lib/website/catalog'
+
+// Sidebar placement; labels default to the page name.
+const adminNav: Partial<Record<WebsitePageSlug, { group: string; label?: string }>> = {
+  services: { group: ADMIN_GROUPS.services, label: 'Services overview' },
+  privacy: { group: ADMIN_GROUPS.legal, label: 'Privacy policy' },
+  terms: { group: ADMIN_GROUPS.legal },
+  impressum: { group: ADMIN_GROUPS.legal, label: 'Legal notice (Impressum)' },
+}
 
 export const WebsiteGlobals: GlobalConfig[] = websitePages
   .filter(({ slug }) => slug !== 'home')
@@ -13,9 +21,9 @@ export const WebsiteGlobals: GlobalConfig[] = websitePages
     const preview = (locale: string) => `${previewURL(locale, path)}&previewGlobal=${slug}`
     return {
       slug,
-      label: `${en} page`,
+      label: adminNav[slug]?.label ?? en,
       admin: {
-        group: 'Website',
+        group: adminNav[slug]?.group ?? ADMIN_GROUPS.pages,
         description:
           'Optional headings, reusable content sections and SEO. Preview unsaved edits, save a draft, then publish. Translate using the locale selector.',
         livePreview: { url: ({ locale }) => preview(locale.code) },

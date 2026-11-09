@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { ServicePage } from '@/payload-types'
 import type { WebsiteLocale, WebsitePageSlug } from './catalog'
 import { websitePage } from './catalog'
 import type { WebsitePageDocument } from './types'
@@ -16,21 +17,57 @@ export function pageMetadata(
   preview: boolean,
 ): Metadata {
   const definition = websitePage(slug)!
+  return seoMetadata({
+    path: definition.path,
+    seo: page.seo,
+    fallbackTitle:
+      slug === 'home' ? 'Taxful' : `${page.title?.trim() || definition[locale]} | Taxful`,
+    fallbackDescription:
+      'subtitle' in page
+        ? page.subtitle?.trim()
+        : 'description' in page
+          ? page.description?.trim()
+          : '',
+    locale,
+    preview,
+  })
+}
+
+export function servicePageMetadata(
+  page: ServicePage,
+  locale: WebsiteLocale,
+  preview: boolean,
+): Metadata {
+  return seoMetadata({
+    path: `/services/${page.slug}`,
+    seo: page.seo,
+    fallbackTitle: `${page.title} | Taxful`,
+    fallbackDescription: page.summary,
+    locale,
+    preview,
+  })
+}
+
+function seoMetadata({
+  path,
+  seo,
+  fallbackTitle,
+  fallbackDescription,
+  locale,
+  preview,
+}: {
+  path: string
+  seo: WebsitePageDocument['seo']
+  fallbackTitle: string
+  fallbackDescription?: string | null
+  locale: WebsiteLocale
+  preview: boolean
+}): Metadata {
   const base = websiteOrigin()
-  const href = (language: string) =>
-    `${base}/${language}${definition.path === '/' ? '' : definition.path}`
-  const title =
-    page.seo?.title?.trim() ||
-    (slug === 'home' ? 'Taxful' : `${page.title?.trim() || definition[locale]} | Taxful`)
-  const description =
-    page.seo?.description?.trim() ||
-    ('subtitle' in page
-      ? page.subtitle?.trim()
-      : 'description' in page
-        ? page.description?.trim()
-        : '') ||
-    undefined
-  const image = page.seo?.image
+  const href = (language: string) => `${base}/${language}${path === '/' ? '' : path}`
+  const title = seo?.title?.trim() || fallbackTitle
+  const description = seo?.description?.trim() || fallbackDescription?.trim() || undefined
+  const image = seo?.image
   const imageURL = typeof image === 'object' && image ? publicMediaURL(image.url) : undefined
   return {
     metadataBase: new URL(base),
@@ -41,9 +78,7 @@ export function pageMetadata(
       languages: { de: href('de'), en: href('en'), 'x-default': href('de') },
     },
     robots:
-      preview || page.seo?.noIndex
-        ? { index: false, follow: false }
-        : { index: true, follow: true },
+      preview || seo?.noIndex ? { index: false, follow: false } : { index: true, follow: true },
     openGraph: {
       type: 'website',
       siteName: 'Taxful',

@@ -1,7 +1,12 @@
 # Public website builder
 
-Open **Website** in Payload Admin. Page globals are Home, Services, About us,
-How it works, FAQ, Contact us, Privacy, Terms of use and Legal notice (Impressum).
+The Payload sidebar groups the website by task: **Services** (service pages and the
+Services overview), **Forms** (forms and submissions), **Media** (media library),
+**Pages** (Home, About us, How it works, FAQ, Contact us), **Legal** (Privacy policy,
+Terms of use, Legal notice (Impressum)), **Site settings** (Navigation) and
+**Administration** (staff accounts; customers & billing for super admins). Group names
+live in `ADMIN_GROUPS` (`src/lib/cms-settings.ts`); Payload lists groups that contain
+collections first, so the `collections` order in `src/payload.config.ts` sets the order.
 The existing home hero and accounting-company diagram remain editable in their
 original tabs. Home now also has Content and SEO tabs.
 
@@ -53,14 +58,14 @@ its pause and reduced-motion behavior.
 
 ## Forms and inbox
 
-Under **Website → Forms**, create a reusable form, add fields and translate labels.
+Under **Forms → Forms**, create a reusable form, add fields and translate labels.
 Supported fields are short text, email, long text, dropdown and checkbox. Choose
 which fields are required. Field keys must be unique, lowercase and stable;
 `website` is reserved for the spam trap. Dropdown values must also be unique.
 Enable **Accept submissions** and publish the form, then select it in a page's
 form content item. A bilingual Contact form is included.
 
-Submitted messages appear under **Website → Form submissions**. CMS staff can
+Submitted messages appear under **Forms → Submissions**. CMS staff can
 read them, mark them handled or delete them. Answers preserve the field labels
 used when the message was submitted. Visitors cannot read this inbox or create
 records through Payload REST/GraphQL. The dedicated submission endpoint checks
@@ -113,6 +118,42 @@ For example, `/services` opens `/en/services` in English. The `about` route is
 The existing billing Pricing page has its own `pricing/` route (`/pricing`);
 its content is managed by billing rather than these CMS page globals.
 
+## Service pages
+
+Each service has its own page at `/de/services/<slug>` and `/en/services/<slug>`,
+managed under **Services → Service pages**. **Services → Services overview** is the
+overview at `/services`.
+
+- **Slug** is shared by both languages (German keywords, for example
+  `e-rechnung-erstellen`): lowercase letters, numbers and single hyphens. Avoid
+  changing it after publishing; links and search results use it.
+- **Title**, **summary** and **key points** form the page header and the service
+  card. Put the main keyword early in the title and summary.
+- **Page sections** use the same layouts and content items as other pages. Use
+  section titles for H2 headings and H3/H4 inside rich text.
+- **Sort order** sets the card order (lower first); **icon** chooses the card icon.
+- **SEO**: the title is used as entered, so include ` | Taxful` and keep it within
+  60 characters; keep descriptions to about 120–160 characters. Empty fields fall
+  back to `<title> | Taxful` and the summary. Pages get canonical and language
+  URLs, Open Graph data and schema.org `Service`, `BreadcrumbList` and, with FAQ
+  items, `FAQPage` structured data.
+
+Two content items work on every page: **FAQ** (expandable questions, also
+published as `FAQPage` data) and **Service cards** (selected service pages in the
+chosen order, or all published service pages when left empty). Cards only show
+published pages; Live Preview also shows your drafts. Forms are not shown on
+service pages because submissions belong to page globals.
+
+Migration `20261106_135239_service_pages` adds the collection and seeds six
+service pages plus a new version of the Services page — all as **drafts**. The
+copy states e-invoicing law as of November 2026 with links to its sources and
+avoids claims such as GoBD compliance, tax advice or ELSTER submission. Have a
+qualified person review both languages, then publish each service page and the
+Services page. Until then the public URLs return 404 and the previous Services
+page stays live. The keyword map and copy rules are in
+`docs/superpowers/specs/2026-11-06-services-pages-design.md`. Revisit the
+XRechnung version notes when XRechnung 4.0 becomes binding.
+
 ## Architecture and deployment
 
 ### Local Home examples
@@ -136,9 +177,10 @@ local Media library. No real client material is used.
 - `src/blocks/website/`: shared layout definitions registered once in Payload and
   referenced by all pages, stored as bounded JSONB documents via Payload's
   `blocksAsJSON` adapter option.
-- `src/fields/website/`: shared heading, SEO and conditional content fields.
+- `src/fields/website/`: shared heading, SEO and conditional content fields
+  (including FAQ and Service cards items).
 - `src/globals/website/`: shared fixed-page factory; Home keeps its custom hero.
-- `src/collections/`: reusable forms and private inbox records.
+- `src/collections/`: reusable forms, private inbox records and service pages.
 - `src/components/website/`: shared public-page composition and metadata, heading,
   sections, rich text, media, forms and preview renderers.
 - `src/lib/website/`: catalog, published/draft reads, metadata, safe URLs and

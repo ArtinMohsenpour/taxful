@@ -51,5 +51,11 @@
     "light": "Hell",
     "dark": "Dunkel",
     "system": "System"
+  },
+  "Services": {
+    "readMore": "Mehr erfahren",
+    "keyPoints": "Auf einen Blick",
+    "startFree": "Kostenlos starten",
+    "viewPricing": "Preise ansehen"
   }
 }

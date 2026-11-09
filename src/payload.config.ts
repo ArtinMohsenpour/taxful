@@ -12,6 +12,7 @@ import { Home } from './globals/Home'
 import { WebsiteGlobals } from './globals/website/page'
 import { WebsiteForms } from './collections/WebsiteForms'
 import { FormSubmissions } from './collections/FormSubmissions'
+import { ServicePages } from './collections/ServicePages'
 import { websiteLayouts } from './blocks/website/layouts'
 import { PUBLIC_MEDIA_MAX_BYTES } from './lib/website/media-settings'
 import { staffEmailAdapter } from './lib/staff-auth/email'
@@ -25,7 +26,7 @@ export default buildConfig({
   email: staffEmailAdapter,
   admin: {
     components: {
-      afterNavLinks: ['/components/billing-admin/nav'],
+      afterNavLinks: ['/components/admin-nav/administration'],
       views: {
         login: { Component: '/components/staff-auth/login', path: '/login', exact: true },
         billing: { Component: '/components/billing-admin/view', path: '/billing' },
@@ -43,8 +44,9 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, WebsiteForms, FormSubmissions],
-  globals: [Navbar, Home, ...WebsiteGlobals],
+  // Order sets the sidebar group order (see ADMIN_GROUPS).
+  collections: [ServicePages, WebsiteForms, FormSubmissions, Media, Users],
+  globals: [Home, ...WebsiteGlobals, Navbar],
   blocks: websiteLayouts,
   upload: {
     limits: { fileSize: PUBLIC_MEDIA_MAX_BYTES },

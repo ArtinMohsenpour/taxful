@@ -1,8 +1,16 @@
-import type { ContentItem, WebsitePageDocument, WebsiteSection } from '@/lib/website/types'
+import type {
+  ContentItem,
+  ServiceCardsData,
+  WebsiteSection,
+  WebsiteSections as Sections,
+} from '@/lib/website/types'
 import type { WebsiteLocale, WebsitePageSlug } from '@/lib/website/catalog'
+import { selectServiceCards } from '@/lib/website/service-pages'
 import { WebsiteRichText } from './rich-text'
 import { MediaContent } from './media-content'
 import { WebsiteFormView } from './form'
+import { FaqList } from './faq-list'
+import { ServiceCards } from './service-cards'
 
 export function sectionColumns(section: WebsiteSection) {
   return [
@@ -18,12 +26,14 @@ function Content({
   columns,
   page,
   preview,
+  cards,
 }: {
   item: ContentItem
   locale: WebsiteLocale
   columns: number
-  page: WebsitePageSlug
+  page?: WebsitePageSlug
   preview: boolean
+  cards?: ServiceCardsData
 }) {
   switch (item.type) {
     case 'text':
@@ -32,10 +42,22 @@ function Content({
     case 'video':
       return <MediaContent item={item} locale={locale} columns={columns} />
     case 'form':
-      return typeof item.form === 'object' &&
+      // Submissions are bound to a page global; other pages do not show forms.
+      return page &&
+        typeof item.form === 'object' &&
         item.form?.enabled &&
         item.form._status === 'published' ? (
         <WebsiteFormView form={item.form} locale={locale} page={page} preview={preview} />
+      ) : null
+    case 'faq':
+      return <FaqList items={item.faq} locale={locale} />
+    case 'services':
+      return cards ? (
+        <ServiceCards
+          services={selectServiceCards(item.services, cards.items)}
+          locale={locale}
+          readMore={cards.readMore}
+        />
       ) : null
     default:
       return null
@@ -47,11 +69,13 @@ export function WebsiteSections({
   locale,
   page,
   preview = false,
+  cards,
 }: {
-  sections: WebsitePageDocument['sections']
+  sections: Sections
   locale: WebsiteLocale
-  page: WebsitePageSlug
+  page?: WebsitePageSlug
   preview?: boolean
+  cards?: ServiceCardsData
 }) {
   if (!sections?.length) return null
   return (
@@ -107,6 +131,7 @@ export function WebsiteSections({
                       columns={columns.length}
                       page={page}
                       preview={preview}
+                      cards={cards}
                     />
                   ))}
                 </div>

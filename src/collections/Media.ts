@@ -1,11 +1,14 @@
 import type { CollectionConfig } from 'payload'
 import { cmsEditor } from '../access/cms-editor'
 import { PUBLIC_MEDIA_MAX_BYTES } from '../lib/website/media-settings'
+import { ADMIN_GROUPS } from '../lib/cms-settings'
 import { APIError } from 'payload'
 
 export const Media: CollectionConfig = {
   slug: 'media',
+  labels: { singular: 'Media file', plural: 'Media library' },
   admin: {
+    group: ADMIN_GROUPS.media,
     description:
       'Public website assets, up to 50 MB per file. Use MP4 or WebM for videos. Never upload private client documents here.',
   },

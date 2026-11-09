@@ -1,12 +1,12 @@
 import { Forbidden, type CollectionConfig, type Where } from 'payload'
 import { cmsEditor } from '../access/cms-editor'
-import { CMS_VERSION_LIMIT } from '../lib/cms-settings'
+import { ADMIN_GROUPS, CMS_VERSION_LIMIT } from '../lib/cms-settings'
 
 export const WebsiteForms: CollectionConfig = {
   slug: 'website-forms',
   labels: { singular: 'Form', plural: 'Forms' },
   admin: {
-    group: 'Website',
+    group: ADMIN_GROUPS.forms,
     useAsTitle: 'name',
     defaultColumns: ['name', 'enabled', '_status'],
     description:

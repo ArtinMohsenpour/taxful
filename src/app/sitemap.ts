@@ -1,12 +1,22 @@
 import type { MetadataRoute } from 'next'
-import { publishedWebsitePages } from '@/lib/website/load'
+import { loadServiceCards, publishedWebsitePages } from '@/lib/website/load'
 import { websiteOrigin } from '@/lib/website/metadata'
 
 export const dynamic = 'force-dynamic'
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const pages = await publishedWebsitePages('de')
+  const [pages, services] = await Promise.all([
+    publishedWebsitePages('de'),
+    loadServiceCards('de', false),
+  ])
   const base = websiteOrigin()
-  return pages
+  return [
+    ...pages.map(({ path, updatedAt, noIndex }) => ({ path, updatedAt, noIndex })),
+    ...services.map(({ slug, updatedAt, noIndex }) => ({
+      path: `/services/${slug}`,
+      updatedAt,
+      noIndex,
+    })),
+  ]
     .filter((page) => !page.noIndex)
     .flatMap((page) =>
       ['de', 'en'].map((locale) => {

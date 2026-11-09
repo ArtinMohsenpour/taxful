@@ -51,5 +51,11 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "Services": {
+    "readMore": "Learn more",
+    "keyPoints": "At a glance",
+    "startFree": "Start for free",
+    "viewPricing": "View pricing"
   }
 }

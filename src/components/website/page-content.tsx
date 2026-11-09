@@ -1,5 +1,5 @@
 import type { Home } from '@/payload-types'
-import type { WebsitePageDocument } from '@/lib/website/types'
+import type { ServiceCardsData, WebsitePageDocument } from '@/lib/website/types'
 import type { WebsiteLocale, WebsitePageSlug } from '@/lib/website/catalog'
 import { homeContent } from '@/lib/home/content'
 import { HeroSection } from '../home/hero/hero-section'
@@ -11,11 +11,13 @@ export function WebsitePageContent({
   slug,
   locale,
   preview = false,
+  cards,
 }: {
   data: WebsitePageDocument
   slug: WebsitePageSlug
   locale: WebsiteLocale
   preview?: boolean
+  cards?: ServiceCardsData
 }) {
   return (
     <>
@@ -28,7 +30,13 @@ export function WebsitePageContent({
           subtitle={'subtitle' in data ? data.subtitle : undefined}
         />
       )}
-      <WebsiteSections sections={data.sections} locale={locale} page={slug} preview={preview} />
+      <WebsiteSections
+        sections={data.sections}
+        locale={locale}
+        page={slug}
+        preview={preview}
+        cards={cards}
+      />
     </>
   )
 }
