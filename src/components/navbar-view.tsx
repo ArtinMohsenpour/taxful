@@ -7,6 +7,7 @@ import { Preferences } from './preferences'
 import Image from 'next/image'
 import type { Navbar } from '@/payload-types'
 import { CustomerAccountLink } from './customer-auth/account-link'
+import { TaxfulWordmark } from './brand/wordmark'
 
 const subscribe = () => () => {}
 
@@ -98,17 +99,7 @@ export function NavbarView({
               className="h-10 w-auto max-w-44 object-contain sm:h-12 sm:max-w-48"
             />
           ) : (
-            <>
-              <span
-                aria-hidden="true"
-                className="flex size-10 items-center justify-center rounded-[0.9rem] bg-primary text-xl font-semibold text-primary-foreground"
-              >
-                t.
-              </span>
-              <span className="text-[1.65rem] font-semibold tracking-[-0.065em] text-foreground">
-                taxful<span className="text-brand-ink">.</span>
-              </span>
-            </>
+            <TaxfulWordmark />
           )}
         </Link>
         <button
@@ -123,29 +114,35 @@ export function NavbarView({
         >
           <span
             aria-hidden="true"
-            className={`absolute h-0.5 w-4 rounded-full bg-current transition-transform duration-300 motion-reduce:transition-none ${open ? 'rotate-45' : '-translate-y-1'}`}
+            className={`menu-bar ${open ? 'rotate-45' : '-translate-y-1'}`}
           />
           <span
             aria-hidden="true"
-            className={`absolute h-0.5 w-4 rounded-full bg-current transition-transform duration-300 motion-reduce:transition-none ${open ? '-rotate-45' : 'translate-y-1'}`}
+            className={`menu-bar ${open ? '-rotate-45' : 'translate-y-1'}`}
           />
         </button>
+        {/* Stays mounted so it can animate closed; hidden content is not focusable. */}
         <div
           id="navbar-panel"
-          className={`${open ? 'mobile-nav-open flex' : 'hidden'} max-h-[calc(100dvh-7rem)] w-full flex-col gap-5 overflow-y-auto pt-5 pb-2 lg:ml-3 lg:flex lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:gap-3 lg:overflow-visible lg:p-0`}
+          data-open={open}
+          className="mobile-nav w-full lg:ml-3 lg:w-auto lg:flex-1"
           onClick={(event) => {
             if ((event.target as HTMLElement).closest('a')) setOpen(false)
           }}
         >
-          <div className="border-t border-border pt-3 lg:flex-1 lg:border-0 lg:pt-0">
-            <NavbarItems items={navbar.items} />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 lg:justify-end lg:border-0 lg:pt-0">
-            <Preferences />
-            <CustomerAccountLink
-              loginLabel={labels.login}
-              initialAuthenticated={initialAuthenticated}
-            />
+          <div className="mobile-nav-clip">
+            <div className="mobile-nav-content -mx-2 flex max-h-[calc(100dvh-7rem)] flex-col gap-5 overflow-y-auto px-2 pt-5 pb-2 lg:mx-0 lg:max-h-none lg:flex-row lg:items-center lg:gap-3 lg:overflow-visible lg:p-0 lg:px-0">
+              <div className="border-t border-border pt-3 lg:flex-1 lg:border-0 lg:pt-0">
+                <NavbarItems items={navbar.items} />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 lg:justify-end lg:border-0 lg:pt-0">
+                <Preferences />
+                <CustomerAccountLink
+                  loginLabel={labels.login}
+                  initialAuthenticated={initialAuthenticated}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </nav>

@@ -3,6 +3,7 @@ import { customerPool } from '@/lib/customer-auth/database'
 import type { Plan } from '@/lib/billing/plans'
 import { PlanCards } from '@/components/billing/plan-cards'
 import { Navbar } from '@/components/navbar'
+import { Footer } from '@/components/footer/footer'
 export const dynamic = 'force-dynamic'
 export default async function PricingPage() {
   const t = await getTranslations('Billing')
@@ -10,9 +11,13 @@ export default async function PricingPage() {
     'SELECT * FROM customer_auth.billing_plans ORDER BY monthly_documents',
   )
   return (
-    <div className="min-h-dvh pt-3 sm:pt-6">
+    <div className="flex min-h-dvh flex-col pt-3 sm:pt-6">
       <Navbar />
-      <main className="mx-auto max-w-6xl px-3 py-12 sm:px-6 sm:py-16">
+      <main
+        id="main"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-6xl flex-1 px-3 py-12 sm:px-6 sm:py-16"
+      >
         <h1 className="text-4xl font-medium">{t('pricing')}</h1>
         <p className="mt-3 text-muted-foreground">{t('intro')}</p>
         <p className="my-6 rounded-2xl bg-primary/10 p-4 text-sm text-brand-ink">
@@ -20,6 +25,7 @@ export default async function PricingPage() {
         </p>
         <PlanCards plans={rows} />
       </main>
+      <Footer />
     </div>
   )
 }

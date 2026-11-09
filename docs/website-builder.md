@@ -3,7 +3,7 @@
 The Payload sidebar groups the website by task: **Services** (service pages and the
 Services overview), **Forms** (forms and submissions), **Media** (media library),
 **Pages** (Home, About us, How it works, FAQ, Contact us), **Legal** (Privacy policy,
-Terms of use, Legal notice (Impressum)), **Site settings** (Navigation) and
+Terms of use, Legal notice (Impressum)), **Site settings** (Navigation, Footer) and
 **Administration** (staff accounts; customers & billing for super admins). Group names
 live in `ADMIN_GROUPS` (`src/lib/cms-settings.ts`); Payload lists groups that contain
 collections first, so the `collections` order in `src/payload.config.ts` sets the order.
@@ -96,7 +96,7 @@ and Contact. Privacy, Terms and Impressum start as drafts with titles and empty
 content. Add reviewed company/legal copy and publish them before launch. Draft
 pages return 404 publicly and are omitted from the sitemap. Navbar
 links remain under the separate Navbar global; existing navigation is preserved.
-The temporary footer is removed; a dedicated footer will be designed later.
+The footer is managed in the separate Footer global; see `footer.md`.
 Each public page has its own named route folder under
 `src/app/(frontend)/[locale]/`. Enter the paths below as internal links in the
 Navbar global; navigation adds the current `/de` or `/en` locale automatically.

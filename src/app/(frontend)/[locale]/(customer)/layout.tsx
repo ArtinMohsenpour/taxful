@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { Navbar } from '@/components/navbar'
+import { Footer } from '@/components/footer/footer'
 import { getCustomerSession } from '@/lib/customer-auth/session'
 
 export const metadata: Metadata = {
@@ -26,15 +27,16 @@ export default async function CustomerLayout({ children }: { children: ReactNode
         InvoiceEmail: messages.InvoiceEmail,
       }}
     >
-      <div className="min-h-dvh pt-3 sm:pt-6">
+      <div className="flex min-h-dvh flex-col pt-3 sm:pt-6">
         <Navbar initialAuthenticated={!!session?.user} />
         <main
           id="main"
           tabIndex={-1}
-          className="mx-auto w-full max-w-6xl px-3 py-12 sm:px-6 sm:py-16"
+          className="mx-auto w-full max-w-6xl flex-1 px-3 py-12 sm:px-6 sm:py-16"
         >
           {children}
         </main>
+        <Footer variant="compact" />
       </div>
     </NextIntlClientProvider>
   )

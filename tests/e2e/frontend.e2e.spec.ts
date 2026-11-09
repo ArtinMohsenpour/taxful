@@ -85,12 +85,18 @@ test('keeps Payload paths unlocalized and rejects unsupported pages', async ({ r
 })
 
 test('requires CMS authentication for draft preview', async ({ request }) => {
-  for (const path of ['/de?preview=true', '/de?preview=true&previewGlobal=home']) {
+  for (const path of [
+    '/de?preview=true',
+    '/de?preview=true&previewGlobal=home',
+    '/de?preview=true&previewGlobal=footer',
+  ]) {
     const response = await request.get(`${origin}${path}`)
     expect(response.status()).toBe(404)
   }
   const draft = await request.get(`${origin}/api/globals/home?draft=true`)
   expect(draft.status()).toBe(403)
+  const footerDraft = await request.get(`${origin}/api/globals/footer?draft=true`)
+  expect(footerDraft.status()).toBe(403)
 })
 
 test('fits a mobile viewport', async ({ page }) => {
@@ -99,10 +105,12 @@ test('fits a mobile viewport', async ({ page }) => {
   const menu = page.getByRole('button', { name: 'Menü öffnen' })
   await expect(menu).toHaveAttribute('aria-expanded', 'false')
   await menu.click()
-  await expect(page.getByRole('link', { name: 'Anmelden', exact: true })).toHaveAttribute(
-    'href',
-    '/de/login',
-  )
+  // The footer also links to login; check the one inside the opened menu.
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Hauptnavigation' })
+      .getByRole('link', { name: 'Anmelden', exact: true }),
+  ).toHaveAttribute('href', '/de/login')
   await page.keyboard.press('Escape')
   await expect(menu).toBeFocused()
   await expect(menu).toHaveAttribute('aria-expanded', 'false')
@@ -116,6 +124,12 @@ test('respects reduced motion and provides navigation landmarks', async ({ page 
   await page.goto(`${origin}/en`)
   await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible()
   await expect(page.locator('.toggle-thumb').first()).toHaveCSS('transition-duration', '0s')
+  // Inactive labels and the sun/moon icons do not scale or rotate with reduced motion.
+  await expect(page.locator('.toggle-option[data-active="false"]').first()).toHaveCSS(
+    'transform',
+    'none',
+  )
+  await expect(page.locator('.toggle-option svg').first()).toHaveCSS('transition-duration', '0s')
   await expect(page.locator('#invoice-flow path[pathLength="100"]').first()).toHaveCSS(
     'animation-name',
     'none',

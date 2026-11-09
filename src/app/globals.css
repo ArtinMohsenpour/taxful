@@ -14,8 +14,13 @@
   --accent: #eae2d6;
   --muted: #eeeeea;
   --brand-ink: #52613f;
+  /* Keeps original-colour partner logos legible; light in both themes. */
+  --logo-plate: #fffdf9;
+  /* Active navbar link line: deeper sage for at least 3:1 on the navbar surface. */
+  --nav-indicator: #73845a;
   --nav-shadow: 0 8px 32px -16px rgb(78 64 40 / 18%);
   --toggle-shadow: 0 2px 8px rgb(48 55 43 / 9%);
+  --toggle-shadow-hover: 0 3px 10px rgb(48 55 43 / 14%);
   --success: #21633b;
   --warning: #805500;
   --error: #b42318;
@@ -33,8 +38,11 @@
   --accent: #343b2d;
   --muted: #30352b;
   --brand-ink: #bdcba6;
+  --logo-plate: #dfd9cd;
+  --nav-indicator: #a6b58b;
   --nav-shadow: 0 8px 32px -16px rgb(0 0 0 / 35%);
   --toggle-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+  --toggle-shadow-hover: 0 3px 12px rgb(0 0 0 / 32%);
   --success: #91d5a7;
   --warning: #f2cf75;
   --error: #ffb4a9;
@@ -52,6 +60,8 @@
   --color-accent: var(--accent);
   --color-muted: var(--muted);
   --color-brand-ink: var(--brand-ink);
+  --color-logo-plate: var(--logo-plate);
+  --color-nav-indicator: var(--nav-indicator);
   --shadow-nav: var(--nav-shadow);
   --shadow-toggle: var(--toggle-shadow);
   --color-success: var(--success);
@@ -61,30 +71,66 @@
 }
 
 @layer components {
+  /* Two square cells: the thumb is exactly one cell, so it stays a circle. */
   .preference-toggle {
-    @apply relative inline-grid h-11 shrink-0 cursor-pointer items-center rounded-full border border-border bg-accent/55 p-1 text-muted-foreground transition-colors duration-300 hover:border-primary/70 disabled:cursor-wait;
+    --toggle-size: 2.25rem;
+    --toggle-thumb: calc(var(--toggle-size) - 0.5rem - 2px);
+    @apply relative inline-grid shrink-0 cursor-pointer grid-cols-2 items-center rounded-full border border-primary/30 bg-background p-1 text-muted-foreground hover:border-primary/55 disabled:cursor-wait;
+    width: calc(var(--toggle-thumb) * 2 + 0.5rem + 2px);
+    height: var(--toggle-size);
+    transition:
+      border-color 300ms ease,
+      transform 160ms ease;
+  }
+
+  /* A slight press, released with the thumb's glide. */
+  .preference-toggle:active:not(:disabled) {
+    transform: scale(0.96);
   }
 
   .toggle-thumb {
-    @apply absolute top-1 bottom-1 left-1 rounded-full bg-surface shadow-toggle;
-    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    @apply absolute top-1 left-1 rounded-full bg-surface shadow-toggle;
+    width: var(--toggle-thumb);
+    height: var(--toggle-thumb);
+    /* Gentle settle: about 3% overshoot, then rest. */
+    transition: transform 420ms cubic-bezier(0.34, 1.3, 0.64, 1);
+  }
+
+  .preference-toggle:hover .toggle-thumb {
+    box-shadow: var(--toggle-shadow-hover);
   }
 
   .toggle-option {
-    @apply relative z-10 flex h-full items-center justify-center text-sm font-semibold transition-colors duration-300;
+    @apply relative z-10 flex h-full items-center justify-center text-xs font-semibold;
+    transition:
+      color 300ms ease,
+      opacity 300ms ease,
+      transform 420ms cubic-bezier(0.34, 1.3, 0.64, 1);
+  }
+
+  .toggle-option[data-active='false'] {
+    opacity: 0.75;
+    transform: scale(0.88);
   }
 
   .toggle-option[data-active='true'] {
     @apply text-brand-ink;
   }
+
+  /* Sun and moon turn into place as they become active. */
+  .toggle-option svg {
+    transition: transform 520ms cubic-bezier(0.34, 1.3, 0.64, 1);
+  }
+
+  .toggle-option[data-active='false'] svg {
+    transform: rotate(-20deg);
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .mobile-nav-open {
-    animation: menu-reveal 220ms ease-out;
-  }
   body,
-  .site-navbar {
+  .site-navbar,
+  .site-footer {
     transition:
       background-color 300ms ease,
       color 300ms ease,
@@ -92,22 +138,106 @@
   }
 }
 
-@keyframes menu-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
+/* Mobile menu: height glides open/closed (grid 0fr -> 1fr) with the toggles' easing;
+   its two sections settle in with a slight stagger. Desktop shows it as a plain row. */
+.mobile-nav {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease,
+    visibility 0s linear 360ms;
+}
+
+.mobile-nav[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    grid-template-rows 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 260ms ease,
+    visibility 0s;
+}
+
+.mobile-nav-clip {
+  min-height: 0;
+  overflow: hidden;
+  /* Room for focus outlines, which the clipping would otherwise cut off. */
+  margin-inline: -0.5rem;
+  padding-inline: 0.5rem;
+}
+
+.mobile-nav-content > * {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 260ms ease,
+    transform 420ms cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+.mobile-nav[data-open='true'] .mobile-nav-content > * {
+  opacity: 1;
+  transform: none;
+}
+
+.mobile-nav[data-open='true'] .mobile-nav-content > :nth-child(2) {
+  transition-delay: 70ms;
+}
+
+.menu-bar {
+  position: absolute;
+  width: 1rem;
+  height: 0.125rem;
+  border-radius: 999px;
+  background: currentColor;
+  /* Tailwind's rotate/translate utilities use the individual transform properties. */
+  transition:
+    rotate 420ms cubic-bezier(0.34, 1.3, 0.64, 1),
+    translate 420ms cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+@media (width >= 64rem) {
+  .mobile-nav,
+  .mobile-nav[data-open='true'] {
+    display: block;
     opacity: 1;
-    transform: translateY(0);
+    visibility: visible;
+    transition: none;
+  }
+
+  .mobile-nav-clip {
+    overflow: visible;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+
+  .mobile-nav-content > *,
+  .mobile-nav[data-open='true'] .mobile-nav-content > * {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .preference-toggle,
   .toggle-thumb,
-  .toggle-option {
+  .toggle-option,
+  .toggle-option svg,
+  .mobile-nav,
+  .mobile-nav[data-open='true'],
+  .mobile-nav-content > *,
+  .mobile-nav[data-open='true'] .mobile-nav-content > *,
+  .menu-bar {
     transition: none;
+  }
+
+  .preference-toggle:active:not(:disabled),
+  .toggle-option[data-active='false'],
+  .toggle-option[data-active='false'] svg {
+    transform: none;
   }
 }
 

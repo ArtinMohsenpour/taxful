@@ -21,7 +21,13 @@ it('highlights Home at the locale root and leaves other links inactive', () => {
   )
   const home = screen.getByRole('link', { name: 'Home' })
   expect(home.getAttribute('aria-current')).toBe('page')
-  expect(home.className).toContain('bg-accent')
+  // The active page shows a sage line under its label instead of a filled background.
+  expect(home.className).not.toContain('bg-accent')
+  expect(home.className).toContain('text-brand-ink')
+  expect(home.querySelector('span')?.className).toContain('after:scale-x-100')
+  expect(screen.getByRole('link', { name: 'About' }).querySelector('span')?.className).toContain(
+    'after:scale-x-0',
+  )
   expect(screen.getByRole('link', { name: 'About' }).hasAttribute('aria-current')).toBe(false)
 })
 

@@ -57,5 +57,15 @@
     "keyPoints": "Auf einen Blick",
     "startFree": "Kostenlos starten",
     "viewPricing": "Preise ansehen"
+  },
+  "Footer": {
+    "navigation": "Fußzeilennavigation",
+    "legal": "Rechtliche Hinweise",
+    "social": "Social Media",
+    "partners": "Partner",
+    "contact": "Kontakt",
+    "email": "E-Mail",
+    "phone": "Telefon",
+    "newTab": "öffnet in einem neuen Tab"
   }
 }

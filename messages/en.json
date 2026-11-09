@@ -57,5 +57,15 @@
     "keyPoints": "At a glance",
     "startFree": "Start for free",
     "viewPricing": "View pricing"
+  },
+  "Footer": {
+    "navigation": "Footer navigation",
+    "legal": "Legal",
+    "social": "Social media",
+    "partners": "Partners",
+    "contact": "Contact",
+    "email": "Email",
+    "phone": "Phone",
+    "newTab": "opens in a new tab"
   }
 }

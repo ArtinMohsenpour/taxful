@@ -2,7 +2,8 @@ import type { CollectionConfig } from 'payload'
 import { cmsEditor } from '../access/cms-editor'
 import { PUBLIC_MEDIA_MAX_BYTES } from '../lib/website/media-settings'
 import { ADMIN_GROUPS } from '../lib/cms-settings'
-import { APIError } from 'payload'
+import { APIError, ValidationError } from 'payload'
+import { svgUploadError } from '../lib/website/svg-safety'
 
 export const Media: CollectionConfig = {
   slug: 'media',
@@ -14,13 +15,19 @@ export const Media: CollectionConfig = {
   },
   hooks: {
     beforeOperation: [
-      ({ req }) => {
+      async ({ req }) => {
         if (
           req.file &&
           (req.file.size > PUBLIC_MEDIA_MAX_BYTES ||
             ('truncated' in req.file && req.file.truncated === true))
         )
           throw new APIError('The file is too large. Please use a file smaller than 50 MB.', 413)
+        const svgError = req.file ? await svgUploadError(req.file) : null
+        if (svgError)
+          throw new ValidationError({
+            collection: 'media',
+            errors: [{ path: 'file', message: svgError }],
+          })
       },
     ],
   },
