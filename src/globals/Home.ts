@@ -3,8 +3,8 @@ import { cmsEditor } from '../access/cms-editor'
 import { homeHeroFields } from '../fields/home/hero'
 import { homeProviderFields } from '../fields/home/providers'
 import { homeDiagramFields } from '../fields/home/diagram'
-import { protectGlobalDrafts } from '../hooks/protect-global-drafts'
-import { CMS_VERSION_LIMIT, previewURL } from '../lib/cms-settings'
+import { protectGlobalDrafts } from '../hooks/protect-drafts'
+import { ADMIN_GROUPS, CMS_VERSION_LIMIT, previewURL } from '../lib/cms-settings'
 import { sectionsField } from '../blocks/website/layouts'
 import { seoFields } from '../fields/website/seo'
 
@@ -12,9 +12,9 @@ const homePreviewURL = (locale: string) => `${previewURL(locale)}&previewGlobal=
 
 export const Home: GlobalConfig = {
   slug: 'home',
-  label: 'Home page',
+  label: 'Home',
   admin: {
-    group: 'Website',
+    group: ADMIN_GROUPS.pages,
     livePreview: { url: ({ locale }) => homePreviewURL(locale.code) },
     preview: (_, { locale }) => homePreviewURL(locale),
     description:

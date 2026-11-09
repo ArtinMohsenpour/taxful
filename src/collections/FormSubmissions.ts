@@ -1,11 +1,12 @@
 import type { CollectionConfig } from 'payload'
 import { cmsEditor } from '../access/cms-editor'
+import { ADMIN_GROUPS } from '../lib/cms-settings'
 
 export const FormSubmissions: CollectionConfig = {
   slug: 'form-submissions',
-  labels: { singular: 'Form submission', plural: 'Form submissions' },
+  labels: { singular: 'Submission', plural: 'Submissions' },
   admin: {
-    group: 'Website',
+    group: ADMIN_GROUPS.forms,
     useAsTitle: 'reference',
     defaultColumns: ['reference', 'form', 'sourcePage', 'status', 'createdAt'],
     description:

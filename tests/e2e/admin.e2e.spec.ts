@@ -25,10 +25,30 @@ test.describe('Admin Panel', () => {
     await expect(dashboardArtifact).toBeVisible()
   })
 
+  test('groups the sidebar by task with administration last', async () => {
+    await page.goto('http://localhost:3000/admin')
+    const groups = page.locator('nav .nav-group')
+    await expect(groups.locator('.nav-group__label')).toHaveText([
+      'Services',
+      'Forms',
+      'Media',
+      'Pages',
+      'Legal',
+      'Site settings',
+      'Administration',
+    ])
+    const items = (index: number) => groups.nth(index).locator('.nav__link-label')
+    await expect(items(0)).toHaveText(['Service pages', 'Services overview'])
+    await expect(items(3)).toHaveText(['Home', 'About us', 'How it works', 'FAQ', 'Contact us'])
+    await expect(items(4)).toHaveText(['Privacy policy', 'Terms of use', 'Legal notice (Impressum)'])
+    // The seeded test user is a super admin.
+    await expect(items(6)).toHaveText(['Staff accounts', 'Customers & billing'])
+  })
+
   test('can navigate to list view', async () => {
     await page.goto('http://localhost:3000/admin/collections/users')
     await expect(page).toHaveURL('http://localhost:3000/admin/collections/users')
-    const listViewArtifact = page.locator('h1', { hasText: 'Users' }).first()
+    const listViewArtifact = page.locator('h1', { hasText: 'Staff accounts' }).first()
     await expect(listViewArtifact).toBeVisible()
   })
 

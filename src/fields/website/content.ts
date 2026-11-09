@@ -14,21 +14,22 @@ import {
   lexicalEditor,
 } from '@payloadcms/richtext-lexical'
 
-const editor = lexicalEditor({
-  features: () => [
-    ParagraphFeature(),
-    HeadingFeature({ enabledHeadingSizes: ['h2', 'h3', 'h4'] }),
-    BoldFeature(),
-    ItalicFeature(),
-    UnderlineFeature(),
-    OrderedListFeature(),
-    UnorderedListFeature(),
-    BlockquoteFeature(),
-    LinkFeature({ enabledCollections: [] }),
-    FixedToolbarFeature(),
-    InlineToolbarFeature(),
-  ],
-})
+// Exported so seeded Markdown converts with exactly the features editors get.
+export const websiteEditorFeatures = () => [
+  ParagraphFeature(),
+  HeadingFeature({ enabledHeadingSizes: ['h2', 'h3', 'h4'] }),
+  BoldFeature(),
+  ItalicFeature(),
+  UnderlineFeature(),
+  OrderedListFeature(),
+  UnorderedListFeature(),
+  BlockquoteFeature(),
+  LinkFeature({ enabledCollections: [] }),
+  FixedToolbarFeature(),
+  InlineToolbarFeature(),
+]
+
+const editor = lexicalEditor({ features: websiteEditorFeatures })
 
 const imageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif']
 const when = (type: string) => (_: unknown, sibling: Record<string, unknown>) =>
@@ -67,6 +68,8 @@ function contentFields(): Field[] {
         { label: 'Image', value: 'image' },
         { label: 'Video', value: 'video' },
         { label: 'Form', value: 'form' },
+        { label: 'FAQ', value: 'faq' },
+        { label: 'Service cards', value: 'services' },
       ],
     },
     // Lexical renders through a custom field component. A conditional row also
@@ -175,7 +178,37 @@ function contentFields(): Field[] {
       admin: {
         condition: when('form'),
         description:
-          'Create and publish forms under Website → Forms. Submissions go to the private CMS inbox.',
+          'Create and publish forms under Forms → Forms. Submissions go to the private CMS inbox.',
+      },
+    },
+    {
+      name: 'faq',
+      label: 'Questions and answers',
+      type: 'array',
+      required: true,
+      minRows: 1,
+      maxRows: 12,
+      labels: { singular: 'Question', plural: 'Questions' },
+      admin: {
+        condition: when('faq'),
+        description:
+          'Shown as expandable questions and published as FAQ structured data for search engines.',
+      },
+      fields: [
+        { name: 'question', type: 'text', required: true, maxLength: 200 },
+        { name: 'answer', type: 'richText', editor, required: true },
+      ],
+    },
+    {
+      name: 'services',
+      label: 'Service pages',
+      type: 'relationship',
+      relationTo: 'service-pages',
+      hasMany: true,
+      admin: {
+        condition: when('services'),
+        description:
+          'Choose and drag to order. Leave empty to show all published service pages in their sort order.',
       },
     },
     {

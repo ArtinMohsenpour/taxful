@@ -1,6 +1,6 @@
 # Home page
 
-In Payload, open **Website → Home page** (`/admin/globals/home`). Choose German or English with the locale selector.
+In Payload, open **Pages → Home** (`/admin/globals/home`). Choose German or English with the locale selector.
 
 - **Hero** controls the introductory line, both heading lines and description. All four are optional: clear a field to hide it, or clear all four to show only the diagram. Empty text adds no empty heading or line break.
 - **Accounting companies** controls the top row. Choose one to six companies and drag rows to reorder them. Built-in wordmarks are local SVG assets. For another company, choose the custom option, enter its name and select an image from Media. Company selection/order is shared between locales; custom names are localized.

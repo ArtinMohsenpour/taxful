@@ -145,7 +145,7 @@ test('the page editor previews unsaved headings and exposes the reusable layout 
   await login({ page, user: testUser })
   await page.request.get(`${origin}/api/globals/about?locale=en&draft=true`)
   await page.goto(`${origin}/admin/globals/about?locale=en`)
-  await expect(page.getByRole('heading', { name: 'About us page', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'About us', exact: true })).toBeVisible()
   await page.locator('#live-preview-toggler').click()
   const preview = page.frameLocator('iframe[src*="previewGlobal=about"]')
   await expect(preview.getByRole('heading', { level: 1 })).toHaveText(

@@ -12,7 +12,7 @@
  */
 export type WebsiteContentItem =
   | {
-      type: 'text' | 'image' | 'video' | 'form';
+      type: 'text' | 'image' | 'video' | 'form' | 'faq' | 'services';
       text?: {
         root: {
           type: string;
@@ -60,9 +60,37 @@ export type WebsiteContentItem =
         [k: string]: unknown;
       } | null;
       /**
-       * Create and publish forms under Website → Forms. Submissions go to the private CMS inbox.
+       * Create and publish forms under Forms → Forms. Submissions go to the private CMS inbox.
        */
       form?: (number | null) | WebsiteForm;
+      /**
+       * Shown as expandable questions and published as FAQ structured data for search engines.
+       */
+      faq?:
+        | {
+            question: string;
+            answer: {
+              root: {
+                type: string;
+                children: {
+                  type: any;
+                  version: number;
+                  [k: string]: unknown;
+                }[];
+                direction: ('ltr' | 'rtl') | null;
+                format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                indent: number;
+                version: number;
+              };
+              [k: string]: unknown;
+            };
+            id?: string | null;
+          }[]
+        | null;
+      /**
+       * Choose and drag to order. Leave empty to show all published service pages in their sort order.
+       */
+      services?: (number | ServicePage)[] | null;
       caption?: string | null;
       id?: string | null;
     }[]
@@ -132,10 +160,11 @@ export interface Config {
     threeColumns: ThreeColumnSection;
   };
   collections: {
-    users: User;
-    media: Media;
+    'service-pages': ServicePage;
     'website-forms': WebsiteForm;
     'form-submissions': FormSubmission;
+    media: Media;
+    users: User;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -143,10 +172,11 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
-    users: UsersSelect<false> | UsersSelect<true>;
-    media: MediaSelect<false> | MediaSelect<true>;
+    'service-pages': ServicePagesSelect<false> | ServicePagesSelect<true>;
     'website-forms': WebsiteFormsSelect<false> | WebsiteFormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
+    users: UsersSelect<false> | UsersSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -157,7 +187,6 @@ export interface Config {
   };
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('de' | 'en') | ('de' | 'en')[];
   globals: {
-    navbar: Navbar;
     home: Home;
     services: Service;
     about: About;
@@ -167,9 +196,9 @@ export interface Config {
     privacy: Privacy;
     terms: Term;
     impressum: Impressum;
+    navbar: Navbar;
   };
   globalsSelect: {
-    navbar: NavbarSelect<false> | NavbarSelect<true>;
     home: HomeSelect<false> | HomeSelect<true>;
     services: ServicesSelect<false> | ServicesSelect<true>;
     about: AboutSelect<false> | AboutSelect<true>;
@@ -179,6 +208,7 @@ export interface Config {
     privacy: PrivacySelect<false> | PrivacySelect<true>;
     terms: TermsSelect<false> | TermsSelect<true>;
     impressum: ImpressumSelect<false> | ImpressumSelect<true>;
+    navbar: NavbarSelect<false> | NavbarSelect<true>;
   };
   locale: 'de' | 'en';
   widgets: {
@@ -280,6 +310,62 @@ export interface WebsiteForm {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * Each service has its own page at /services/<slug> and appears in Service cards. Translate with the locale selector, save drafts and publish after review.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "service-pages".
+ */
+export interface ServicePage {
+  id: number;
+  /**
+   * Shared by both languages: /de/services/<slug> and /en/services/<slug>. Avoid changing it after publishing.
+   */
+  slug: string;
+  /**
+   * Lower numbers appear first.
+   */
+  sortOrder: number;
+  /**
+   * Icon on the service card.
+   */
+  icon?:
+    | ('outgoing-invoices' | 'incoming-invoices' | 'converter' | 'check' | 'files' | 'security' | 'team' | 'preview')
+    | null;
+  title: string;
+  /**
+   * Lead paragraph and card text. Use the main keyword early.
+   */
+  summary: string;
+  keyPoints?:
+    | {
+        text: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Add, reorder and reuse layouts. Columns stack in reading order on mobile. Each locale has its own sections.
+   */
+  sections?: (FullWidthSection | TwoColumnSection | ThreeColumnSection)[] | null;
+  seo?: {
+    /**
+     * Optional. Falls back to the page title and Taxful.
+     */
+    title?: string | null;
+    /**
+     * Optional search-result description. Falls back to the subtitle.
+     */
+    description?: string | null;
+    image?: (number | null) | Media;
+    /**
+     * Drafts and previews are always excluded. Canonical and language URLs are generated automatically.
+     */
+    noIndex?: boolean | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "TwoColumnSection".
  */
@@ -321,6 +407,32 @@ export interface ThreeColumnSection {
   id?: string | null;
   blockName?: string | null;
   blockType: 'threeColumns';
+}
+/**
+ * Private website inbox. Read messages here and mark them handled. No email notifications are sent. Delete submissions according to your reviewed retention policy.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "form-submissions".
+ */
+export interface FormSubmission {
+  id: number;
+  reference: string;
+  fingerprint: string;
+  form: number | WebsiteForm;
+  sourcePage: string;
+  locale: 'de' | 'en';
+  answers:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  status: 'new' | 'handled';
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -369,32 +481,6 @@ export interface User {
   collection: 'users';
 }
 /**
- * Private website inbox. Read messages here and mark them handled. No email notifications are sent. Delete submissions according to your reviewed retention policy.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "form-submissions".
- */
-export interface FormSubmission {
-  id: number;
-  reference: string;
-  fingerprint: string;
-  form: number | WebsiteForm;
-  sourcePage: string;
-  locale: 'de' | 'en';
-  answers:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  status: 'new' | 'handled';
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -419,12 +505,8 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: 'users';
-        value: number | User;
-      } | null)
-    | ({
-        relationTo: 'media';
-        value: number | Media;
+        relationTo: 'service-pages';
+        value: number | ServicePage;
       } | null)
     | ({
         relationTo: 'website-forms';
@@ -433,6 +515,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'form-submissions';
         value: number | FormSubmission;
+      } | null)
+    | ({
+        relationTo: 'media';
+        value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'users';
+        value: number | User;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -478,57 +568,32 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users_select".
+ * via the `definition` "service-pages_select".
  */
-export interface UsersSelect<T extends boolean = true> {
-  firstName?: T;
-  lastName?: T;
-  role?: T;
-  image?: T;
-  phoneNumber?: T;
-  address?:
+export interface ServicePagesSelect<T extends boolean = true> {
+  slug?: T;
+  sortOrder?: T;
+  icon?: T;
+  title?: T;
+  summary?: T;
+  keyPoints?:
     | T
     | {
-        street?: T;
-        addressLine2?: T;
-        postalCode?: T;
-        city?: T;
-        country?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-  email?: T;
-  resetPasswordToken?: T;
-  resetPasswordExpiration?: T;
-  salt?: T;
-  hash?: T;
-  loginAttempts?: T;
-  lockUntil?: T;
-  sessions?:
-    | T
-    | {
+        text?: T;
         id?: T;
-        createdAt?: T;
-        expiresAt?: T;
       };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media_select".
- */
-export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
+  sections?: T | {};
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
-  url?: T;
-  thumbnailURL?: T;
-  filename?: T;
-  mimeType?: T;
-  filesize?: T;
-  width?: T;
-  height?: T;
-  focalX?: T;
-  focalY?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -579,6 +644,60 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users_select".
+ */
+export interface UsersSelect<T extends boolean = true> {
+  firstName?: T;
+  lastName?: T;
+  role?: T;
+  image?: T;
+  phoneNumber?: T;
+  address?:
+    | T
+    | {
+        street?: T;
+        addressLine2?: T;
+        postalCode?: T;
+        city?: T;
+        country?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
+  sessions?:
+    | T
+    | {
+        id?: T;
+        createdAt?: T;
+        expiresAt?: T;
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -616,61 +735,6 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
-}
-/**
- * Reorder items by dragging. Translate labels using the locale selector. Publish to update the public navigation. Internal paths link to pages; they do not create pages.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "navbar".
- */
-export interface Navbar {
-  id: number;
-  /**
-   * Upload or choose an image to replace the Taxful branding. A transparent logo works best. Remove it to restore the default.
-   */
-  logo?: (number | null) | Media;
-  items?:
-    | {
-        label: string;
-        type: 'link' | 'dropdown';
-        appearance?: ('link' | 'button') | null;
-        link?: {
-          type: 'internal' | 'external';
-          /**
-           * Use / for home or a slug such as about. Do not include /de or /en. This links to a page; it does not create one.
-           */
-          path?: string | null;
-          /**
-           * Full URL beginning with https:// or http://.
-           */
-          url?: string | null;
-          newTab?: boolean | null;
-        };
-        children?:
-          | {
-              label: string;
-              description?: string | null;
-              link: {
-                type: 'internal' | 'external';
-                /**
-                 * Use / for home or a slug such as about. Do not include /de or /en. This links to a page; it does not create one.
-                 */
-                path?: string | null;
-                /**
-                 * Full URL beginning with https:// or http://.
-                 */
-                url?: string | null;
-                newTab?: boolean | null;
-              };
-              id?: string | null;
-            }[]
-          | null;
-        id?: string | null;
-      }[]
-    | null;
-  _status?: ('draft' | 'published') | null;
-  updatedAt?: string | null;
-  createdAt?: string | null;
 }
 /**
  * Edit the hero and invoice-flow illustration. Translate text with the locale selector. Preview unsaved changes, save drafts, then publish when ready.
@@ -1009,46 +1073,59 @@ export interface Impressum {
   createdAt?: string | null;
 }
 /**
+ * Reorder items by dragging. Translate labels using the locale selector. Publish to update the public navigation. Internal paths link to pages; they do not create pages.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "navbar_select".
+ * via the `definition` "navbar".
  */
-export interface NavbarSelect<T extends boolean = true> {
-  logo?: T;
+export interface Navbar {
+  id: number;
+  /**
+   * Upload or choose an image to replace the Taxful branding. A transparent logo works best. Remove it to restore the default.
+   */
+  logo?: (number | null) | Media;
   items?:
-    | T
     | {
-        label?: T;
-        type?: T;
-        appearance?: T;
-        link?:
-          | T
-          | {
-              type?: T;
-              path?: T;
-              url?: T;
-              newTab?: T;
-            };
+        label: string;
+        type: 'link' | 'dropdown';
+        appearance?: ('link' | 'button') | null;
+        link?: {
+          type: 'internal' | 'external';
+          /**
+           * Use / for home or a slug such as about. Do not include /de or /en. This links to a page; it does not create one.
+           */
+          path?: string | null;
+          /**
+           * Full URL beginning with https:// or http://.
+           */
+          url?: string | null;
+          newTab?: boolean | null;
+        };
         children?:
-          | T
           | {
-              label?: T;
-              description?: T;
-              link?:
-                | T
-                | {
-                    type?: T;
-                    path?: T;
-                    url?: T;
-                    newTab?: T;
-                  };
-              id?: T;
-            };
-        id?: T;
-      };
-  _status?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
+              label: string;
+              description?: string | null;
+              link: {
+                type: 'internal' | 'external';
+                /**
+                 * Use / for home or a slug such as about. Do not include /de or /en. This links to a page; it does not create one.
+                 */
+                path?: string | null;
+                /**
+                 * Full URL beginning with https:// or http://.
+                 */
+                url?: string | null;
+                newTab?: boolean | null;
+              };
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1269,6 +1346,48 @@ export interface ImpressumSelect<T extends boolean = true> {
         description?: T;
         image?: T;
         noIndex?: T;
+      };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "navbar_select".
+ */
+export interface NavbarSelect<T extends boolean = true> {
+  logo?: T;
+  items?:
+    | T
+    | {
+        label?: T;
+        type?: T;
+        appearance?: T;
+        link?:
+          | T
+          | {
+              type?: T;
+              path?: T;
+              url?: T;
+              newTab?: T;
+            };
+        children?:
+          | T
+          | {
+              label?: T;
+              description?: T;
+              link?:
+                | T
+                | {
+                    type?: T;
+                    path?: T;
+                    url?: T;
+                    newTab?: T;
+                  };
+              id?: T;
+            };
+        id?: T;
       };
   _status?: T;
   updatedAt?: T;

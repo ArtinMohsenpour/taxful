@@ -6,6 +6,9 @@ import { HomePreview } from '@/components/home/home-preview'
 import { loadHome } from '@/lib/home/load'
 import { homeContent } from '@/lib/home/content'
 import { WebsiteSections } from '@/components/website/sections'
+import { JsonLd } from '@/components/website/json-ld'
+import { serviceCardsFor } from '@/lib/website/load'
+import { faqJsonLd } from '@/lib/website/structured-data'
 import { pageMetadata } from '@/lib/website/metadata'
 
 export async function generateMetadata({
@@ -34,6 +37,7 @@ export default async function HomePage({
   const homePreview = preview && params.previewGlobal === 'home'
   const locale = await getLocale()
   const home = await loadHome(locale, homePreview)
+  const cards = await serviceCardsFor(home.sections, locale, homePreview)
 
   return (
     <div className="relative isolate flex min-h-dvh flex-col pt-3 sm:pt-6">
@@ -44,11 +48,12 @@ export default async function HomePage({
         className="relative mx-auto w-full max-w-6xl flex-1 px-5 sm:px-6"
       >
         {homePreview ? (
-          <HomePreview home={home} locale={locale} />
+          <HomePreview home={home} locale={locale} cards={cards} />
         ) : (
           <>
             <HeroSection {...homeContent(home, locale)} />
-            <WebsiteSections sections={home.sections} locale={locale} page="home" />
+            <WebsiteSections sections={home.sections} locale={locale} page="home" cards={cards} />
+            <JsonLd data={faqJsonLd(home.sections)} />
           </>
         )}
       </main>

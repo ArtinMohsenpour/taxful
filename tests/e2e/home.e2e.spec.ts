@@ -28,7 +28,7 @@ test.describe('Home editor', () => {
     expect(data._status).toBe('published')
     const editor = await page.goto(`${origin}/admin/globals/home?locale=de`)
     expect(editor?.status()).toBe(200)
-    await expect(page.getByRole('heading', { name: 'Home page', exact: true })).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible({
       timeout: 15000,
     })
     await page.locator('#live-preview-toggler').click()

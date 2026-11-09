@@ -103,6 +103,26 @@ test('fresh nonces replace forged headers, survive locale routing, and keep priv
   assert.match(denied.headers.get('content-security-policy')!, /frame-ancestors 'none'/)
 })
 
+test('service page previews can be framed by Live Preview; other paths cannot', async () => {
+  const policy = async (path: string) =>
+    (await proxy(new NextRequest('http://localhost:3000' + path))).headers.get(
+      'content-security-policy',
+    )!
+  for (const path of [
+    '/de/services/e-rechnung-erstellen?preview=true',
+    '/en/services/e-rechnung-pruefen?preview=true',
+  ])
+    assert.match(await policy(path), /frame-ancestors 'self'/)
+  for (const path of [
+    '/de/services/e-rechnung-erstellen',
+    '/de/services/Bad?preview=true',
+    '/de/services/a--b?preview=true',
+    '/de/services/x/y?preview=true',
+    '/de/portal/files/x?preview=true',
+  ])
+    assert.match(await policy(path), /frame-ancestors 'none'/)
+})
+
 test('proxy trust configuration requires valid bounded networks and throttling never locks an account', () => {
   assert.deepEqual(
     customerProxyConfig({

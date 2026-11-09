@@ -59,7 +59,7 @@ next-themes 0.4.6 has a tracked pnpm patch for its React client-remount script w
 
 ## Repository state and generated files
 
-- `src/payload.config.ts` registers `Users`, `Media`, and the localized `Navbar` global. See `docs/navbar.md` for editor usage and database setup.
+- `src/payload.config.ts` registers `Users`, `Media`, website forms, `service-pages`, the localized `Navbar` and `Home` globals and the website page globals. See `docs/navbar.md` and `docs/website-builder.md` (page builder, service pages, SEO, sitemap). Service pages and the Services page are seeded as drafts; legal copy needs review before publishing.
 - PostgreSQL schema push is disabled. Use reviewed migrations; the initial migration targets an empty database and must not be replayed over existing tables.
 - `src/app/(frontend)/` contains the placeholder public site.
 - `src/app/(payload)/` contains Payload routes and admin UI. Files marked as automatically generated must not be edited manually.

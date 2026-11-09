@@ -1,3 +1,5 @@
+import { isServiceSlug } from '../../fields/slug'
+
 export const websitePages = [
   { slug: 'home', path: '/', de: 'Startseite', en: 'Home' },
   { slug: 'services', path: '/services', de: 'Leistungen', en: 'Services' },
@@ -19,5 +21,7 @@ export function websitePage(slug: string) {
 
 export function isWebsitePreviewPath(path: string) {
   const match = path.match(/^\/(de|en)(\/[^/]+)?\/?$/)
-  return Boolean(match && websitePages.some((page) => page.path === (match[2] || '/')))
+  if (match && websitePages.some((page) => page.path === (match[2] || '/'))) return true
+  const service = path.match(/^\/(de|en)\/services\/([^/]+)\/?$/)
+  return Boolean(service && isServiceSlug(service[2]))
 }

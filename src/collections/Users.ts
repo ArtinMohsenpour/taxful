@@ -38,7 +38,10 @@ async function checkStaffPassword(password: unknown) {
 
 export const Users: CollectionConfig = {
   slug: 'users',
+  labels: { singular: 'Staff account', plural: 'Staff accounts' },
   admin: {
+    // Listed in the custom Administration group (src/components/admin-nav).
+    group: false,
     useAsTitle: 'email',
     defaultColumns: ['firstName', 'lastName', 'email', 'role', 'updatedAt'],
   },

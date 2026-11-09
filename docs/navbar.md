@@ -1,6 +1,6 @@
 # Navbar editor
 
-Open `/admin/globals/navbar` or **Website → Navbar** in Payload.
+Open `/admin/globals/navbar` or **Site settings → Navigation** in Payload.
 
 ## Live preview and history
 
