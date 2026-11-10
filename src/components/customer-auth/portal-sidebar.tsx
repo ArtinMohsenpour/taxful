@@ -25,38 +25,59 @@ export function PortalSidebar({
   const pathname = usePathname()
   const sidebar = useSidebarPosition()
   const [open, setOpen] = useState(false)
-  const links: {
-    href: string
-    label: 'overview' | 'converter' | 'files' | 'team' | 'profile' | 'security'
-    icon: IconName
-    invoiceLabel?: 'new' | 'incoming' | 'outgoing' | 'customers' | 'products'
-  }[] = [
-    { href: '/portal', label: 'overview', icon: 'overview' },
-    { href: '/portal/invoices/new', label: 'converter', icon: 'converter', invoiceLabel: 'new' },
+  type NavItem = { href: string; label: string; icon: IconName }
+  const groups: { key: string; heading?: string; items: NavItem[] }[] = [
     {
-      href: '/portal/invoices/outgoing',
-      label: 'files',
-      icon: 'outgoing-invoices',
-      invoiceLabel: 'outgoing',
+      key: 'main',
+      items: [{ href: '/portal', label: t('overview'), icon: 'overview' }],
     },
     {
-      href: '/portal/invoices/incoming',
-      label: 'files',
-      icon: 'incoming-invoices',
-      invoiceLabel: 'incoming',
+      key: 'invoices',
+      heading: t('navInvoices'),
+      items: [
+        { href: '/portal/invoices/new', label: invoices('new'), icon: 'converter' },
+        {
+          href: '/portal/invoices/outgoing',
+          label: invoices('outgoing'),
+          icon: 'outgoing-invoices',
+        },
+        {
+          href: '/portal/invoices/incoming',
+          label: invoices('incoming'),
+          icon: 'incoming-invoices',
+        },
+        { href: '/portal/files', label: t('files'), icon: 'files' },
+      ],
     },
-    { href: '/portal/invoices/customers', label: 'team', icon: 'team', invoiceLabel: 'customers' },
     {
-      href: '/portal/invoices/products',
-      label: 'converter',
-      icon: 'converter',
-      invoiceLabel: 'products',
+      key: 'directory',
+      heading: t('navDirectory'),
+      items: [
+        { href: '/portal/invoices/customers', label: invoices('customers'), icon: 'team' },
+        { href: '/portal/invoices/products', label: invoices('products'), icon: 'converter' },
+      ],
     },
-    { href: '/portal/files', label: 'files', icon: 'files' },
-    { href: '/portal/team', label: 'team', icon: 'team' },
-    { href: '/portal/profile', label: 'profile', icon: 'profile' },
-    { href: '/portal/security', label: 'security', icon: 'security' },
+    {
+      key: 'workspace',
+      heading: t('navWorkspace'),
+      items: [
+        { href: '/portal/team', label: t('team'), icon: 'team' },
+        ...(billingOwner
+          ? [{ href: '/portal/billing', label: billing('title'), icon: 'billing' as IconName }]
+          : []),
+      ],
+    },
+    {
+      key: 'account',
+      heading: t('navAccount'),
+      items: [
+        { href: '/portal/profile', label: t('profile'), icon: 'profile' },
+        { href: '/portal/security', label: t('security'), icon: 'security' },
+      ],
+    },
   ]
+  const isActive = (href: string) =>
+    pathname === href || (href !== '/portal' && pathname.startsWith(href + '/'))
   return (
     <aside
       ref={sidebar}
@@ -87,36 +108,43 @@ export function PortalSidebar({
             aria-label={t('workspaceMenu')}
             className={`${styles.links} mt-2 transition-[visibility,opacity] duration-250 motion-reduce:transition-none lg:visible lg:opacity-100 ${open ? 'visible opacity-100' : 'invisible opacity-0'}`}
           >
-            {links.map(({ href, label, icon, invoiceLabel }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setOpen(false)}
-                aria-current={
-                  pathname === href || (href !== '/portal' && pathname.startsWith(href + '/'))
-                    ? 'page'
-                    : undefined
-                }
-                className={`flex items-center gap-3 rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${pathname === href || (href !== '/portal' && pathname.startsWith(href + '/')) ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
-              >
-                <Icon name={icon} />
-                {invoiceLabel ? invoices(invoiceLabel) : t(label)}
-                {pathname === href && (
-                  <span className="ml-auto size-1.5 rounded-full bg-brand-ink" />
-                )}
-              </Link>
-            ))}
-            {billingOwner && (
-              <Link
-                href="/portal/billing"
-                onClick={() => setOpen(false)}
-                aria-current={pathname.startsWith('/portal/billing') ? 'page' : undefined}
-                className={`flex items-center gap-3 rounded-2xl px-4 py-2 text-sm font-medium ${pathname.startsWith('/portal/billing') ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent'}`}
-              >
-                <Icon name="billing" />
-                {billing('title')}
-              </Link>
-            )}
+            {groups.map(({ key, heading, items }) => {
+              const headingId = `portal-nav-${key}`
+              return (
+                <div
+                  key={key}
+                  role={heading ? 'group' : undefined}
+                  aria-labelledby={heading ? headingId : undefined}
+                  className={heading ? 'mt-1.5 border-t border-border/60 pt-1.5' : undefined}
+                >
+                  {heading && (
+                    <p
+                      id={headingId}
+                      className="mb-0.5 px-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                    >
+                      {heading}
+                    </p>
+                  )}
+                  <div className="grid gap-0.5">
+                    {items.map(({ href, label, icon }) => (
+                      <Link
+                        key={href}
+                        href={href}
+                        onClick={() => setOpen(false)}
+                        aria-current={isActive(href) ? 'page' : undefined}
+                        className={`flex items-center gap-3 rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${isActive(href) ? 'bg-primary/20 text-brand-ink' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                      >
+                        <Icon name={icon} />
+                        {label}
+                        {pathname === href && (
+                          <span className="ml-auto size-1.5 rounded-full bg-brand-ink" />
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </nav>
           <div
             className={`mt-4 border-t border-border pt-3 transition-[visibility,opacity] duration-250 motion-reduce:transition-none lg:visible lg:opacity-100 ${open ? 'visible opacity-100' : 'invisible opacity-0'}`}
