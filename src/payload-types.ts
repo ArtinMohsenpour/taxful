@@ -258,7 +258,7 @@ export interface FullWidthSection {
   blockType: 'fullWidth';
 }
 /**
- * Public website assets, up to 50 MB per file. Use MP4 or WebM for videos. Never upload private client documents here.
+ * Public website assets, up to 50 MB per file: JPEG, PNG, WebP, AVIF, GIF or SVG images, MP4 or WebM videos and WebVTT captions. Never upload private client documents here.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
@@ -751,6 +751,27 @@ export interface Home {
   titleAccent?: string | null;
   description?: string | null;
   /**
+   * Up to two buttons under the heading. The first is the filled main button, the second an outlined one. Order is shared; translate labels with the locale selector. Remove both to show none.
+   */
+  actions?:
+    | {
+        label: string;
+        link: {
+          type: 'internal' | 'external';
+          /**
+           * Pick a page from the list or type a path such as /about or /#faq. Do not include /de or /en; the language is added automatically.
+           */
+          path?: string | null;
+          /**
+           * Full URL beginning with https:// or http://.
+           */
+          url?: string | null;
+          newTab?: boolean | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
    * Choose one to six companies. Drag rows to reorder them. These illustrate file imports; they do not advertise direct integrations.
    */
   providers: {
@@ -767,11 +788,13 @@ export interface Home {
     processing: string;
     customers: string;
     formats: string;
-    taxOffice: string;
+    partners?: string | null;
+    partnerFormats?: string | null;
+    inbox?: string | null;
     /**
-     * This branch always displays “Planned”. Direct tax submission is a future feature.
+     * Received invoices are checked and filed in the company’s Taxful inbox. Do not describe them as sent to other apps.
      */
-    taxSubmission: string;
+    inboxStorage?: string | null;
   };
   steps: {
     import: string;
@@ -1292,6 +1315,20 @@ export interface HomeSelect<T extends boolean = true> {
   title?: T;
   titleAccent?: T;
   description?: T;
+  actions?:
+    | T
+    | {
+        label?: T;
+        link?:
+          | T
+          | {
+              type?: T;
+              path?: T;
+              url?: T;
+              newTab?: T;
+            };
+        id?: T;
+      };
   providers?:
     | T
     | {
@@ -1307,8 +1344,10 @@ export interface HomeSelect<T extends boolean = true> {
         processing?: T;
         customers?: T;
         formats?: T;
-        taxOffice?: T;
-        taxSubmission?: T;
+        partners?: T;
+        partnerFormats?: T;
+        inbox?: T;
+        inboxStorage?: T;
       };
   steps?:
     | T

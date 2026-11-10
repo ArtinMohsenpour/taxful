@@ -68,7 +68,7 @@ const link = (entry: Entry, locale: Locale, id?: string | null) => ({
 })
 
 // Publishes starter navigation once. An existing footer is never overwritten.
-export async function seedFooter(payload: Payload, req: PayloadRequest) {
+export async function seedFooter(payload: Payload, req: Partial<PayloadRequest>) {
   const existing = await payload.findGlobal({
     slug: 'footer',
     req,

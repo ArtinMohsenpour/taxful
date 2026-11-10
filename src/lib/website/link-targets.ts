@@ -4,8 +4,8 @@ import { websitePage, type WebsiteLocale, type WebsitePageSlug } from './catalog
 // Pages editors can pick for internal links. Folder routes are listed here (a test
 // keeps this in sync with src/app/(frontend)/[locale]); service pages are read from
 // the CMS. Paths are stored without the /de or /en prefix.
-export type LinkTargetGroupId = 'website' | 'services' | 'legal' | 'customer'
-export type LinkTargetStatus = 'published' | 'draft'
+type LinkTargetGroupId = 'website' | 'services' | 'legal' | 'customer'
+type LinkTargetStatus = 'published' | 'draft'
 
 export type LinkTarget = { path: string; label: string; status?: LinkTargetStatus }
 export type LinkTargetGroup = { id: LinkTargetGroupId; label: string; options: LinkTarget[] }
@@ -13,13 +13,23 @@ export type LinkTargetGroup = { id: LinkTargetGroupId; label: string; options: L
 type StaticTarget = {
   group: LinkTargetGroupId
   path: string
+  label: Record<WebsiteLocale, string>
   // CMS page globals report a publication status; other routes are always live.
   page?: WebsitePageSlug
-  de?: string
-  en?: string
 }
 
-export const linkTargetGroups: { id: LinkTargetGroupId; label: string }[] = [
+// CMS pages take their path and labels from the website catalog.
+const cmsPage = (group: LinkTargetGroupId, slug: WebsitePageSlug): StaticTarget => {
+  const page = websitePage(slug)!
+  return { group, path: page.path, label: { de: page.de, en: page.en }, page: slug }
+}
+const route = (group: LinkTargetGroupId, path: string, de: string, en: string): StaticTarget => ({
+  group,
+  path,
+  label: { de, en },
+})
+
+const linkTargetGroups: { id: LinkTargetGroupId; label: string }[] = [
   { id: 'website', label: 'Website' },
   { id: 'services', label: 'Services' },
   { id: 'legal', label: 'Legal' },
@@ -27,20 +37,20 @@ export const linkTargetGroups: { id: LinkTargetGroupId; label: string }[] = [
 ]
 
 export const staticLinkTargets: StaticTarget[] = [
-  { group: 'website', path: '/', page: 'home' },
-  { group: 'website', path: '/about', page: 'about' },
-  { group: 'website', path: '/how-it-works', page: 'how-it-works' },
-  { group: 'website', path: '/pricing', de: 'Preise', en: 'Pricing' },
-  { group: 'website', path: '/faq', page: 'faq' },
-  { group: 'website', path: '/contact', page: 'contact' },
-  { group: 'services', path: '/services', page: 'services' },
-  { group: 'legal', path: '/privacy', page: 'privacy' },
-  { group: 'legal', path: '/terms', page: 'terms' },
-  { group: 'legal', path: '/impressum', page: 'impressum' },
-  { group: 'customer', path: '/login', de: 'Anmelden', en: 'Log in' },
-  { group: 'customer', path: '/signup', de: 'Registrieren', en: 'Sign up' },
-  { group: 'customer', path: '/forgot-password', de: 'Passwort vergessen', en: 'Forgot password' },
-  { group: 'customer', path: '/portal', de: 'Kundenportal', en: 'Customer portal' },
+  cmsPage('website', 'home'),
+  cmsPage('website', 'about'),
+  cmsPage('website', 'how-it-works'),
+  route('website', '/pricing', 'Preise', 'Pricing'),
+  cmsPage('website', 'faq'),
+  cmsPage('website', 'contact'),
+  cmsPage('services', 'services'),
+  cmsPage('legal', 'privacy'),
+  cmsPage('legal', 'terms'),
+  cmsPage('legal', 'impressum'),
+  route('customer', '/login', 'Anmelden', 'Log in'),
+  route('customer', '/signup', 'Registrieren', 'Sign up'),
+  route('customer', '/forgot-password', 'Passwort vergessen', 'Forgot password'),
+  route('customer', '/portal', 'Kundenportal', 'Customer portal'),
 ]
 
 // Folder routes deliberately not offered: token links from emails and private
@@ -56,14 +66,10 @@ export const unlinkableRoutes = [
   '/portal/team',
 ]
 
-const staticLabel = (target: StaticTarget, locale: WebsiteLocale) => {
-  const page = target.page ? websitePage(target.page) : undefined
-  return (page?.[locale] ?? target[locale] ?? target.path) as string
-}
-
+// Runs with the requesting CMS user's access, so drafts are listed only for editors.
 export async function listLinkTargets(
   payload: Payload,
-  { locale, req }: { locale: WebsiteLocale; req?: Partial<PayloadRequest> },
+  { locale, req }: { locale: WebsiteLocale; req: Partial<PayloadRequest> },
 ): Promise<LinkTargetGroup[]> {
   const pageSlugs = staticLinkTargets.flatMap((target) => (target.page ? [target.page] : []))
   const [statuses, services] = await Promise.all([
@@ -72,8 +78,8 @@ export async function listLinkTargets(
         const doc = await payload.findGlobal({
           slug,
           depth: 0,
-          overrideAccess: true,
-          req: req ? { ...req } : undefined,
+          overrideAccess: false,
+          req: { ...req },
           select: { _status: true },
         })
         return [slug, doc._status === 'published' ? 'published' : 'draft'] as const
@@ -86,8 +92,8 @@ export async function listLinkTargets(
       depth: 0,
       limit: 200,
       sort: 'sortOrder',
-      overrideAccess: true,
-      req: req ? { ...req } : undefined,
+      overrideAccess: false,
+      req: { ...req },
       select: { slug: true, title: true, _status: true },
     }),
   ])
@@ -98,7 +104,7 @@ export async function listLinkTargets(
       ...(options.get(target.group) ?? []),
       {
         path: target.path,
-        label: staticLabel(target, locale),
+        label: target.label[locale],
         status: target.page ? status.get(target.page) : undefined,
       },
     ])

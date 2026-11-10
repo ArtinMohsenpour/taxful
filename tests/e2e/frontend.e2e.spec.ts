@@ -148,16 +148,25 @@ test('explains the invoice flow and lets visitors pause its animation', async ({
   for (const name of ['DATEV', 'Lexware Office', 'sevdesk', 'Sage', 'WISO MeinBüro', 'FastBill']) {
     await expect(flow.getByRole('img', { name, exact: true })).toBeVisible()
   }
-  await expect(flow.getByText('Planned', { exact: true })).toBeVisible()
+  // Two lanes: company invoices to customers, partner invoices to the inbox. No tax office.
+  for (const label of ['For your customers', 'From business partners', 'Invoice inbox'])
+    await expect(flow.getByText(label, { exact: true })).toBeVisible()
+  await expect(flow.getByText('Tax office')).toHaveCount(0)
+  await expect(flow.locator('svg[viewBox="0 0 880 440"] path[data-pulse="receive"]')).toHaveCount(2)
+  await expect(flow.locator('svg[viewBox="0 0 880 440"] path[data-pulse="file"]')).toHaveCount(2)
   await expect(
     flow.getByText('Accounting software examples. File imports, without a direct integration.'),
   ).toBeVisible()
-  await expect(page.locator('section[aria-labelledby="hero-title"] a')).toHaveCount(0)
-  const pulse = flow.locator('path[pathLength="100"]').first()
+  // CMS-managed hero buttons keep the active locale.
+  const actions = page.locator('section[aria-labelledby="hero-title"] a')
+  await expect(actions).toHaveCount(2)
+  await expect(actions.nth(0)).toHaveAttribute('href', '/en/signup')
+  await expect(actions.nth(1)).toHaveAttribute('href', '/en/pricing')
+  const pulse = flow.locator('path[data-pulse="in"]').first()
   const glow = flow.locator('span[style*="animation-duration"]').first()
   const delays = await flow
     .locator('svg[viewBox="0 0 880 440"]')
-    .locator('path[pathLength="100"]')
+    .locator('path[data-pulse="in"]')
     .evaluateAll((paths) => paths.slice(0, 6).map((path) => getComputedStyle(path).animationDelay))
   expect(new Set(delays).size).toBe(6)
   await expect(glow).toHaveCSS(

@@ -13,6 +13,20 @@
   box-shadow: var(--toggle-shadow);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .provider {
+    animation: tile-in 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(120ms + var(--tile-index, 0) * 60ms);
+  }
+}
+
+@keyframes tile-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+
 .providerLogo {
   width: 72%;
   max-height: 50%;

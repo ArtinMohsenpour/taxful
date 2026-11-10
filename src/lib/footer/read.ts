@@ -2,7 +2,7 @@ import type { Payload, PayloadRequest } from 'payload'
 import type { Footer, Media, User } from '@/payload-types'
 import { publicMediaSelection } from '../website/media-settings'
 
-export type FooterData = { footer: Footer; fallbackLogo: Media | null }
+type FooterData = { footer: Footer; fallbackLogo: Media | null }
 
 // Never-published (or unpublished) footers render as empty rather than leaking drafts.
 const emptyFooter = (id: number): Footer => ({ id })

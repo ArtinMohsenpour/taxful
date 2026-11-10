@@ -2,7 +2,7 @@ import type { GlobalConfig } from 'payload'
 import { ValidationError } from 'payload'
 import { cmsEditor } from '../access/cms-editor'
 import { navigationLinkFields } from '../fields/navigation-link'
-import { internalHref, externalHref } from '../lib/navigation-links'
+import { linkHref } from '../lib/navigation-links'
 import { ADMIN_GROUPS, CMS_VERSION_LIMIT, previewURL } from '../lib/cms-settings'
 
 export const Navbar: GlobalConfig = {
@@ -29,10 +29,7 @@ export const Navbar: GlobalConfig = {
               errors: [{ path: 'items', message: 'Dropdowns need at least one link.' }],
             })
           for (const entry of links) {
-            const link = entry.link
-            const valid =
-              link?.type === 'external' ? externalHref(link.url) : internalHref(link?.path)
-            if (!valid)
+            if (!linkHref(entry.link))
               throw new ValidationError({
                 global: 'navbar',
                 errors: [

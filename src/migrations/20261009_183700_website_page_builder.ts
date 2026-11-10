@@ -1,7 +1,6 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
-import { seedWebsite } from './seeds/website-20261009'
 
-export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+export async function up({ db, payload }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
    CREATE TYPE "public"."enum_website_forms_fields_type" AS ENUM('text', 'email', 'textarea', 'select', 'checkbox');
   CREATE TYPE "public"."enum_website_forms_status" AS ENUM('draft', 'published');
@@ -714,7 +713,11 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "payload_locked_documents_rels_form_submissions_id_idx" ON "payload_locked_documents_rels" USING btree ("form_submissions_id");
   CREATE INDEX "home_seo_seo_image_idx" ON "home" USING btree ("seo_image_id");
   CREATE INDEX "_home_v_version_seo_version_seo_image_idx" ON "_home_v" USING btree ("version_seo_image_id");`)
-  await seedWebsite(payload, req)
+  // Starter content is added after all migrations by `pnpm content:seed`: the Local API
+  // uses the current schema, which an empty database replaying this migration lacks.
+  payload.logger.info(
+    'Website pages: run `pnpm content:seed` after migrating to add starter content.',
+  )
 }
 
 export async function down({ db }: MigrateDownArgs): Promise<void> {

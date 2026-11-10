@@ -1,4 +1,6 @@
 import type { Field } from 'payload'
+import { navigationLinkFields } from '../navigation-link'
+import { rowLabel } from '../row-label'
 
 export const homeHeroFields: Field[] = [
   {
@@ -28,5 +30,26 @@ export const homeHeroFields: Field[] = [
     type: 'textarea',
     localized: true,
     maxLength: 360,
+  },
+  {
+    name: 'actions',
+    label: 'Buttons',
+    type: 'array',
+    maxRows: 2,
+    labels: { singular: 'Button', plural: 'Buttons' },
+    admin: {
+      description:
+        'Up to two buttons under the heading. The first is the filled main button, the second an outlined one. Order is shared; translate labels with the locale selector. Remove both to show none.',
+      components: { RowLabel: rowLabel(['label'], 'Button') },
+    },
+    fields: [
+      { name: 'label', type: 'text', required: true, localized: true, maxLength: 40 },
+      {
+        name: 'link',
+        label: false,
+        type: 'group',
+        fields: navigationLinkFields({ requirePath: true }),
+      },
+    ],
   },
 ]

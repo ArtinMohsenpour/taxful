@@ -43,15 +43,15 @@ when saving and are never rendered.
 
 ### SVG safety
 
-Media uploads run an SVG check (`src/lib/website/svg-safety.ts`) because the Media
-collection declares no MIME types, so Payload's own SVG scan never runs. SVGs are
-detected by type, file name or content, so a renamed or mislabelled SVG is still
-checked. Files containing scripts, event handlers, `javascript:`/`data:text/html`
-URLs, `foreignObject`, embedded frames/objects, entities or stylesheet imports are
-rejected; `.svgz` is not supported. This is a pattern check, not a sanitiser, so it
-is one of three layers: the website renders SVGs only through `<img>`, which never
-runs their scripts, and Payload serves SVG files with `Content-Security-Policy:
-script-src 'none'`. Website content and SEO images remain raster-only.
+Media uploads go through the upload policy in `src/lib/website/media-uploads.ts` (see
+[Public website builder](website-builder.md#media)). SVGs must be UTF-8 SVG documents;
+files containing scripts, event handlers, `javascript:`/`data:text/html` URLs,
+`foreignObject`, embedded frames/objects (also with a namespace prefix such as
+`<x:script>`), entities or stylesheet imports are rejected, and `.svgz` is not
+supported. This is a pattern check, not a sanitiser, so it is one of three layers:
+the website renders SVGs only through `<img>`, which never runs their scripts, and
+every Media file is served with a sandboxing `Content-Security-Policy`. Website
+content and SEO images remain raster-only.
 
 ## Preview and publishing
 
@@ -68,8 +68,9 @@ for editor messages at a time. The home route selects the listener from
 
 ## Starter content
 
-Migration `20261109_093459_footer` creates the footer tables and publishes starter
-content once: Services, Company and Customer area columns linking to existing
+Migration `20261109_093459_footer` creates the footer tables; on a new database
+`pnpm content:seed` publishes starter content once (see
+[Starter content](website-builder.md#starter-content)): Services, Company and Customer area columns linking to existing
 routes, and Privacy, Terms of use and Legal notice in the bottom bar. It never
 overwrites an existing footer. Social profiles, contact details and partner logos
 are intentionally left empty; they must come from the company and must not be

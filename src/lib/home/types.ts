@@ -1,3 +1,5 @@
+import type { Home } from '@/payload-types'
+
 export type InvoiceFlowLabels = {
   title: string
   description: string
@@ -7,12 +9,18 @@ export type InvoiceFlowLabels = {
   processing: string
   customers: string
   formats: string
-  taxOffice: string
-  taxSubmission: string
-  planned: string
+  formatChip: string
+  partners: string
+  partnerFormats: string
+  inbox: string
+  inboxStorage: string
+  report: string
   pause: string
   play: string
 }
+
+// A hero button as stored in the CMS; rendered only when its link is safe.
+export type HeroAction = NonNullable<Home['actions']>[number]
 
 export type HeroLabels = {
   eyebrow: string
@@ -20,6 +28,7 @@ export type HeroLabels = {
   titleAccent: string
   description: string
   stepsLabel: string
+  newTab: string
   steps: readonly string[]
   flow: InvoiceFlowLabels
 }

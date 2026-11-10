@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import Image from 'next/image'
 import { Link } from '@/i18n/navigation'
+import { CmsLink } from '../cms-link'
 import type { Footer, Media } from '@/payload-types'
 import { copyrightText, emailHref, phoneHref } from '@/lib/footer/contact'
 import { socialPlatformName } from '@/lib/footer/social'
@@ -24,7 +25,7 @@ export type FooterLabels = Record<
 
 export type FooterVariant = 'full' | 'compact'
 
-type StoredLink = NonNullable<Footer['legalLinks']>[number]
+type StoredLinkRow = NonNullable<Footer['legalLinks']>[number]
 
 // Shared by the server render and the Live Preview client, so it must stay hook-free.
 // Every href and media URL is re-checked because preview data comes from the editor.
@@ -36,46 +37,24 @@ function mediaImage(value: number | Media | null | undefined) {
     : null
 }
 
-function NewTabHint({ label }: { label: string }) {
-  return (
-    <>
-      <UiIcon name="external" className="ml-1 inline size-3.5 align-[-0.125em] opacity-70" />
-      <span className="sr-only"> ({label})</span>
-    </>
-  )
-}
-
+// Footer links show a small arrow when they open a new tab; CmsLink announces it.
 function FooterLink({
   entry,
   newTabLabel,
   className,
 }: {
-  entry: StoredLink
+  entry: StoredLinkRow
   newTabLabel: string
   className: string
 }) {
-  const href = linkHref(entry.link)
-  if (!href || !entry.label) return null
-  const newTab = Boolean(entry.link?.newTab)
-  const props = {
-    className,
-    target: newTab ? '_blank' : undefined,
-    rel: newTab ? 'noopener noreferrer' : undefined,
-  }
-  const content = (
-    <>
+  if (!entry.label) return null
+  return (
+    <CmsLink link={entry.link} className={className} newTabLabel={newTabLabel}>
       {entry.label}
-      {newTab && <NewTabHint label={newTabLabel} />}
-    </>
-  )
-  return entry.link.type === 'external' ? (
-    <a href={href} {...props}>
-      {content}
-    </a>
-  ) : (
-    <Link href={href} {...props}>
-      {content}
-    </Link>
+      {entry.link?.newTab && (
+        <UiIcon name="external" className="ml-1 inline size-3.5 align-[-0.125em] opacity-70" />
+      )}
+    </CmsLink>
   )
 }
 
@@ -286,21 +265,22 @@ function Partners({ footer, labels }: { footer: Footer; labels: FooterLabels }) 
   )
 }
 
-function BottomBar({
-  footer,
-  labels,
-  year,
-  compact,
-}: {
-  footer: Footer
-  labels: FooterLabels
-  year: number
-  compact: boolean
-}) {
+function bottomBarContent(footer: Footer, year: number) {
   const copyright = copyrightText(footer.copyright, year)
   const note = footer.note?.trim()
   const legal = (footer.legalLinks ?? []).filter((entry) => entry.label && linkHref(entry.link))
-  if (!copyright && !note && !legal.length) return null
+  return copyright || note || legal.length ? { copyright, note, legal } : null
+}
+
+function BottomBar({
+  content: { copyright, note, legal },
+  labels,
+  compact,
+}: {
+  content: NonNullable<ReturnType<typeof bottomBarContent>>
+  labels: FooterLabels
+  compact: boolean
+}) {
   return (
     <div
       className={`flex flex-col gap-4 px-6 text-sm text-muted-foreground sm:px-10 lg:flex-row lg:items-center lg:justify-between lg:gap-8 ${compact ? 'py-5' : 'border-t border-border/80 py-6'}`}
@@ -347,14 +327,17 @@ export function FooterView({
   const card =
     'site-footer overflow-hidden rounded-[1.5rem] border border-border/80 bg-surface/90 shadow-nav'
 
+  const bottomBar = bottomBarContent(footer, year)
+
+  // Customer pages show only the legal bar; without content there is nothing to show.
   if (variant === 'compact')
-    return (
+    return bottomBar ? (
       <footer id="site-footer" className={`${shell} mt-4`}>
         <div className={card}>
-          <BottomBar footer={footer} labels={labels} year={year} compact />
+          <BottomBar content={bottomBar} labels={labels} compact />
         </div>
       </footer>
-    )
+    ) : null
 
   const columns = (footer.columns ?? [])
     .map((column) => ({
@@ -410,7 +393,7 @@ export function FooterView({
           )}
         </div>
         <Partners footer={footer} labels={labels} />
-        <BottomBar footer={footer} labels={labels} year={year} compact={false} />
+        {bottomBar && <BottomBar content={bottomBar} labels={labels} compact={false} />}
       </div>
     </footer>
   )

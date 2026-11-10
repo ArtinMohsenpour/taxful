@@ -47,7 +47,9 @@ describe('Link targets', () => {
     const slug = `link-target-${randomUUID().slice(0, 8)}`
     const transactionID = await payload.db.beginTransaction()
     if (!transactionID) throw new Error('A transaction is required for this test')
-    const req = { transactionID }
+    // The picker runs with the editor's access; drafts are listed for CMS users only.
+    const editor = { id: 1, collection: 'users', role: 'content-editor' } as PayloadRequest['user']
+    const req = { transactionID, user: editor }
     try {
       await payload.create({
         collection: 'service-pages',
@@ -68,6 +70,10 @@ describe('Link targets', () => {
       })
       const en = await listLinkTargets(payload, { locale: 'en', req })
       expect(en[0].options[0]).toMatchObject({ path: '/', label: 'Home' })
+      const anonymous = await listLinkTargets(payload, { locale: 'de', req: { transactionID } })
+      expect(anonymous.find((group) => group.id === 'services')!.options).not.toContainEqual(
+        expect.objectContaining({ path: `/services/${slug}` }),
+      )
     } finally {
       await payload.db.rollbackTransaction(transactionID)
     }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useLivePreview } from '@payloadcms/live-preview-react'
+import { useOrderedLivePreview } from '@/lib/live-preview'
 import type { ServicePage } from '@/payload-types'
 import type { WebsiteLocale } from '@/lib/website/catalog'
 import type { ServiceCardsData } from '@/lib/website/types'
@@ -15,10 +15,6 @@ export function ServicePagePreview({
   cards?: ServiceCardsData
   labels: ServicePageLabels
 }) {
-  const { data } = useLivePreview<ServicePage>({
-    initialData,
-    serverURL: typeof window === 'undefined' ? '' : window.location.origin,
-    depth: 1,
-  })
+  const data = useOrderedLivePreview(initialData)
   return <ServicePageContent data={data} {...props} />
 }

@@ -1,7 +1,6 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
-import { seedFooter } from './seeds/footer-20261109'
 
-export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+export async function up({ db, payload }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
    CREATE TYPE "public"."enum_footer_columns_links_link_type" AS ENUM('internal', 'external');
   CREATE TYPE "public"."enum_footer_social_platform" AS ENUM('linkedin', 'xing', 'instagram', 'facebook', 'x', 'youtube', 'tiktok', 'mastodon', 'github', 'website');
@@ -290,8 +289,9 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "_footer_v_latest_idx" ON "_footer_v" USING btree ("latest");
   CREATE UNIQUE INDEX "_footer_v_locales_locale_parent_id_unique" ON "_footer_v_locales" USING btree ("_locale","_parent_id");`)
 
-  // Published starter links to existing routes; see docs/footer.md.
-  await seedFooter(payload, req)
+  // Starter content is added after all migrations by `pnpm content:seed`: the Local API
+  // uses the current schema, which an empty database replaying this migration lacks.
+  payload.logger.info('Footer: run `pnpm content:seed` after migrating to add starter content.')
 }
 
 export async function down({ db }: MigrateDownArgs): Promise<void> {

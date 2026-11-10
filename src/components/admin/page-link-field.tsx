@@ -17,23 +17,27 @@ import {
 } from '@/lib/website/link-targets'
 import styles from './page-link-field.module.css'
 
-// One request per locale, shared by every link field on the page.
-const targetCache = new Map<string, Promise<LinkTargetGroup[]>>()
+// One request per locale, shared by every link field on the page. Results expire
+// after a minute so new or published pages appear; failures are never kept.
+const CACHE_MS = 60_000
+const targetCache = new Map<string, { at: number; groups: Promise<LinkTargetGroup[]> }>()
 function loadTargets(locale: string) {
-  if (!targetCache.has(locale))
-    targetCache.set(
-      locale,
-      fetch(`/api/link-targets?locale=${locale === 'en' ? 'en' : 'de'}`, {
-        credentials: 'include',
-      })
-        .then((response) => (response.ok ? response.json() : { groups: [] }))
-        .then((body: { groups?: LinkTargetGroup[] }) => body.groups ?? [])
-        .catch(() => {
-          targetCache.delete(locale)
-          return []
-        }),
-    )
-  return targetCache.get(locale)!
+  const cached = targetCache.get(locale)
+  if (cached && Date.now() - cached.at < CACHE_MS) return cached.groups
+  const groups = fetch(`/api/link-targets?locale=${locale === 'en' ? 'en' : 'de'}`, {
+    credentials: 'include',
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error(`Link targets: ${response.status}`)
+      return response.json() as Promise<{ groups?: LinkTargetGroup[] }>
+    })
+    .then((body) => body.groups ?? [])
+    .catch(() => {
+      targetCache.delete(locale)
+      return []
+    })
+  targetCache.set(locale, { at: Date.now(), groups })
+  return groups
 }
 
 type Entry = LinkTarget & { group: string; groupId: string; id: string }
@@ -43,7 +47,6 @@ const matches = (entry: Entry, query: string) => {
   return (
     !needle ||
     entry.label.toLowerCase().includes(needle) ||
-    entry.path.toLowerCase().includes(needle.startsWith('/') ? needle : `/${needle}`) ||
     entry.path.toLowerCase().includes(needle)
   )
 }

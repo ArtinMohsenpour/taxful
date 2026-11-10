@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Link, usePathname } from '@/i18n/navigation'
-import { externalHref, internalHref } from '@/lib/navigation-links'
+import { internalHref, linkHref } from '@/lib/navigation-links'
 import type { Navbar } from '@/payload-types'
 
 type Item = NonNullable<Navbar['items']>[number]
@@ -31,8 +31,7 @@ function NavigationLink({
   onClick?: () => void
 }) {
   const pathname = usePathname()
-  const href =
-    item.link?.type === 'external' ? externalHref(item.link.url) : internalHref(item.link?.path)
+  const href = linkHref(item.link)
   if (!href) return null
   const active = isActive(item, pathname)
   // Buttons keep their filled style when active; text links use the underline.

@@ -6,23 +6,18 @@ import type {
 } from 'payload'
 import { upload } from 'payload/shared'
 import { cmsEditor } from '../access/cms-editor'
-import { navigationLinkFields } from '../fields/navigation-link'
+import { navigationLinkFields, validateExternalURL } from '../fields/navigation-link'
+import { rowLabel } from '../fields/row-label'
 import { protectGlobalDrafts } from '../hooks/protect-drafts'
 import { ADMIN_GROUPS, CMS_VERSION_LIMIT, previewURL } from '../lib/cms-settings'
 import { PHONE_PATTERN } from '../lib/footer/contact'
 import { socialPlatforms } from '../lib/footer/social'
-import { externalHref } from '../lib/navigation-links'
 
 const footerPreviewURL = (locale: string) => `${previewURL(locale)}&previewGlobal=footer`
 
-const rowLabel = (fields: string[], fallback: string, options?: Record<string, string>) => ({
-  path: '/components/admin/row-label',
-  clientProps: { fields, fallback, options },
-})
-
 type Condition = NonNullable<NonNullable<Field['admin']>['condition']>
 // Logos may be SVG: they render through <img>, which never runs SVG scripts, and
-// Media rejects unsafe SVG content on upload (src/lib/website/svg-safety.ts).
+// Media rejects unsafe SVG content on upload (src/lib/website/media-uploads.ts).
 const logoTypes = [
   'image/svg+xml',
   'image/png',
@@ -68,13 +63,6 @@ const imageField = (
   validate: validateLogo,
   admin: { description, condition },
 })
-
-const validateExternal =
-  (required: boolean): TextFieldSingleValidation =>
-  (value) =>
-    (!required && !value?.trim()) ||
-    Boolean(externalHref(value)) ||
-    'Enter a valid HTTPS or HTTP URL without credentials.'
 
 const validatePhone: TextFieldSingleValidation = (value) =>
   !value?.trim() ||
@@ -245,7 +233,7 @@ export const Footer: GlobalConfig = {
                       label: 'Profile URL',
                       type: 'text',
                       required: true,
-                      validate: validateExternal(true),
+                      validate: validateExternalURL(true),
                       admin: { width: '65%', placeholder: 'https://' },
                     },
                   ],
@@ -304,7 +292,7 @@ export const Footer: GlobalConfig = {
                       name: 'url',
                       label: 'Website',
                       type: 'text',
-                      validate: validateExternal(false),
+                      validate: validateExternalURL(false),
                       admin: {
                         width: '50%',
                         placeholder: 'https://',

@@ -156,7 +156,7 @@ it('uses the navigation logo as fallback and shows only the bottom bar when comp
 it('renders unsaved editor messages through the official live-preview hook', async () => {
   const initial: Footer = { id: 1, copyright: 'Saved {year}' }
   const updated: Footer = { ...initial, copyright: 'Unsaved {year}' }
-  const fetcher = vi.fn().mockResolvedValue({ json: async () => updated })
+  const fetcher = vi.fn().mockImplementation(async () => new Response(JSON.stringify(updated)))
   vi.stubGlobal('fetch', fetcher)
   render(
     React.createElement(FooterPreview, { footer: initial, fallbackLogo: null, labels, year: 2031 }),

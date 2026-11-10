@@ -7,7 +7,6 @@ import config from '@/payload.config'
 import { readFooter } from '@/lib/footer/read'
 import { copyrightText, emailHref, phoneHref } from '@/lib/footer/contact'
 import type { Footer } from '@/payload-types'
-import { isSafeSvg, looksLikeSvg } from '@/lib/website/svg-safety'
 
 let payload: Payload
 beforeAll(async () => {
@@ -154,7 +153,12 @@ describe('Footer', () => {
       svg('<rect width="120" height="40" fill="#52613f"/>'),
       'image/svg+xml',
     )
-    const text = await upload('notes.txt', Buffer.from('not an image'), 'text/plain')
+    // A valid Media file that is not an image, to exercise the logo format check.
+    const text = await upload(
+      'captions.vtt',
+      Buffer.from('WEBVTT\n\n00:00.000 --> 00:01.000\nSynthetic\n'),
+      'text/vtt',
+    )
     const transactionID = await payload.db.beginTransaction()
     if (!transactionID) throw new Error('A transaction is required for this test')
     const req = { transactionID }
@@ -196,14 +200,6 @@ describe('Footer', () => {
       for (const id of [logo.id, text.id])
         await payload.delete({ collection: 'media', id, overrideAccess: true })
     }
-  })
-
-  it('detects SVG content independently of the declared type', () => {
-    expect(looksLikeSvg({ name: 'a.png' }, '<?xml version="1.0"?>\n<svg xmlns="x">')).toBe(true)
-    expect(looksLikeSvg({ name: 'a.png', mimetype: 'image/png' }, '\u0089PNG')).toBe(false)
-    expect(isSafeSvg('<svg><path d="M0 0h1"/></svg>')).toBe(true)
-    expect(isSafeSvg('<svg><SCRIPT>x</SCRIPT></svg>')).toBe(false)
-    expect(isSafeSvg('<svg><image href="data:text/html,x"/></svg>')).toBe(false)
   })
 
   it('formats copyright years and contact links safely', () => {

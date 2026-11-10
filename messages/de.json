@@ -9,6 +9,7 @@
     "description": "Dokumente importieren, Details prüfen und validierte E-Rechnungen erstellen. Von Ihrer Buchhaltung bis zur fertigen Datei – alles an einem Ort.",
     "eyebrow": "Ein bisschen mehr Klarheit.",
     "stepsLabel": "Ihr Rechnungsablauf",
+    "newTab": "öffnet in einem neuen Tab",
     "steps": {
       "import": "Importieren",
       "review": "Prüfen",
@@ -17,16 +18,19 @@
     },
     "flow": {
       "title": "Ihr Weg zur E-Rechnung",
-      "description": "Dokumente aus Ihrer Buchhaltungssoftware werden per Datei in Taxful importiert, geprüft und freigegeben. Validierte XRechnung- und ZUGFeRD-Dateien sind für Ihre Kunden bestimmt. Eine direkte Anbindung der gezeigten Anbieter und die Übermittlung an das Finanzamt sind derzeit nicht verfügbar.",
+      "description": "Rechnungen aus Ihrer Buchhaltungssoftware werden per Datei in Taxful importiert, geprüft und freigegeben; validierte XRechnung- und ZUGFeRD-Dateien sind für Ihre Kunden bestimmt. Eingangsrechnungen Ihrer Geschäftspartner werden ebenfalls geprüft und mit Prüfbericht in Ihrem Rechnungseingang abgelegt. Eine direkte Anbindung der gezeigten Anbieter ist derzeit nicht verfügbar.",
       "sources": "Aus Ihrer Buchhaltung",
       "importMethod": "Import per Datei",
       "providerNote": "Beispiele für Buchhaltungssoftware. Import per Datei, keine direkte Anbindung.",
       "processing": "Prüfen & freigeben",
       "customers": "Für Ihre Kunden",
       "formats": "XRechnung · ZUGFeRD",
-      "taxOffice": "Finanzamt",
-      "taxSubmission": "Übermittlung über ELSTER",
-      "planned": "Geplant",
+      "formatChip": "XML / PDF",
+      "partners": "Von Geschäftspartnern",
+      "partnerFormats": "XRechnung · ZUGFeRD · PDF",
+      "inbox": "Rechnungseingang",
+      "inboxStorage": "Geprüft und abgelegt",
+      "report": "Prüfbericht",
       "pause": "Animation pausieren",
       "play": "Animation fortsetzen"
     }

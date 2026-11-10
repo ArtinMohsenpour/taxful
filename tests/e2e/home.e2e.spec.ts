@@ -44,7 +44,12 @@ test.describe('Home editor', () => {
     await page.locator('input[name="eyebrow"]').fill('')
     await page.locator('textarea[name="description"]').fill('')
     await expect(preview.locator('#hero-title')).toHaveCount(0)
-    await expect(preview.locator('#main > section > div')).toHaveCount(1)
+    // Only the CMS buttons remain above the diagram; they are managed separately.
+    const copy = preview.locator('#main > section > div')
+    // Live preview applies each cleared field in turn; allow for a busy dev server.
+    await expect(copy.first().locator('p')).toHaveCount(0, { timeout: 15000 })
+    await expect(copy).toHaveCount(2)
+    await expect(copy.first().getByRole('link')).toHaveCount(2)
     await expect(
       preview.getByRole('region', { name: 'Ihr Weg zur E-Rechnung', exact: true }),
     ).toBeVisible()
@@ -82,9 +87,12 @@ test.describe('Home editor', () => {
           true,
         )
         const paths = width === '320' ? '0 0 360 440' : '0 0 880 440'
-        await expect(preview.locator(`svg[viewBox="${paths}"] path[pathLength="100"]`)).toHaveCount(
+        // One inbound and one outbound invoice per company; the partner lane is fixed.
+        const scene = preview.locator(`svg[viewBox="${paths}"]`)
+        await expect(scene.locator('path[data-pulse="in"], path[data-pulse="out"]')).toHaveCount(
           count * 2,
         )
+        await expect(scene.locator('path[data-pulse="receive"]')).toHaveCount(2)
       }
     }
     const unchanged = await request.get(`${origin}/de`)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useLivePreview } from '@payloadcms/live-preview-react'
+import { useOrderedLivePreview } from '@/lib/live-preview'
 import type { Footer, Media } from '@/payload-types'
 import { FooterView, type FooterLabels } from './footer-view'
 
@@ -16,11 +16,7 @@ export function FooterPreview({
   labels: FooterLabels
   year: number
 }) {
-  const { data } = useLivePreview<Footer>({
-    initialData: footer,
-    serverURL: typeof window === 'undefined' ? '' : window.location.origin,
-    depth: 1,
-  })
+  const data = useOrderedLivePreview(footer)
   // The preview opens the home page; bring the footer into view for the editor,
   // again after images above it have loaded and shifted the layout.
   useEffect(() => {

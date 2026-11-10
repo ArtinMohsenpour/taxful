@@ -12,7 +12,7 @@ Navbar keeps at most 25 versions using Payload's built-in retention on new versi
 
 Implementation follows [Payload's client live-preview documentation](https://payloadcms.com/docs/live-preview/client).
 
-Use **Company logo** to upload or select an image from Media, then publish. Its aspect ratio is preserved and it replaces the default Taxful branding. Remove the image to restore the default. The current internal page has an accent background; dropdown parents also highlight when a child is active.
+Use **Company logo** to upload or select an image from Media, then publish. Its aspect ratio is preserved and it replaces the default Taxful branding. Remove the image to restore the default. The current internal page is marked with a sage underline (`--nav-indicator`); dropdown parents are also marked when a child is active.
 
 The additive `20260911_141108_navbar_logo` migration adds optional Media references to the Navbar and its versions. Its SQL has been applied to the existing local development database, whose migration history still requires baselining as described below.
 
@@ -29,7 +29,7 @@ The frontend displays published content with German translation fallback. Login 
 
 ## Page picker
 
-Every internal link field (navbar and footer) is a searchable picker. Click or focus it
+Every internal link field (navbar, footer and the Home hero buttons) is a searchable picker. Click or focus it
 to see pages grouped as **Website**, **Services** (the overview plus every service page
 from the CMS, including drafts), **Legal** and **Customer area**, each with its title in
 the editor's current locale and its path. Type to filter by title or path; use the arrow
@@ -43,9 +43,10 @@ values are unchanged plain paths, so existing links such as `services` keep work
 are recognised.
 
 Choices come from `GET /api/link-targets?locale=de|en`, which only CMS staff can call
-(`src/lib/website/link-targets-endpoint.ts`). Folder routes are listed in
-`staticLinkTargets` in `src/lib/website/link-targets.ts`; service pages are read from the
-CMS. When you add a page folder under `src/app/(frontend)/[locale]/`, add it there (or to
+(`src/lib/website/link-targets-endpoint.ts`); the lookup runs with the editor's own access.
+The browser caches the list for a minute. Folder routes are listed in `staticLinkTargets`
+in `src/lib/website/link-targets.ts` (CMS pages take their path and titles from
+`src/lib/website/catalog.ts`); service pages are read from the CMS. When you add a page folder under `src/app/(frontend)/[locale]/`, add it there (or to
 `unlinkableRoutes` for email-token and private portal routes):
 `tests/int/link-targets.int.spec.ts` fails until every folder route is accounted for. The
 field component is `src/components/admin/page-link-field.tsx`.

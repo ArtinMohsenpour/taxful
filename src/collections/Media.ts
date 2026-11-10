@@ -3,7 +3,7 @@ import { cmsEditor } from '../access/cms-editor'
 import { PUBLIC_MEDIA_MAX_BYTES } from '../lib/website/media-settings'
 import { ADMIN_GROUPS } from '../lib/cms-settings'
 import { APIError, ValidationError } from 'payload'
-import { svgUploadError } from '../lib/website/svg-safety'
+import { mediaResponseHeaders, mediaUploadError } from '../lib/website/media-uploads'
 
 export const Media: CollectionConfig = {
   slug: 'media',
@@ -11,7 +11,7 @@ export const Media: CollectionConfig = {
   admin: {
     group: ADMIN_GROUPS.media,
     description:
-      'Public website assets, up to 50 MB per file. Use MP4 or WebM for videos. Never upload private client documents here.',
+      'Public website assets, up to 50 MB per file: JPEG, PNG, WebP, AVIF, GIF or SVG images, MP4 or WebM videos and WebVTT captions. Never upload private client documents here.',
   },
   hooks: {
     beforeOperation: [
@@ -22,11 +22,12 @@ export const Media: CollectionConfig = {
             ('truncated' in req.file && req.file.truncated === true))
         )
           throw new APIError('The file is too large. Please use a file smaller than 50 MB.', 413)
-        const svgError = req.file ? await svgUploadError(req.file) : null
-        if (svgError)
+        // Only inert public asset types; see src/lib/website/media-uploads.ts.
+        const typeError = req.file ? await mediaUploadError(req.file) : null
+        if (typeError)
           throw new ValidationError({
             collection: 'media',
-            errors: [{ path: 'file', message: svgError }],
+            errors: [{ path: 'file', message: typeError }],
           })
       },
     ],
@@ -44,5 +45,5 @@ export const Media: CollectionConfig = {
       required: true,
     },
   ],
-  upload: true,
+  upload: { modifyResponseHeaders: mediaResponseHeaders },
 }

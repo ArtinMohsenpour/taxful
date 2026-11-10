@@ -8,11 +8,21 @@ const validateSlug =
   (required: boolean): TextFieldSingleValidation =>
   (value, { siblingData }) =>
     (siblingData as { type?: string }).type !== 'internal' ||
-    (!value ? !required || slugMessage : Boolean(internalHref(value)) || slugMessage)
-const validateURL: TextFieldSingleValidation = (value, { siblingData }) =>
-  (siblingData as { type?: string }).type !== 'external' ||
-  Boolean(externalHref(value)) ||
-  'Enter a valid HTTP or HTTPS URL without credentials.'
+    (!value
+      ? !required || 'Choose a page or enter a path.'
+      : Boolean(internalHref(value)) || slugMessage)
+
+// Also used by standalone URL fields (footer social profiles and partner websites).
+export const validateExternalURL =
+  (required: boolean): TextFieldSingleValidation =>
+  (value) =>
+    (!required && !value?.trim()) ||
+    Boolean(externalHref(value)) ||
+    'Enter a valid HTTPS or HTTP URL without credentials.'
+
+const validateURL: TextFieldSingleValidation = (value, args) =>
+  (args.siblingData as { type?: string }).type !== 'external' ||
+  validateExternalURL(true)(value, args)
 
 export const navigationLinkFields = ({ requirePath = false } = {}): Field[] => [
   {
