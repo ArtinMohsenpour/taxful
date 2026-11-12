@@ -1,58 +1,84 @@
 type FlowGeometry = {
   viewBox: string
+  // One entry per company, in order.
   incoming: readonly string[]
+  // Outgoing: Taxful to the customer card.
   customer: string
-  taxOffice: string
+  // Incoming lane: the partner card up into Taxful, then Taxful to the inbox card.
+  partner: string
+  inbox: string
 }
 
-// Coordinates align with the responsive provider grid, central hub and destination cards.
-const flowPaths: Record<'desktop' | 'mobile', FlowGeometry> = {
+// Each scene matches its CSS: company tiles across the top, the Taxful hub in the
+// middle and the customer, partner and inbox cards at the bottom (see
+// invoice-flow.module.css). Desktop shows the three cards in one row; mobile shows
+// customer and inbox side by side, with the partner card centred below them.
+const scenes = {
   desktop: {
-    viewBox: '0 0 880 440',
-    incoming: [
-      'M68 64 V90 Q68 120 98 120 H372 Q400 120 400 148 V176',
-      'M217 64 V102 Q217 138 253 138 H393 Q416 138 416 161 V176',
-      'M366 64 V120 Q366 154 400 154 H432 V176',
-      'M514 64 V120 Q514 154 480 154 H448 V176',
-      'M663 64 V102 Q663 138 627 138 H487 Q464 138 464 161 V176',
-      'M812 64 V90 Q812 120 782 120 H508 Q480 120 480 148 V176',
-    ],
-    customer: 'M420 268 V284 Q420 316 388 316 H252 Q224 316 224 344 V364',
-    taxOffice: 'M460 268 V284 Q460 316 492 316 H628 Q656 316 656 344 V364',
+    width: 880,
+    columns: (sources: number) => Math.max(1, sources),
+    tileHeight: 64,
+    rowGap: 12,
+    columnGap: 12,
+    rail: 116,
+    hubTop: 176,
+    radius: 18,
+    // Card centres at 161, 440 and 719; the hub spans y 176–268. The horizontal runs
+    // sit at y = 300 so the chips clear the cards on tablets.
+    customer: 'M400 268 V276 Q400 300 376 300 H189 Q161 300 161 328 V364',
+    partner: 'M440 364 V268',
+    inbox: 'M480 268 V276 Q480 300 504 300 H691 Q719 300 719 328 V364',
   },
   mobile: {
-    viewBox: '0 0 360 440',
-    incoming: [
-      'M56 56 V58 Q56 62 50 62 H2 Q-6 62 -6 70 V166 Q-6 188 16 188 H131 Q148 188 148 205 V220',
-      'M180 56 V58 Q180 62 174 62 H124 Q118 62 118 68 V166 Q118 198 150 198 H160 V220',
-      'M304 56 V58 Q304 62 310 62 H358 Q366 62 366 70 V166 Q366 188 344 188 H229 Q212 188 212 205 V220',
-      'M56 124 V146 Q56 174 84 174 H144 Q172 174 172 202 V220',
-      'M180 124 V220',
-      'M304 124 V146 Q304 174 276 174 H216 Q188 174 188 202 V220',
-    ],
-    customer: 'M164 300 V310 Q164 326 148 326 H108 Q88 326 88 346 V358',
-    taxOffice: 'M196 300 V310 Q196 326 212 326 H252 Q272 326 272 346 V358',
+    width: 360,
+    columns: (sources: number) => Math.min(3, Math.max(1, sources)),
+    tileHeight: 56,
+    rowGap: 12,
+    columnGap: 12,
+    rail: 146,
+    hubTop: 176,
+    radius: 14,
+    // Hub spans y 176–255, the chips sit at y 275 and the destination cards start at
+    // 300. The partner route starts behind the bottom-anchored partner card (y 440) and
+    // rises through the gap between the cards. Routes start just inside the hub.
+    customer: 'M164 255 V265 Q164 275 154 275 H96 Q86 275 86 285 V300',
+    partner: 'M180 440 V255',
+    inbox: 'M196 255 V265 Q196 275 206 275 H264 Q274 275 274 285 V300',
   },
-}
+} as const
 
-export type FlowLayout = keyof typeof flowPaths
+export type FlowLayout = keyof typeof scenes
 
+const round = (value: number) => Math.round(value * 10) / 10
+
+// Every company drops onto one shared rail, which feeds a single trunk into the
+// hub. On mobile, top-row lines run straight down behind the tiles below them.
 export function createFlowPaths(layout: FlowLayout, sources: number): FlowGeometry {
-  if (sources === 6) return flowPaths[layout]
-  const desktop = layout === 'desktop'
-  const width = desktop ? 880 : 360
-  const columns = desktop ? Math.max(1, sources) : Math.min(3, Math.max(1, sources))
-  const tileWidth = (width - (columns - 1) * 12) / columns
+  const scene = scenes[layout]
+  const columns = scene.columns(sources)
+  const tileWidth = (scene.width - (columns - 1) * scene.columnGap) / columns
+  const trunk = scene.width / 2
+  const r = scene.radius
   const incoming = Array.from({ length: sources }, (_, index) => {
-    const column = index % columns
-    const startX = tileWidth / 2 + column * (tileWidth + 12)
-    const endX = width / 2 + (index - (sources - 1) / 2) * (desktop ? 16 : 12)
-    if (desktop) return `M${startX} 64 C${startX} 142 ${endX} 102 ${endX} 176`
-    if (sources <= 3) return `M${startX} 56 C${startX} 152 ${endX} 154 ${endX} 220`
-    if (index >= columns) return `M${startX} 124 C${startX} 186 ${endX} 166 ${endX} 220`
-    const bypassX = column === 0 ? -6 : column === columns - 1 ? 366 : 118
-    const direction = column === columns - 1 ? 1 : -1
-    return `M${startX} 56 V58 Q${startX} 62 ${startX + direction * 6} 62 H${bypassX - direction * 6} Q${bypassX} 62 ${bypassX} 68 V168 Q${bypassX} 198 ${endX} 198 V220`
+    const row = Math.floor(index / columns)
+    const x = round(tileWidth / 2 + (index % columns) * (tileWidth + scene.columnGap))
+    const top = round(row * (scene.tileHeight + scene.rowGap) + scene.tileHeight)
+    if (Math.abs(x - trunk) < 1) return `M${trunk} ${top} V${scene.hubTop}`
+    const toward = x < trunk ? 1 : -1
+    return [
+      `M${x} ${top}`,
+      `V${scene.rail - r}`,
+      `Q${x} ${scene.rail} ${round(x + toward * r)} ${scene.rail}`,
+      `H${trunk - toward * r}`,
+      `Q${trunk} ${scene.rail} ${trunk} ${scene.rail + r}`,
+      `V${scene.hubTop}`,
+    ].join(' ')
   })
-  return { ...flowPaths[layout], incoming }
+  return {
+    viewBox: `0 0 ${scene.width} 440`,
+    incoming,
+    customer: scene.customer,
+    partner: scene.partner,
+    inbox: scene.inbox,
+  }
 }

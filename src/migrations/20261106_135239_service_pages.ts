@@ -1,7 +1,6 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
-import { seedServicePages } from './seeds/services-20261106'
 
-export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+export async function up({ db, payload }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
    CREATE TYPE "public"."enum_service_pages_icon" AS ENUM('outgoing-invoices', 'incoming-invoices', 'converter', 'check', 'files', 'security', 'team', 'preview');
   CREATE TYPE "public"."enum_service_pages_status" AS ENUM('draft', 'published');
@@ -114,8 +113,11 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_service_pages_fk" FOREIGN KEY ("service_pages_id") REFERENCES "public"."service_pages"("id") ON DELETE cascade ON UPDATE no action;
   CREATE INDEX "payload_locked_documents_rels_service_pages_id_idx" ON "payload_locked_documents_rels" USING btree ("service_pages_id");`)
 
-  // Content is created as drafts for review; see docs/website-builder.md.
-  await seedServicePages(payload, req)
+  // Starter content is added after all migrations by `pnpm content:seed`: the Local API
+  // uses the current schema, which an empty database replaying this migration lacks.
+  payload.logger.info(
+    'Service pages: run `pnpm content:seed` after migrating to add starter content.',
+  )
 }
 
 export async function down({ db }: MigrateDownArgs): Promise<void> {

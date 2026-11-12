@@ -1,0 +1,128 @@
+.card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+  min-height: 4.8rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
+  background: var(--surface);
+}
+
+.arrival {
+  position: absolute;
+  inset: -1px;
+  border: 1.5px solid var(--primary);
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--primary) 16%, transparent),
+    0 0 26px 4px color-mix(in srgb, var(--primary) 32%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Lights up as each outgoing invoice reaches customers (head arrives at ~52%). */
+  .customer {
+    animation: customer-arrival 12s linear infinite;
+  }
+
+  /* Lights up as each received invoice reaches the inbox (head arrives at ~37%). */
+  .inbox {
+    animation: inbox-arrival 12s linear infinite;
+  }
+}
+
+[data-motion-paused='true'] .arrival {
+  animation-play-state: paused;
+}
+
+@keyframes customer-arrival {
+  0%,
+  51%,
+  63%,
+  100% {
+    opacity: 0;
+  }
+  53%,
+  56% {
+    opacity: 1;
+  }
+}
+
+@keyframes inbox-arrival {
+  0%,
+  36.5%,
+  48%,
+  100% {
+    opacity: 0;
+  }
+  38.5%,
+  41.5% {
+    opacity: 1;
+  }
+}
+
+.card > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cardIcon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--brand-ink);
+}
+
+.cardIcon svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cardTitle {
+  display: block;
+  color: var(--foreground);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.cardDescription {
+  margin-top: 0.2rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* Three cards share the row up to 900 px; compact cards keep their text on fewer
+   lines so they clear the format chips. */
+@media (max-width: 899px) {
+  .card {
+    min-height: 4.5rem;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 0.9rem;
+  }
+
+  .cardIcon {
+    display: none;
+  }
+
+  .cardTitle {
+    font-size: 0.75rem;
+  }
+
+  .cardDescription {
+    font-size: 0.6875rem;
+  }
+}

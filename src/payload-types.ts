@@ -197,6 +197,7 @@ export interface Config {
     terms: Term;
     impressum: Impressum;
     navbar: Navbar;
+    footer: Footer;
   };
   globalsSelect: {
     home: HomeSelect<false> | HomeSelect<true>;
@@ -209,6 +210,7 @@ export interface Config {
     terms: TermsSelect<false> | TermsSelect<true>;
     impressum: ImpressumSelect<false> | ImpressumSelect<true>;
     navbar: NavbarSelect<false> | NavbarSelect<true>;
+    footer: FooterSelect<false> | FooterSelect<true>;
   };
   locale: 'de' | 'en';
   widgets: {
@@ -256,7 +258,7 @@ export interface FullWidthSection {
   blockType: 'fullWidth';
 }
 /**
- * Public website assets, up to 50 MB per file. Use MP4 or WebM for videos. Never upload private client documents here.
+ * Public website assets, up to 50 MB per file: JPEG, PNG, WebP, AVIF, GIF or SVG images, MP4 or WebM videos and WebVTT captions. Never upload private client documents here.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
@@ -749,6 +751,27 @@ export interface Home {
   titleAccent?: string | null;
   description?: string | null;
   /**
+   * Up to two buttons under the heading. The first is the filled main button, the second an outlined one. Order is shared; translate labels with the locale selector. Remove both to show none.
+   */
+  actions?:
+    | {
+        label: string;
+        link: {
+          type: 'internal' | 'external';
+          /**
+           * Pick a page from the list or type a path such as /about or /#faq. Do not include /de or /en; the language is added automatically.
+           */
+          path?: string | null;
+          /**
+           * Full URL beginning with https:// or http://.
+           */
+          url?: string | null;
+          newTab?: boolean | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
    * Choose one to six companies. Drag rows to reorder them. These illustrate file imports; they do not advertise direct integrations.
    */
   providers: {
@@ -765,11 +788,13 @@ export interface Home {
     processing: string;
     customers: string;
     formats: string;
-    taxOffice: string;
+    partners?: string | null;
+    partnerFormats?: string | null;
+    inbox?: string | null;
     /**
-     * This branch always displays “Planned”. Direct tax submission is a future feature.
+     * Received invoices are checked and filed in the company’s Taxful inbox. Do not describe them as sent to other apps.
      */
-    taxSubmission: string;
+    inboxStorage?: string | null;
   };
   steps: {
     import: string;
@@ -1092,7 +1117,7 @@ export interface Navbar {
         link?: {
           type: 'internal' | 'external';
           /**
-           * Use / for home or a slug such as about. Do not include /de or /en. This links to a page; it does not create one.
+           * Pick a page from the list or type a path such as /about or /#faq. Do not include /de or /en; the language is added automatically.
            */
           path?: string | null;
           /**
@@ -1108,7 +1133,7 @@ export interface Navbar {
               link: {
                 type: 'internal' | 'external';
                 /**
-                 * Use / for home or a slug such as about. Do not include /de or /en. This links to a page; it does not create one.
+                 * Pick a page from the list or type a path such as /about or /#faq. Do not include /de or /en; the language is added automatically.
                  */
                 path?: string | null;
                 /**
@@ -1128,6 +1153,160 @@ export interface Navbar {
   createdAt?: string | null;
 }
 /**
+ * Shown at the bottom of every public page; customer pages show the bottom bar only. Translate text with the locale selector — order and structure are shared. Empty sections are hidden. Preview unsaved edits, save a draft, then publish.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "footer".
+ */
+export interface Footer {
+  id: number;
+  /**
+   * Leave empty to reuse the navigation logo, or the default Taxful branding. SVG or a transparent PNG works best.
+   */
+  logo?: (number | null) | Media;
+  /**
+   * Optional light version, shown instead of the footer logo in dark mode.
+   */
+  logoDark?: (number | null) | Media;
+  /**
+   * A short sentence under the logo.
+   */
+  tagline?: string | null;
+  /**
+   * Optional. Empty fields are not shown.
+   */
+  contact?: {
+    email?: string | null;
+    phone?: string | null;
+    /**
+     * Line breaks are kept.
+     */
+    address?: string | null;
+  };
+  /**
+   * Up to five columns, e.g. Services, Company and Legal. Drag rows to reorder columns and links.
+   */
+  columns?:
+    | {
+        title: string;
+        /**
+         * Internal paths get the /de or /en prefix automatically.
+         */
+        links?:
+          | {
+              label: string;
+              link: {
+                type: 'internal' | 'external';
+                /**
+                 * Pick a page from the list or type a path such as /about or /#faq. Do not include /de or /en; the language is added automatically.
+                 */
+                path?: string | null;
+                /**
+                 * Full URL beginning with https:// or http://.
+                 */
+                url?: string | null;
+                newTab?: boolean | null;
+              };
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Optional, e.g. "Follow us".
+   */
+  socialTitle?: string | null;
+  /**
+   * Shown as icons. Profiles open in a new tab.
+   */
+  social?:
+    | {
+        platform:
+          | 'linkedin'
+          | 'xing'
+          | 'instagram'
+          | 'facebook'
+          | 'x'
+          | 'youtube'
+          | 'tiktok'
+          | 'mastodon'
+          | 'github'
+          | 'website';
+        url: string;
+        /**
+         * Optional, e.g. "Taxful on LinkedIn". Defaults to the platform name.
+         */
+        label?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Optional, e.g. "Partners & memberships".
+   */
+  partnersTitle?: string | null;
+  /**
+   * Logos of partners, memberships or certifications. Only list relationships that actually exist.
+   */
+  partners?:
+    | {
+        /**
+         * Used as the image description for screen readers.
+         */
+        name: string;
+        /**
+         * Optional. Opens in a new tab.
+         */
+        url?: string | null;
+        /**
+         * SVG works best; a transparent PNG or WebP also works.
+         */
+        logo: number | Media;
+        /**
+         * Monochrome works with transparent logos and keeps a calm, uniform row in light and dark mode.
+         */
+        appearance?: ('original' | 'monochrome') | null;
+        /**
+         * Optional light version for dark mode when using original colours.
+         */
+        logoDark?: (number | null) | Media;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Use {year} for the current year, e.g. © {year} Taxful GmbH.
+   */
+  copyright?: string | null;
+  /**
+   * Short links such as Privacy, Terms and Legal notice (Impressum). Keep the legal notice reachable from every page.
+   */
+  legalLinks?:
+    | {
+        label: string;
+        link: {
+          type: 'internal' | 'external';
+          /**
+           * Pick a page from the list or type a path such as /about or /#faq. Do not include /de or /en; the language is added automatically.
+           */
+          path?: string | null;
+          /**
+           * Full URL beginning with https:// or http://.
+           */
+          url?: string | null;
+          newTab?: boolean | null;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Optional short note below the copyright.
+   */
+  note?: string | null;
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "home_select".
  */
@@ -1136,6 +1315,20 @@ export interface HomeSelect<T extends boolean = true> {
   title?: T;
   titleAccent?: T;
   description?: T;
+  actions?:
+    | T
+    | {
+        label?: T;
+        link?:
+          | T
+          | {
+              type?: T;
+              path?: T;
+              url?: T;
+              newTab?: T;
+            };
+        id?: T;
+      };
   providers?:
     | T
     | {
@@ -1151,8 +1344,10 @@ export interface HomeSelect<T extends boolean = true> {
         processing?: T;
         customers?: T;
         formats?: T;
-        taxOffice?: T;
-        taxSubmission?: T;
+        partners?: T;
+        partnerFormats?: T;
+        inbox?: T;
+        inboxStorage?: T;
       };
   steps?:
     | T
@@ -1389,6 +1584,82 @@ export interface NavbarSelect<T extends boolean = true> {
             };
         id?: T;
       };
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "footer_select".
+ */
+export interface FooterSelect<T extends boolean = true> {
+  logo?: T;
+  logoDark?: T;
+  tagline?: T;
+  contact?:
+    | T
+    | {
+        email?: T;
+        phone?: T;
+        address?: T;
+      };
+  columns?:
+    | T
+    | {
+        title?: T;
+        links?:
+          | T
+          | {
+              label?: T;
+              link?:
+                | T
+                | {
+                    type?: T;
+                    path?: T;
+                    url?: T;
+                    newTab?: T;
+                  };
+              id?: T;
+            };
+        id?: T;
+      };
+  socialTitle?: T;
+  social?:
+    | T
+    | {
+        platform?: T;
+        url?: T;
+        label?: T;
+        id?: T;
+      };
+  partnersTitle?: T;
+  partners?:
+    | T
+    | {
+        name?: T;
+        url?: T;
+        logo?: T;
+        appearance?: T;
+        logoDark?: T;
+        id?: T;
+      };
+  copyright?: T;
+  legalLinks?:
+    | T
+    | {
+        label?: T;
+        link?:
+          | T
+          | {
+              type?: T;
+              path?: T;
+              url?: T;
+              newTab?: T;
+            };
+        id?: T;
+      };
+  note?: T;
   _status?: T;
   updatedAt?: T;
   createdAt?: T;

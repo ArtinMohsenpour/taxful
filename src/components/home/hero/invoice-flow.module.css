@@ -36,6 +36,42 @@
   aspect-ratio: 2;
 }
 
+/* Cards and the hub keep their real size, so narrower desktop layouts get extra
+   height; routes stretch with the scene and keep crisp strokes. */
+@media (min-width: 640px) and (max-width: 767px) {
+  .scene {
+    aspect-ratio: 1.45;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 899px) {
+  .scene {
+    aspect-ratio: 1.7;
+  }
+}
+
+.grid {
+  position: absolute;
+  z-index: -2;
+  inset: 2% 0 -2%;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--muted-foreground) 30%, transparent) 1px,
+    transparent 1.5px
+  );
+  background-size: 20px 20px;
+  mask-image: radial-gradient(ellipse 52% 58% at 50% 52%, black 15%, transparent 72%);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+/* Wider screens have room beside the diagram; narrower ones must not scroll sideways. */
+@media (min-width: 1024px) {
+  .grid {
+    inset-inline: -6%;
+  }
+}
+
 .halo {
   position: absolute;
   z-index: -1;
@@ -60,36 +96,154 @@
   padding: 0;
 }
 
-.invoice {
+/* Small labels on the two routes leaving Taxful: output formats and the report. */
+.chip {
   position: absolute;
-  top: 67%;
-  left: 35%;
+  /* Centred on the routes' horizontal runs (y = 300 of 440). */
+  top: 68.2%;
   display: flex;
   align-items: center;
   gap: 0.4rem;
   padding: 0.4rem 0.6rem;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   border: 1px solid var(--border);
   border-radius: 0.6rem;
   background: var(--surface);
   color: var(--brand-ink);
   box-shadow: var(--toggle-shadow);
   font-size: 0.6rem;
+  white-space: nowrap;
 }
 
-.invoice svg {
+.formatChip {
+  left: 30%;
+}
+
+.reportChip {
+  left: 70%;
+}
+
+.chipRing {
+  position: absolute;
+  inset: -1px;
+  border: 1.5px solid var(--primary);
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent),
+    0 0 18px 2px color-mix(in srgb, var(--primary) 40%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chip svg {
   width: 1rem;
   height: 1rem;
   stroke: currentColor;
   stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
+/* Three equal cards from y = 364 of 440 (where the routes end) to the bottom; centres
+   at 18.3%, 50% and 81.7% match the routes in flow-paths.ts. Stretched rows keep the
+   tops level when one description wraps. */
 .destinations {
   position: absolute;
-  inset: auto 9% 0;
+  inset: 82.7% 4% 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3.4%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Chips light up as an invoice passes the middle of their route. */
+  .formatRing {
+    animation: format-pass 12s linear infinite;
+  }
+
+  .reportRing {
+    animation: report-pass 12s linear infinite;
+  }
+
+  .chip {
+    animation: chip-in 600ms cubic-bezier(0.22, 1, 0.36, 1) 850ms both;
+  }
+
+  .reportChip {
+    animation-delay: 950ms;
+  }
+
+  .destinations > * {
+    animation: chip-in 700ms cubic-bezier(0.22, 1, 0.36, 1) 750ms both;
+  }
+
+  .destinations > :nth-child(2) {
+    animation-delay: 850ms;
+  }
+
+  .destinations > :nth-child(3) {
+    animation-delay: 950ms;
+  }
+
+  .providerNote {
+    animation: fade-in 600ms ease 1000ms both;
+  }
+}
+
+[data-motion-paused='true'] .chipRing {
+  animation-play-state: paused;
+}
+
+/* Outgoing invoices pass the format chip at ~41% of their cycle. */
+@keyframes format-pass {
+  0%,
+  39%,
+  46.5%,
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+  41% {
+    opacity: 1;
+    scale: 1;
+  }
+  45.5% {
+    opacity: 0;
+    scale: 1.18;
+  }
+}
+
+/* Received invoices pass the report chip at ~27% of theirs. */
+@keyframes report-pass {
+  0%,
+  25.5%,
+  32.5%,
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+  27.3% {
+    opacity: 1;
+    scale: 1;
+  }
+  31.5% {
+    opacity: 0;
+    scale: 1.18;
+  }
+}
+
+/* Uses the individual translate property so it composes with the chip's centring transform. */
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .providerNote {
@@ -103,30 +257,73 @@
 @media (max-width: 639px) {
   .scene {
     aspect-ratio: 360 / 440;
-    min-height: 460px;
+    min-height: 560px;
   }
 
   .providers {
     grid-template-columns: repeat(var(--mobile-columns), minmax(0, 1fr));
     height: calc(var(--mobile-rows) * 12.7273% + (var(--mobile-rows) - 1) * 2.7273%);
     gap: 3.3333%;
+    /* Matches the 12-unit gap in flow-paths.ts for up to two rows (at most six
+       companies, so at most two rows of three). */
     row-gap: calc((var(--mobile-rows) - 1) * 9.6774%);
   }
 
-  .invoice {
-    top: 71%;
-    left: 34%;
+  .chip {
+    /* Centred on the routes' horizontal runs (y = 275 of 440). */
+    top: 62.5%;
     padding: 0.3rem 0.4rem;
     font-size: 0.5rem;
   }
 
+  .formatChip {
+    left: 34%;
+  }
+
+  .reportChip {
+    left: 66%;
+  }
+
+  /* Customer and inbox side by side from y = 300; the partner card is centred at the
+     bottom and its route rises through the gap between them. */
   .destinations {
+    top: 68.2%;
     inset-inline: 0;
-    gap: 5%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: space-between;
+    gap: 0 5%;
+  }
+
+  .customerCard {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .inboxCard {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .partnerCard {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+    width: 64%;
   }
 
   .providerNote {
     max-width: 100%;
-    font-size: 0.6875rem;
+  }
+}
+
+/* On narrow phones both chips fit beside the partner route only as icons; the cards
+   already name the formats. */
+@media (max-width: 419px) {
+  .chip {
+    padding: 0.3rem;
+  }
+
+  .chipLabel {
+    display: none;
   }
 }

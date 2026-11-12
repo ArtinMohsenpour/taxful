@@ -9,76 +9,255 @@
   stroke-linejoin: round;
 }
 
+/* The scene stretches the viewBox; keep line widths even and invoice dots round. */
+.connections path {
+  vector-effect: non-scaling-stroke;
+}
+
 .mobile {
   display: none;
+}
+
+.tracks {
+  opacity: 0.38;
 }
 
 .track {
   stroke: var(--primary);
   stroke-width: 1.4;
-  opacity: 0.3;
 }
 
-.plannedTrack {
-  stroke: var(--muted-foreground);
-  stroke-width: 1;
-  stroke-dasharray: 4 7;
-  opacity: 0.3;
-}
-
-.pulse,
-.outgoingPulse {
+/*
+ * Comets use pathLength="100": the tail is a 14-unit dash and the head a dot at
+ * its front. Huge gaps keep the dash from wrapping back to the start of a route.
+ * The tail's front edge reaches the end at 100/114 of its travel, exactly when
+ * the head (0 -> -100) arrives, so both stay aligned.
+ */
+.inTail,
+.outTail,
+.receiveTail,
+.fileTail,
+.inHead,
+.outHead,
+.receiveHead,
+.fileHead {
   stroke: var(--brand-ink);
-  stroke-width: 2;
-  stroke-dasharray: 7 93;
-  stroke-dashoffset: 100;
   opacity: 0;
 }
 
+.inTail,
+.outTail,
+.receiveTail,
+.fileTail {
+  stroke-width: 2.2;
+  stroke-opacity: 0.5;
+  stroke-dasharray: 14 400;
+  stroke-dashoffset: 14;
+}
+
+.inHead,
+.outHead,
+.receiveHead,
+.fileHead {
+  stroke-width: 6.5;
+  stroke-dasharray: 0.01 400;
+  stroke-dashoffset: 0;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .pulse {
-    animation: incoming-pulse 12s linear infinite;
+  .inTail {
+    animation: in-tail 12s linear infinite;
   }
 
-  .outgoingPulse {
-    animation: outgoing-pulse 12s linear infinite;
+  .inHead {
+    animation: in-head 12s linear infinite;
+  }
+
+  .outTail {
+    animation: out-tail 12s linear infinite;
+  }
+
+  .outHead {
+    animation: out-head 12s linear infinite;
+  }
+
+  .receiveTail {
+    animation: receive-tail 12s linear infinite;
+  }
+
+  .receiveHead {
+    animation: receive-head 12s linear infinite;
+  }
+
+  .fileTail {
+    animation: file-tail 12s linear infinite;
+  }
+
+  .fileHead {
+    animation: file-head 12s linear infinite;
+  }
+
+  /* Entrance: routes draw in once, then invoices start travelling. */
+  .track {
+    stroke-dasharray: 1;
+    animation: track-draw 1100ms cubic-bezier(0.22, 1, 0.36, 1) 250ms both;
+  }
+
+  .pulses {
+    animation: fade-in 600ms ease 1100ms both;
   }
 }
 
-[data-motion-paused='true'] .pulse,
-[data-motion-paused='true'] .outgoingPulse {
+[data-motion-paused='true']
+  :is(.inTail, .inHead, .outTail, .outHead, .receiveTail, .receiveHead, .fileTail, .fileHead) {
   animation-play-state: paused;
 }
 
-@keyframes incoming-pulse {
+/* Cycle: travel to Taxful 0–27%, hub glow 24–36%, out to customers 30–55%. */
+@keyframes in-tail {
   0% {
-    stroke-dashoffset: 100;
+    stroke-dashoffset: 14;
     opacity: 0;
   }
   1%,
   25% {
-    opacity: 0.85;
+    opacity: 1;
   }
   27%,
   100% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: -100;
     opacity: 0;
   }
 }
 
-@keyframes outgoing-pulse {
+@keyframes in-head {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  1%,
+  23.6% {
+    opacity: 1;
+  }
+  23.7%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+@keyframes out-tail {
   0%,
   30% {
-    stroke-dashoffset: 100;
+    stroke-dashoffset: 14;
     opacity: 0;
   }
   31%,
   53% {
-    opacity: 0.85;
+    opacity: 1;
   }
   55%,
   100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+@keyframes out-head {
+  0%,
+  30% {
     stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  31%,
+  51.8% {
+    opacity: 1;
+  }
+  51.9%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+/* Incoming lane: partner to Taxful 0–14% (head arrives 12.3%), Taxful to inbox 17–40%. */
+@keyframes receive-tail {
+  0% {
+    stroke-dashoffset: 14;
+    opacity: 0;
+  }
+  1%,
+  12.5% {
+    opacity: 1;
+  }
+  14%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+@keyframes receive-head {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  1%,
+  12.2% {
+    opacity: 1;
+  }
+  12.3%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+@keyframes file-tail {
+  0%,
+  17% {
+    stroke-dashoffset: 14;
+    opacity: 0;
+  }
+  18%,
+  38.5% {
+    opacity: 1;
+  }
+  40%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+@keyframes file-head {
+  0%,
+  17% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  18%,
+  37.1% {
+    opacity: 1;
+  }
+  37.2%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+@keyframes track-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
     opacity: 0;
   }
 }

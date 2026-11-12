@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "website:examples": "tsx scripts/seed-home-blocks.ts",
+    "content:seed": "tsx scripts/seed-content.ts",
     "invoices:email-worker": "tsx scripts/invoice-email-worker.ts",
     "documents:worker": "tsx scripts/document-worker.ts",
     "documents:services": "docker compose -f docker-compose.documents.yml up -d --build",

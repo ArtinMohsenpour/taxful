@@ -9,6 +9,7 @@
     "description": "Import documents, review the details and create validated e-invoices. From your accounting software to the finished file – all in one place.",
     "eyebrow": "A little more clarity.",
     "stepsLabel": "Your invoice workflow",
+    "newTab": "opens in a new tab",
     "steps": {
       "import": "Import",
       "review": "Review",
@@ -17,16 +18,19 @@
     },
     "flow": {
       "title": "Your path to an e-invoice",
-      "description": "Documents from your accounting software are imported into Taxful as files, reviewed and approved. Validated XRechnung and ZUGFeRD files are prepared for your customers. Direct connections to the illustrated providers and submission to the tax office are not currently available.",
+      "description": "Invoices from your accounting software are imported into Taxful as files, reviewed and approved; validated XRechnung and ZUGFeRD files are prepared for your customers. Invoices you receive from business partners are checked too and filed in your invoice inbox with a validation report. Direct connections to the illustrated providers are not currently available.",
       "sources": "From your accounting software",
       "importMethod": "Import a file",
       "providerNote": "Accounting software examples. File imports, without a direct integration.",
       "processing": "Review & approve",
       "customers": "For your customers",
       "formats": "XRechnung · ZUGFeRD",
-      "taxOffice": "Tax office",
-      "taxSubmission": "Submission via ELSTER",
-      "planned": "Planned",
+      "formatChip": "XML / PDF",
+      "partners": "From business partners",
+      "partnerFormats": "XRechnung · ZUGFeRD · PDF",
+      "inbox": "Invoice inbox",
+      "inboxStorage": "Checked and filed",
+      "report": "Validation report",
       "pause": "Pause animation",
       "play": "Resume animation"
     }
@@ -57,5 +61,15 @@
     "keyPoints": "At a glance",
     "startFree": "Start for free",
     "viewPricing": "View pricing"
+  },
+  "Footer": {
+    "navigation": "Footer navigation",
+    "legal": "Legal",
+    "social": "Social media",
+    "partners": "Partners",
+    "contact": "Contact",
+    "email": "Email",
+    "phone": "Phone",
+    "newTab": "opens in a new tab"
   }
 }

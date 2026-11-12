@@ -9,6 +9,9 @@ import * as migration_20261007_120000_staff_revocation_clock from './20261007_12
 import * as migration_20261009_113849_home_page from './20261009_113849_home_page'
 import * as migration_20261009_183700_website_page_builder from './20261009_183700_website_page_builder'
 import * as migration_20261106_135239_service_pages from './20261106_135239_service_pages'
+import * as migration_20261109_093459_footer from './20261109_093459_footer'
+import * as migration_20261109_115933_home_hero_actions from './20261109_115933_home_hero_actions'
+import * as migration_20261109_141329_home_incoming_lane from './20261109_141329_home_incoming_lane'
 
 export const migrations = [
   {
@@ -65,5 +68,20 @@ export const migrations = [
     up: migration_20261106_135239_service_pages.up,
     down: migration_20261106_135239_service_pages.down,
     name: '20261106_135239_service_pages',
+  },
+  {
+    up: migration_20261109_093459_footer.up,
+    down: migration_20261109_093459_footer.down,
+    name: '20261109_093459_footer',
+  },
+  {
+    up: migration_20261109_115933_home_hero_actions.up,
+    down: migration_20261109_115933_home_hero_actions.down,
+    name: '20261109_115933_home_hero_actions',
+  },
+  {
+    up: migration_20261109_141329_home_incoming_lane.up,
+    down: migration_20261109_141329_home_incoming_lane.down,
+    name: '20261109_141329_home_incoming_lane',
   },
 ]

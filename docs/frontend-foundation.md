@@ -44,7 +44,7 @@ The hero folder separates responsive path coordinates, SVG icons, provider tiles
 
 The public diagram renders on the server. Only the pause/resume control uses client state; moving strokes and the synchronized primary-colour glow use CSS animation. Reduced-motion preferences disable animation and hide the unnecessary control. Desktop supports one to six providers; small screens use at most three columns with separate connection geometry. Explicit diagram dimensions reserve space during loading.
 
-Provider marks illustrate document sources and are labelled as file imports without direct integrations. The Finanzamt/ELSTER destination has a static dashed connection and a localized “Planned” label. Preserve these distinctions until those integrations are implemented.
+Provider marks illustrate document sources and are labelled as file imports without direct integrations. The incoming lane shows invoices from business partners filed in Taxful’s own invoice inbox, not delivered to other apps. Direct tax submission is not shown until it exists. Preserve these distinctions until those integrations are implemented.
 
 ## Verification
 

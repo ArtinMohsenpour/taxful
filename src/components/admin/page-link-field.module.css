@@ -1,0 +1,228 @@
+/* Uses Payload admin theme variables so the picker follows light/dark admin themes. */
+.field {
+  position: relative;
+}
+
+.wrap {
+  position: relative;
+}
+
+.control {
+  position: relative;
+}
+
+.input {
+  width: 100%;
+  height: 40px;
+  padding: 0 44px 0 14px;
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: var(--style-radius-s);
+  background: var(--theme-input-bg);
+  color: var(--theme-elevation-800);
+  font: inherit;
+  font-size: 1rem;
+  outline: none;
+  box-shadow: 0 2px 2px -1px rgb(0 0 0 / 0.1);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.input::placeholder {
+  color: var(--theme-elevation-400);
+}
+
+.input:hover {
+  border-color: var(--theme-elevation-250);
+}
+
+.input:focus,
+.control[data-open] .input {
+  border-color: var(--theme-elevation-400);
+}
+
+.input:disabled {
+  background: var(--theme-elevation-50);
+  color: var(--theme-elevation-450);
+  cursor: not-allowed;
+}
+
+.toggle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--style-radius-s);
+  background: transparent;
+  color: var(--theme-elevation-500);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background: var(--theme-elevation-100);
+  color: var(--theme-elevation-800);
+}
+
+.toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 150ms ease;
+}
+
+.control[data-open] .toggle svg {
+  transform: rotate(180deg);
+}
+
+.list {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  max-height: min(360px, 55vh);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: var(--style-radius-m);
+  background: var(--theme-input-bg);
+  box-shadow:
+    0 12px 32px -12px rgb(0 0 0 / 0.25),
+    0 2px 6px -2px rgb(0 0 0 / 0.1);
+}
+
+.group + .group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--theme-elevation-100);
+}
+
+.groupLabel {
+  position: sticky;
+  z-index: 1;
+  top: -6px;
+  padding: 8px 10px 4px;
+  background: var(--theme-input-bg);
+  color: var(--theme-elevation-500);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.option {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: var(--style-radius-s);
+  cursor: pointer;
+}
+
+.option[data-active] {
+  background: var(--theme-elevation-100);
+}
+
+.option[aria-selected='true'] .optionLabel {
+  font-weight: 600;
+}
+
+.optionText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.optionLabel,
+.optionPath {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionLabel {
+  color: var(--theme-elevation-800);
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+
+.optionPath {
+  color: var(--theme-elevation-500);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.75rem;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--theme-warning-100);
+  color: var(--theme-warning-800);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.check {
+  flex-shrink: 0;
+  color: var(--theme-success-500);
+  font-weight: 700;
+}
+
+.empty,
+.footer {
+  margin: 0;
+  padding: 10px;
+  color: var(--theme-elevation-500);
+  font-size: 0.8125rem;
+}
+
+.footer {
+  margin-top: 4px;
+  border-top: 1px solid var(--theme-elevation-100);
+}
+
+.hint {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.hintMatch {
+  color: var(--theme-elevation-700);
+}
+
+.hintMatch > span:first-child {
+  color: var(--theme-success-500);
+  font-weight: 700;
+}
+
+.hintGroup {
+  color: var(--theme-elevation-500);
+}
+
+.hintWarning {
+  color: var(--theme-warning-750, var(--theme-warning-800));
+}
+
+.hintCustom {
+  color: var(--theme-elevation-550, var(--theme-elevation-500));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input,
+  .toggle svg {
+    transition: none;
+  }
+}

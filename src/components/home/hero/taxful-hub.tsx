@@ -1,6 +1,7 @@
 import { TaxfulMark } from '@/components/brand/taxful-mark'
 import { CheckIcon } from './flow-icons'
-import { flowTiming } from './flow-timing'
+import { FlowRings } from './flow-rings'
+import { flowTiming, INCOMING_DOCUMENTS, incomingTiming } from './flow-timing'
 import styles from './taxful-hub.module.css'
 
 export function TaxfulHub({
@@ -12,14 +13,17 @@ export function TaxfulHub({
 }) {
   return (
     <div className={styles.hub}>
-      {Array.from({ length: sources }, (_, index) => (
-        <span
-          key={index}
-          className={styles.glow}
-          aria-hidden="true"
-          style={flowTiming(index, sources)}
-        />
-      ))}
+      {/* Outgoing glows come first: tests and timing share their order. */}
+      <FlowRings
+        count={sources}
+        timing={(index) => flowTiming(index, sources)}
+        className={styles.glow}
+      />
+      <FlowRings
+        count={INCOMING_DOCUMENTS}
+        timing={(index) => incomingTiming(index, sources)}
+        className={`${styles.glow} ${styles.received}`}
+      />
       <TaxfulMark className={styles.taxfulMark} />
       <div>
         <span className={styles.taxfulName}>

@@ -24,7 +24,7 @@ export function Icon({ name, className = '' }: { name: IconName; className?: str
   return (
     <span
       aria-hidden="true"
-      className={`inline-block size-5 shrink-0 bg-current ${className}`}
+      className={`inline-block shrink-0 bg-current ${/(^|\s)size-/.test(className) ? '' : 'size-5'} ${className}`}
       style={{
         mask: `url("/icons/${name}.svg") center / contain no-repeat`,
         WebkitMask: `url("/icons/${name}.svg") center / contain no-repeat`,

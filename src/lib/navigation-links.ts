@@ -24,3 +24,16 @@ export function externalHref(value: unknown): string | null {
     return null
   }
 }
+
+export type StoredLink = {
+  type?: string | null
+  path?: string | null
+  url?: string | null
+  newTab?: boolean | null
+}
+
+// Resolves a CMS link group to a safe href, or null when it must not render.
+export function linkHref(link: StoredLink | null | undefined): string | null {
+  if (!link) return null
+  return link.type === 'external' ? externalHref(link.url) : internalHref(link.path)
+}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Link, usePathname } from '@/i18n/navigation'
-import { externalHref, internalHref } from '@/lib/navigation-links'
+import { internalHref, linkHref } from '@/lib/navigation-links'
 import type { Navbar } from '@/payload-types'
 
 type Item = NonNullable<Navbar['items']>[number]
@@ -16,6 +16,11 @@ function isActive(item: NavLink, pathname: string) {
   return normalize(href) === normalize(pathname)
 }
 
+// The current page is marked by a sage line under its label; hover previews a fainter line.
+function indicator(active: boolean | undefined) {
+  return `relative after:absolute after:inset-x-0 after:-bottom-1.5 after:h-0.5 after:origin-center after:rounded-full after:transition-transform after:duration-200 motion-reduce:after:transition-none ${active ? 'after:scale-x-100 after:bg-nav-indicator' : 'after:scale-x-0 after:bg-nav-indicator/45 group-hover:after:scale-x-100'}`
+}
+
 function NavigationLink({
   item,
   button = false,
@@ -26,11 +31,12 @@ function NavigationLink({
   onClick?: () => void
 }) {
   const pathname = usePathname()
-  const href =
-    item.link?.type === 'external' ? externalHref(item.link.url) : internalHref(item.link?.path)
+  const href = linkHref(item.link)
   if (!href) return null
   const active = isActive(item, pathname)
-  const className = `block rounded-full px-4 py-3 text-sm font-medium break-words transition-colors motion-reduce:transition-none ${active ? 'bg-accent text-brand-ink ring-1 ring-primary/30' : button ? 'bg-primary text-primary-foreground hover:bg-primary/80' : 'text-foreground hover:bg-accent/70'}`
+  // Buttons keep their filled style when active; text links use the underline.
+  const className = `group block rounded-full px-4 py-3 text-sm font-medium break-words transition-colors motion-reduce:transition-none ${button ? 'bg-primary text-primary-foreground hover:bg-primary/80' : active ? 'text-brand-ink' : 'text-foreground hover:text-brand-ink'}`
+  const label = button ? item.label : <span className={indicator(active)}>{item.label}</span>
   const props = {
     className,
     onClick,
@@ -39,11 +45,11 @@ function NavigationLink({
   }
   return item.link?.type === 'external' ? (
     <a href={href} {...props}>
-      {item.label}
+      {label}
     </a>
   ) : (
     <Link href={href} aria-current={active ? 'page' : undefined} {...props}>
-      {item.label}
+      {label}
     </Link>
   )
 }
@@ -82,9 +88,9 @@ function Dropdown({ item }: { item: Item }) {
         aria-expanded={open}
         aria-controls={`nav-${item.id}`}
         onClick={() => setOpen(!open)}
-        className={`flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors motion-reduce:transition-none ${active ? 'bg-accent text-brand-ink ring-1 ring-primary/30' : 'hover:bg-accent/70'}`}
+        className={`group flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors motion-reduce:transition-none ${active ? 'text-brand-ink' : 'hover:text-brand-ink'}`}
       >
-        {item.label}
+        <span className={indicator(active)}>{item.label}</span>
         <span
           aria-hidden="true"
           className={`transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`}

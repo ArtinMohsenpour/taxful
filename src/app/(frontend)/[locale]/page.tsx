@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getLocale } from 'next-intl/server'
 import { Navbar } from '@/components/navbar'
+import { Footer } from '@/components/footer/footer'
 import { HeroSection } from '@/components/home/hero/hero-section'
 import { HomePreview } from '@/components/home/home-preview'
 import { loadHome } from '@/lib/home/load'
@@ -35,13 +36,16 @@ export default async function HomePage({
   const params = await searchParams
   const preview = params.preview === 'true'
   const homePreview = preview && params.previewGlobal === 'home'
+  // Payload Live Preview keeps one shared cache, so only one global may listen per page.
+  const navbarPreview = preview && !params.previewGlobal
+  const footerPreview = preview && params.previewGlobal === 'footer'
   const locale = await getLocale()
   const home = await loadHome(locale, homePreview)
   const cards = await serviceCardsFor(home.sections, locale, homePreview)
 
   return (
     <div className="relative isolate flex min-h-dvh flex-col pt-3 sm:pt-6">
-      <Navbar preview={preview && !homePreview} />
+      <Navbar preview={navbarPreview} />
       <main
         id="main"
         tabIndex={-1}
@@ -57,6 +61,7 @@ export default async function HomePage({
           </>
         )}
       </main>
+      <Footer preview={footerPreview} />
     </div>
   )
 }

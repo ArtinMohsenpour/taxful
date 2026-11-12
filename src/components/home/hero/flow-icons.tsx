@@ -20,10 +20,22 @@ export function CustomersIcon(props: IconProps) {
   )
 }
 
-export function TaxOfficeIcon(props: IconProps) {
+// An envelope with an arrow: invoices sent to you by business partners.
+export function PartnersIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
-      <path d="m3 8 9-5 9 5v2H3V8ZM5 10v8m5-8v8m4-8v8m5-8v8M3 18h18v3H3v-3Z" />
+      <path d="M21 11V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7" />
+      <path d="m3.5 7 8.5 6 8.5-6M16 19h6m-3-3 3 3-3 3" />
+    </svg>
+  )
+}
+
+// An inbox tray: received invoices filed in Taxful.
+export function InboxIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M3 13h5l1.5 3h5l1.5-3h5" />
+      <path d="M5.5 5h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5l2.5-8Z" />
     </svg>
   )
 }

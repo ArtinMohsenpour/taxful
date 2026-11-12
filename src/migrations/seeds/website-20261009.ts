@@ -289,7 +289,10 @@ const content = {
   >
 >
 
-export async function seedWebsite(payload: Payload, req: PayloadRequest) {
+// Page globals written by seedWebsite; starter content checks they are untouched.
+export const websiteSeedGlobals = Object.keys(content.de) as (keyof typeof content.de)[]
+
+export async function seedWebsite(payload: Payload, req: Partial<PayloadRequest>) {
   const form = await payload.create({
     collection: 'website-forms',
     overrideAccess: true,

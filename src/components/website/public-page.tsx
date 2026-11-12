@@ -1,6 +1,7 @@
 import 'server-only'
 import { getLocale } from 'next-intl/server'
 import { Navbar } from '@/components/navbar'
+import { Footer } from '@/components/footer/footer'
 import type { WebsitePageSlug } from '@/lib/website/catalog'
 import { loadWebsitePage, serviceCardsFor } from '@/lib/website/load'
 import { pageMetadata } from '@/lib/website/metadata'
@@ -56,6 +57,7 @@ export async function PublicWebsitePage({
           </>
         )}
       </main>
+      <Footer />
     </div>
   )
 }

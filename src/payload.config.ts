@@ -8,6 +8,7 @@ import sharp from 'sharp'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Navbar } from './globals/Navbar'
+import { Footer } from './globals/Footer'
 import { Home } from './globals/Home'
 import { WebsiteGlobals } from './globals/website/page'
 import { WebsiteForms } from './collections/WebsiteForms'
@@ -17,6 +18,7 @@ import { websiteLayouts } from './blocks/website/layouts'
 import { PUBLIC_MEDIA_MAX_BYTES } from './lib/website/media-settings'
 import { staffEmailAdapter } from './lib/staff-auth/email'
 import { installStaffMfa } from './lib/staff-auth/strategy'
+import { linkTargetsEndpoint } from './lib/website/link-targets-endpoint'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -46,8 +48,9 @@ export default buildConfig({
   },
   // Order sets the sidebar group order (see ADMIN_GROUPS).
   collections: [ServicePages, WebsiteForms, FormSubmissions, Media, Users],
-  globals: [Home, ...WebsiteGlobals, Navbar],
+  globals: [Home, ...WebsiteGlobals, Navbar, Footer],
   blocks: websiteLayouts,
+  endpoints: [linkTargetsEndpoint],
   upload: {
     limits: { fileSize: PUBLIC_MEDIA_MAX_BYTES },
     abortOnLimit: true,

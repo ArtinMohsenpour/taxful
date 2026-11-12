@@ -41,6 +41,7 @@ test.describe('Admin Panel', () => {
     await expect(items(0)).toHaveText(['Service pages', 'Services overview'])
     await expect(items(3)).toHaveText(['Home', 'About us', 'How it works', 'FAQ', 'Contact us'])
     await expect(items(4)).toHaveText(['Privacy policy', 'Terms of use', 'Legal notice (Impressum)'])
+    await expect(items(5)).toHaveText(['Navigation', 'Footer'])
     // The seeded test user is a super admin.
     await expect(items(6)).toHaveText(['Staff accounts', 'Customers & billing'])
   })

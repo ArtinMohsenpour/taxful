@@ -3,7 +3,7 @@
 The Payload sidebar groups the website by task: **Services** (service pages and the
 Services overview), **Forms** (forms and submissions), **Media** (media library),
 **Pages** (Home, About us, How it works, FAQ, Contact us), **Legal** (Privacy policy,
-Terms of use, Legal notice (Impressum)), **Site settings** (Navigation) and
+Terms of use, Legal notice (Impressum)), **Site settings** (Navigation, Footer) and
 **Administration** (staff accounts; customers & billing for super admins). Group names
 live in `ADMIN_GROUPS` (`src/lib/cms-settings.ts`); Payload lists groups that contain
 collections first, so the `collections` order in `src/payload.config.ts` sets the order.
@@ -44,6 +44,16 @@ or third-party video embed. Optional posters, WebVTT captions and a rich-text
 transcript are supported. Add captions for speech and an equivalent description
 for visual information. Rich text supports headings H2–H4, lists, quotes, emphasis
 and safe links; the optional page heading supplies H1.
+
+Media accepts only these website asset types: JPEG, PNG, WebP, AVIF and GIF images,
+SVG logos, MP4/WebM videos and WebVTT captions. The upload policy
+(`src/lib/website/media-uploads.ts`) checks the file contents, not just the name: binary
+files must match their extension, SVGs must pass the [SVG safety
+check](footer.md#svg-safety) and captions must start with `WEBVTT`. Anything else, such as
+HTML, XML or PDF, is rejected. Media files are public and served from this site, so every
+file response is also sandboxed (`Content-Security-Policy: sandbox; default-src 'none'`,
+`X-Content-Type-Options: nosniff`); files of any other type stored before this policy
+download instead of opening. Tests: `tests/int/media-uploads.int.spec.ts`.
 
 Media uploads support files up to 50 MB. Payload's file limit and Next's proxy
 buffer limit are aligned, with additional room for multipart metadata. Requests
@@ -91,12 +101,12 @@ routes. Set `WEBSITE_URL` to the real website origin before deployment. It falls
 back to `BETTER_AUTH_URL`, including for public form Origin checks. Do not use an
 arbitrary request Host header as the canonical origin.
 
-The migration publishes starter content for Services, About, How it works, FAQ
-and Contact. Privacy, Terms and Impressum start as drafts with titles and empty
+`pnpm content:seed` publishes starter content for Services, About, How it works,
+FAQ and Contact (see [Starter content](#starter-content)). Privacy, Terms and Impressum start as drafts with titles and empty
 content. Add reviewed company/legal copy and publish them before launch. Draft
 pages return 404 publicly and are omitted from the sitemap. Navbar
 links remain under the separate Navbar global; existing navigation is preserved.
-The temporary footer is removed; a dedicated footer will be designed later.
+The footer is managed in the separate Footer global; see `footer.md`.
 Each public page has its own named route folder under
 `src/app/(frontend)/[locale]/`. Enter the paths below as internal links in the
 Navbar global; navigation adds the current `/de` or `/en` locale automatically.
@@ -144,8 +154,8 @@ chosen order, or all published service pages when left empty). Cards only show
 published pages; Live Preview also shows your drafts. Forms are not shown on
 service pages because submissions belong to page globals.
 
-Migration `20261106_135239_service_pages` adds the collection and seeds six
-service pages plus a new version of the Services page — all as **drafts**. The
+Migration `20261106_135239_service_pages` adds the collection; `pnpm content:seed`
+adds six service pages plus a new version of the Services page — all as **drafts**. The
 copy states e-invoicing law as of November 2026 with links to its sources and
 avoids claims such as GoBD compliance, tax advice or ELSTER submission. Have a
 qualified person review both languages, then publish each service page and the
@@ -189,9 +199,25 @@ local Media library. No real client material is used.
   page wrappers; all CMS pages reuse `src/components/website/public-page.tsx`.
 
 Apply `pnpm payload migrate` before running this version in another environment.
-Migration `20261009_183700_website_page_builder` is additive, preserves the home
-hero and includes the initial page/form content. Customer-auth tables and existing
-data are untouched. Restart `pnpm dev` after CMS schema changes so the server
+Migration `20261009_183700_website_page_builder` is additive and preserves the home
+hero. Customer-auth tables and existing data are untouched.
+
+### Starter content
+
+Migrations only change the schema. On a new database, run `pnpm content:seed` after
+`pnpm payload migrate` to add the starter content: the website pages and Contact
+form, the six draft service pages with the Services page draft, and the footer
+(`src/migrations/seeds/starter-content.ts`). It refuses to run while migrations are
+pending, works in one transaction, and seeds an area only while it is empty (no
+website form or page-global versions; no service pages; no footer versions), so it
+is safe to repeat and changes nothing on an existing database.
+
+The seeds use Payload's Local API, which always reads the current schema. Inside a
+migration they would fail when an empty database is migrated from the start,
+because later migrations have not added their tables yet. Write any content that a
+migration itself must add in plain SQL (as `src/migrations/seeds/home-actions-20261109.ts`
+does); `tests/int/starter-content.int.spec.ts` rejects Local API calls in migrations.
+Databases that applied these migrations before this change already have the content. Restart `pnpm dev` after CMS schema changes so the server
 initializes the new Payload configuration. Generated types/import map are committed
 with the migration. No new dependencies are required.
 

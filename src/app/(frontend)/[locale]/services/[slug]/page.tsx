@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server'
 import { Navbar } from '@/components/navbar'
+import { Footer } from '@/components/footer/footer'
 import { JsonLd } from '@/components/website/json-ld'
 import { ServicePageContent } from '@/components/website/service-page'
 import { ServicePagePreview } from '@/components/website/service-page-preview'
@@ -53,6 +54,7 @@ export default async function ServicePageRoute(props: Props) {
           </>
         )}
       </main>
+      <Footer />
     </div>
   )
 }

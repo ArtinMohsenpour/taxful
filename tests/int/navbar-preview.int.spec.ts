@@ -19,7 +19,7 @@ it('renders unsaved editor messages through the official hook without a save req
     items: [{ label: 'Saved', type: 'link', link: { type: 'internal', path: '/' } }],
   }
   const updated = { ...initial, items: [{ ...initial.items![0], label: 'Unsaved label' }] }
-  const fetcher = vi.fn().mockResolvedValue({ json: async () => updated })
+  const fetcher = vi.fn().mockImplementation(async () => new Response(JSON.stringify(updated)))
   vi.stubGlobal('fetch', fetcher)
   render(
     React.createElement(NavbarPreview, {
@@ -51,4 +51,37 @@ it('renders unsaved editor messages through the official hook without a save req
   )
   await waitFor(() => expect(screen.getByText('Unsaved label')).toBeDefined())
   expect(fetcher.mock.calls[0][1].headers['X-Payload-HTTP-Method-Override']).toBe('GET')
+})
+
+it('applies preview updates in message order even when an older response is slower', async () => {
+  const { orderedRequestHandler } = await import('@/lib/live-preview')
+  const handler = orderedRequestHandler()
+  const finished: string[] = []
+  let releaseFirst!: () => void
+  const firstGate = new Promise<void>((resolve) => (releaseFirst = resolve))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+      const { data } = JSON.parse(String(init.body)) as { data: { label: string } }
+      if (data.label === 'older') await firstGate
+      return new Response(JSON.stringify(data))
+    }),
+  )
+  const request = (label: string) =>
+    handler({
+      apiPath: '/api',
+      endpoint: 'globals/navbar',
+      serverURL: '',
+      data: { data: { label } },
+    })
+      .then((response) => response.json())
+      .then((body: { label: string }) => finished.push(body.label))
+  const older = request('older')
+  const newer = request('newer')
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  // The newer request waits for the older one instead of overtaking it.
+  expect(finished).toEqual([])
+  releaseFirst()
+  await Promise.all([older, newer])
+  expect(finished).toEqual(['older', 'newer'])
 })

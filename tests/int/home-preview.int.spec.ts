@@ -40,7 +40,7 @@ it('previews unsaved copy and company changes using the official hook and same-o
     title: 'Unsaved heading',
     providers: [{ id: 'sage', provider: 'sage' }],
   }
-  const fetcher = vi.fn().mockResolvedValue({ json: async () => updated })
+  const fetcher = vi.fn().mockImplementation(async () => new Response(JSON.stringify(updated)))
   vi.stubGlobal('fetch', fetcher)
   render(React.createElement(HomePreview, { home: initial, locale: 'de' }))
   expect(screen.getByText('Saved heading')).toBeDefined()

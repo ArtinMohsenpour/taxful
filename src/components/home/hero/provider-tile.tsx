@@ -1,10 +1,15 @@
+import type { CSSProperties } from 'react'
 import Image from 'next/image'
 import type { FlowProvider } from '@/lib/home/types'
 import styles from './provider-tile.module.css'
 
-export function ProviderTile({ provider }: { provider: FlowProvider }) {
+export function ProviderTile({ provider, index }: { provider: FlowProvider; index: number }) {
   return (
-    <li className={styles.provider} data-provider={provider.builtin || 'custom'}>
+    <li
+      className={styles.provider}
+      data-provider={provider.builtin || 'custom'}
+      style={{ '--tile-index': index } as CSSProperties}
+    >
       <Image
         src={provider.src}
         alt={provider.name}

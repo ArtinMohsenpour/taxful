@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
-import { useSyncExternalStore, useTransition } from 'react'
+import { useState, useSyncExternalStore, useTransition } from 'react'
 import { usePathname, useRouter } from '@/i18n/navigation'
 
 const subscribe = () => () => {}
@@ -14,6 +14,11 @@ export function Preferences() {
   const router = useRouter()
   const { resolvedTheme, setTheme } = useTheme()
   const [pending, startTransition] = useTransition()
+  // Changing language replaces the navbar, so the thumb slides first and the
+  // new-language page loads once the motion has mostly played.
+  const [targetLocale, setTargetLocale] = useState<string | null>(null)
+  const shownLocale = targetLocale ?? locale
+  const switching = pending || (targetLocale !== null && targetLocale !== locale)
   // The server cannot know localStorage or the browser's color preference.
   const mounted = useSyncExternalStore(
     subscribe,
@@ -32,28 +37,30 @@ export function Preferences() {
         type="button"
         role="switch"
         aria-label={t('english')}
-        aria-checked={locale === 'en'}
-        aria-busy={pending}
-        disabled={!mounted || pending}
+        aria-checked={shownLocale === 'en'}
+        aria-busy={switching}
+        disabled={!mounted || switching}
         title={t('switchLanguage')}
-        className="preference-toggle w-[5.5rem] grid-cols-2"
-        onClick={() =>
-          startTransition(() =>
-            router.replace(`${pathname}${window.location.search}${window.location.hash}`, {
-              locale: locale === 'de' ? 'en' : 'de',
-              scroll: false,
-            }),
+        className="preference-toggle"
+        onClick={() => {
+          const next = locale === 'de' ? 'en' : 'de'
+          const href = `${pathname}${window.location.search}${window.location.hash}`
+          setTargetLocale(next)
+          const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 260
+          window.setTimeout(
+            () => startTransition(() => router.replace(href, { locale: next, scroll: false })),
+            delay,
           )
-        }
+        }}
       >
         <span
-          className="toggle-thumb w-[calc((100%-0.5rem)/2)]"
-          style={{ transform: `translateX(${locale === 'en' ? '100%' : '0'})` }}
+          className="toggle-thumb"
+          style={{ transform: `translateX(${shownLocale === 'en' ? '100%' : '0'})` }}
         />
-        <span className="toggle-option" data-active={locale === 'de'} aria-hidden="true">
+        <span className="toggle-option" data-active={shownLocale === 'de'} aria-hidden="true">
           DE
         </span>
-        <span className="toggle-option" data-active={locale === 'en'} aria-hidden="true">
+        <span className="toggle-option" data-active={shownLocale === 'en'} aria-hidden="true">
           EN
         </span>
       </button>
@@ -69,13 +76,10 @@ export function Preferences() {
         })}
         disabled={!mounted}
         data-theme-choice={activeTheme}
-        className="preference-toggle w-[5.5rem] grid-cols-2"
+        className="preference-toggle"
         onClick={() => setTheme(nextTheme)}
       >
-        <span
-          className="toggle-thumb w-[calc((100%-0.5rem)/2)]"
-          style={{ transform: `translateX(${themeIndex * 100}%)` }}
-        />
+        <span className="toggle-thumb" style={{ transform: `translateX(${themeIndex * 100}%)` }} />
         {themes.map((value) => (
           <span
             key={value}
@@ -84,8 +88,8 @@ export function Preferences() {
             aria-hidden="true"
           >
             <svg
-              width="17"
-              height="17"
+              width="15"
+              height="15"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"

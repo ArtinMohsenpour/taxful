@@ -27,7 +27,7 @@ const locales = ['de', 'en'] as const
 // Creates missing service pages and a new Services page version, all as
 // drafts: legal statements need review before an editor publishes them.
 // Existing service pages are never overwritten.
-export async function seedServicePages(payload: Payload, req: PayloadRequest) {
+export async function seedServicePages(payload: Payload, req: Partial<PayloadRequest>) {
   const editorConfig = await editorConfigFactory.fromFeatures({
     config: payload.config,
     features: websiteEditorFeatures,

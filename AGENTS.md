@@ -59,8 +59,9 @@ next-themes 0.4.6 has a tracked pnpm patch for its React client-remount script w
 
 ## Repository state and generated files
 
-- `src/payload.config.ts` registers `Users`, `Media`, website forms, `service-pages`, the localized `Navbar` and `Home` globals and the website page globals. See `docs/navbar.md` and `docs/website-builder.md` (page builder, service pages, SEO, sitemap). Service pages and the Services page are seeded as drafts; legal copy needs review before publishing.
+- `src/payload.config.ts` registers `Users`, `Media`, website forms, `service-pages`, the localized `Navbar`, `Footer` and `Home` globals and the website page globals. See `docs/navbar.md`, `docs/footer.md` and `docs/website-builder.md` (page builder, service pages, SEO, sitemap). Service pages and the Services page are seeded as drafts; legal copy needs review before publishing.
 - PostgreSQL schema push is disabled. Use reviewed migrations; the initial migration targets an empty database and must not be replayed over existing tables.
+- Migrations must stay replayable on an empty database: never call the Payload Local API in a migration (it reads the current schema). Use plain SQL for data a migration must add; starter website content is added by `pnpm content:seed` after migrating. See `docs/website-builder.md#starter-content`.
 - `src/app/(frontend)/` contains the placeholder public site.
 - `src/app/(payload)/` contains Payload routes and admin UI. Files marked as automatically generated must not be edited manually.
 - `src/payload-types.ts` is generated. Run `pnpm generate:types` after schema changes; do not hand-edit it.
@@ -143,8 +144,10 @@ Semantic tokens live in `src/app/globals.css` and map to Tailwind v4 utilities w
 | border             | `#E2DBCF` | `#3D4435` |
 | accent             | `#EAE2D6` | `#343B2D` |
 | brand ink          | `#52613F` | `#BDCBA6` |
+| logo plate         | `#FFFDF9` | `#DFD9CD` |
+| nav indicator      | `#73845A` | `#A6B58B` |
 
-Use primary for sage surfaces and primary foreground for their text; use brand ink for olive text on pale surfaces. Check contrast when introducing new combinations. The navbar has two animated controls: a DE/EN switch and a light/dark toggle. The system preference is used initially, without a separate system icon. Keep keyboard labels localized and disable motion under prefers-reduced-motion.
+Use primary for sage surfaces and primary foreground for their text; use brand ink for olive text on pale surfaces; logo plate only keeps original-colour partner logos legible in dark mode; nav indicator is the sage line under the active navbar link. Check contrast when introducing new combinations. The navbar has two animated controls: a DE/EN switch and a light/dark toggle. The system preference is used initially, without a separate system icon. Keep keyboard labels localized and disable motion under prefers-reduced-motion.
 
 Navbar items are read from the published Payload global for each request, with German fallback. CMS users may edit and publish navigation. Customer identities remain separate from Payload Users. The navbar links to customer login or the customer portal according to the customer session.
 

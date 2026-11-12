@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import styles from './flow-motion.module.css'
 
-// Only the pause button needs client state; the diagram is rendered on the server.
+// Only the pause control needs client state; the diagram is rendered on the server.
 export function FlowMotion({
   children,
   pauseLabel,
@@ -14,9 +14,22 @@ export function FlowMotion({
   playLabel: string
 }) {
   const [paused, setPaused] = useState(false)
+  // The loop also rests while the diagram is off-screen, saving repaints and battery.
+  const [onScreen, setOnScreen] = useState(true)
+  const root = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const element = root.current
+    if (!element || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting), {
+      rootMargin: '120px',
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
 
   return (
-    <div className={styles.motion} data-motion-paused={paused}>
+    <div ref={root} className={styles.motion} data-motion-paused={paused || !onScreen}>
       {children}
       <button
         type="button"
