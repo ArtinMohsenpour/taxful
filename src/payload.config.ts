@@ -19,6 +19,8 @@ import { PUBLIC_MEDIA_MAX_BYTES } from './lib/website/media-settings'
 import { staffEmailAdapter } from './lib/staff-auth/email'
 import { installStaffMfa } from './lib/staff-auth/strategy'
 import { linkTargetsEndpoint } from './lib/website/link-targets-endpoint'
+import { s3Storage } from '@payloadcms/storage-s3'
+import { r2Settings } from './lib/storage/r2'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -77,5 +79,19 @@ export default buildConfig({
     },
   }),
   sharp,
-  plugins: [],
+  plugins: [
+    // Public website media in Cloudflare R2 when configured; local disk otherwise.
+    // Uploads stay server-side (no clientUploads) so Media's type checks and
+    // SVG validation always see the file. Files are served through Payload.
+    ...((media) =>
+      media
+        ? [
+            s3Storage({
+              collections: { media: true },
+              bucket: media.bucket,
+              config: media.config,
+            }),
+          ]
+        : [])(r2Settings('media')),
+  ],
 })

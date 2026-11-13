@@ -1,8 +1,7 @@
 import { config } from 'dotenv'
-import { stat } from 'node:fs/promises'
 config({ path: ['.env.local', '.env'] })
 const { customerPool } = await import('../src/lib/customer-auth/database')
-const { storagePath } = await import('../src/lib/documents/storage')
+const { privateSize } = await import('../src/lib/documents/storage')
 const { billingLock } = await import('../src/lib/billing/usage')
 const { syncCustomer } = await import('../src/lib/billing/stripe')
 let failed = false
@@ -12,10 +11,10 @@ try {
   )
   for (const item of exports.rows) {
     try {
-      const file = await stat(storagePath(item.id, 'export'))
+      const size = await privateSize(item.id, 'export')
       await customerPool.query(
         'UPDATE customer_auth.document_exports SET size_bytes=$2 WHERE id=$1 AND size_bytes=0',
-        [item.id, file.size],
+        [item.id, size],
       )
     } catch {
       failed = true
